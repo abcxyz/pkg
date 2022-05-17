@@ -8,9 +8,6 @@ on:
     branches:
       - main
 
-env:
-  GOMAXPROCS: 7
-
 # If a new commit comes in, cancel the current action run.
 concurrency:
   group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
