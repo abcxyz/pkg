@@ -93,7 +93,6 @@ jobs:
               "unused",
               "varcheck",
               "whitespace",
-              "wrapcheck",
             ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0
 
       - name: 'Lint (custom configuration)'
