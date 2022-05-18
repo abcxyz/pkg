@@ -1,0 +1,42 @@
+name: 'Go test'
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        description: 'The version of Go to install and use.'
+        type: 'string'
+        required: true
+
+jobs:
+  go_test:
+    name: 'go test'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2' # ratchet:actions/setup-go@v3
+        with:
+          go-version: '${{ inputs.go_version }}'
+
+      - name: 'Cache dependencies'
+        uses: 'actions/cache@48af2dc4a9e8278b89d7fa154b955c30c6aaab09' # ratchet:actions/cache@v3
+        with:
+          path: |-
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-test-${{ hashFiles('**/go.sum') }}
+          restore-keys: |-
+            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-test-
+
+      - name: 'Test'
+        run: |-
+          go test \
+            -count=1 \
+            -coverprofile=coverage.out \
+            -race \
+            -shuffle=on \
+            -timeout=10m \
+            ./...
