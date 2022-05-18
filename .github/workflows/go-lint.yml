@@ -1,0 +1,101 @@
+name: 'Go lint'
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        description: 'The version of Go to install and use.'
+        type: 'string'
+        required: true
+
+jobs:
+  modules:
+    name: 'modules'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2' # ratchet:actions/setup-go@v3
+        with:
+          go-version: '${{ inputs.go_version }}'
+
+      - name: 'Check modules'
+        run: |-
+          for d in $(find . -name go.mod); do
+            (cd $(dirname $d) && go mod tidy)
+          done
+          if [ -n "$(git status -s -uall)" ]; then
+            echo "::error title=Go module changes::Detected go module changes"
+            git diff
+            exit 1
+          fi
+
+  golang_ci:
+    name: 'golang-ci'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2' # ratchet:actions/setup-go@v3
+        with:
+          go-version: '${{ inputs.go_version }}'
+
+      - name: 'Lint (default configuration)'
+        uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
+        if: ${{ hashFiles('.golangci.yml') == '' }}
+        with:
+          args: |-
+            --enable=${{ join(fromJson('[
+              "asciicheck",
+              "bidichk",
+              "bodyclose",
+              "containedctx",
+              "deadcode",
+              "depguard",
+              "dogsled",
+              "errcheck",
+              "errchkjson",
+              "errname",
+              "errorlint",
+              "exhaustive",
+              "exportloopref",
+              "forcetypeassert",
+              "godot",
+              "gofumpt",
+              "goheader",
+              "goimports",
+              "gomodguard",
+              "goprintffuncname",
+              "gosec",
+              "gosimple",
+              "govet",
+              "ifshort",
+              "ineffassign",
+              "makezero",
+              "noctx",
+              "nolintlint",
+              "prealloc",
+              "predeclared",
+              "revive",
+              "sqlclosecheck",
+              "staticcheck",
+              "structcheck",
+              "stylecheck",
+              "tenv",
+              "thelper",
+              "tparallel",
+              "typecheck",
+              "unconvert",
+              "unused",
+              "varcheck",
+              "whitespace",
+              "wrapcheck",
+            ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0
+
+      - name: 'Lint (custom configuration)'
+        if: ${{ hashFiles('.golangci.yml') != '' }}
+        uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
