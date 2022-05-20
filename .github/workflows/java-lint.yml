@@ -10,7 +10,7 @@ on:
       java_distribution:
         description: 'The distibution of Java to use.'
         type: 'string'
-        default: 'adopt'
+        default: 'zulu'
       google_java_format_version:
         description: 'The version of google-java-format to use. This must be the full version with no leading "v" prefix.'
         type: 'string'
