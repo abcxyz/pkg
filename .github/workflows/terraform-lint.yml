@@ -1,0 +1,39 @@
+name: 'Terraform lint'
+
+on:
+  workflow_call:
+    inputs:
+      terraform_version:
+        description: 'The version of Terraform to install and use.'
+        type: 'string'
+        required: true
+      directory:
+        description: 'The directory upon which to lint Terraform configurations.'
+        type: 'string'
+        required: true
+
+jobs:
+  lint:
+    name: 'lint'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Terraform'
+        uses: 'hashicorp/setup-terraform@17d4c9b8043b238f6f35641cdd8433da1e6f3867' # ratchet:hashicorp/setup-terraform@v2.0.0
+        with:
+          go-version: '${{ inputs.terraform_version }}'
+
+      - name: 'Validate'
+        shell: 'bash'
+        working-directory: '${{ inputs.directory }}'
+        run: |-
+          terraform init -backend=false -input=false
+          terraform validate -no-color
+
+      - name: 'Format'
+        shell: 'bash'
+        working-directory: '${{ inputs.directory }}'
+        run: |-
+          terraform fmt -check -diff -no-color
