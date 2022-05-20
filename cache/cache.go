@@ -13,6 +13,11 @@
 // limitations under the License.
 
 // Package cache implements an inmemory cache for any object.
+//
+// This package was created and adapted from:
+//
+//     https://github.com/google/exposure-notifications-server/blob/main/pkg/cache/cache.go
+//
 package cache
 
 import (
@@ -42,7 +47,7 @@ func (c *item[T]) expired() bool {
 // New creates a new in memory cache. Panics if expireAfter is 0 or negative.
 func New[T any](expireAfter time.Duration) *Cache[T] {
 	if expireAfter <= 0 {
-		panic("expireAfter duration cannot be negative")
+		panic("expireAfter duration must be positive")
 	}
 
 	return &Cache[T]{

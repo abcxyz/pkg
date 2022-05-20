@@ -191,7 +191,7 @@ func TestConcurrentReaders(t *testing.T) {
 				t.Fatal(err)
 			}
 		case <-time.After(2 * time.Second):
-			t.Fatal("gorountines didn't termine fast enough")
+			t.Fatal("goroutines did not terminate fast enough")
 		}
 	}
 
