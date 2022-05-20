@@ -31,9 +31,22 @@ reusable workflows are pinned to specific references using
 
 #### go-lint.yml
 
-Use this workflow to perform basic linting checks:
+Use this workflow to perform basic Go linting checks:
 
 ```yaml
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
+  workflow_dispatch:
+
 jobs:
   lint:
     uses: 'abcxyz/pkg/.github/workflows/go-lint.yml@main'
@@ -48,9 +61,22 @@ settings. Otherwise, it uses a set of sane defaults.
 
 #### go-test.yml
 
-Use this workflow to perform basic go tests:
+Use this workflow to perform basic Go tests:
 
 ```yaml
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '**.go'
+  workflow_dispatch:
+
 jobs:
   lint:
     uses: 'abcxyz/pkg/.github/workflows/go-test.yml@main'
@@ -60,7 +86,42 @@ jobs:
 
 Testing is done via the `go test` command with:
 
-- Test caching disabled
-- Test shuffling enabled
-- Race detector enabled
-- A 10 minute timeout
+-   Test caching disabled
+-   Test shuffling enabled
+-   Race detector enabled
+-   A 10 minute timeout
+
+
+#### terraform-lint.yml
+
+Use this workflow to perform basic Terraform linting checks:
+
+```yaml
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.tf'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '**.tf'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    uses: 'abcxyz/pkg/.github/workflows/terraform-lint.yml@main'
+    with:
+      terraform_version: '1.2'
+      directory: './terraform'
+```
+
+If you have multiple Terraform configurations, repeat the stanza for each
+directory. Linting is done in two steps:
+
+1.  Run `terraform validate`. This will fail if the Terraform is invalid.
+
+1.  Run `terraform fmt` and check the git diff. This will will if the Terraform
+    file is not formatted. On failure, the output will include the diff.
