@@ -18,6 +18,8 @@
 //
 //     https://github.com/google/exposure-notifications-server/blob/main/pkg/cache/cache.go
 //
+// This package assumes the system time has minimal skew. In case of major clock
+// skew or system clock reset, cache expirations could occur out of order.
 package cache
 
 import (
