@@ -1,0 +1,49 @@
+name: 'Java lint'
+
+on:
+  workflow_call:
+    inputs:
+      java_version:
+        description: 'The version of Java to install and use.'
+        type: 'string'
+        required: true
+      java_distribution:
+        description: 'The distibution of Java to use.'
+        type: 'string'
+        default: 'adopt'
+      google_java_format_version:
+        description: 'The version of google-java-format to use. This must be the full version with no leading "v" prefix.'
+        type: 'string'
+        default: '1.15.0'
+
+jobs:
+  format:
+    name: 'format'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Java'
+        uses: 'actions/setup-java@860f60056505705214d223b91ed7a30f173f6142' # ratchet:actions/setup-java@v3
+        with:
+          distribution: '${{ inputs.java_distribution }}'
+          java-version: '${{ inputs.java_version }}'
+
+      - name: 'Download google-java-format'
+        run: |-
+          curl -sLfo "/tmp/google-java-format" \
+            "https://github.com/google/google-java-format/releases/download/v${{ inputs.google_java_format_version }}/google-java-format-${{ inputs.google_java_format_version }}-all-deps.jar"
+          chmod +x "/tmp/google-java-format"
+
+      - name: 'Check formatting'
+        run: |-
+          set -e
+          shopt -s globstar
+
+          java -jar /tmp/google-java-format --set-exit-if-changed **/*.java
+
+      - name: 'Post Download google-java-format'
+        if: '${{ always() }}'
+        run: |-
+          rm -rf /tmp/google-java-format || true
