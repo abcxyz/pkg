@@ -35,8 +35,23 @@ jobs:
         run: |-
           go test \
             -count=1 \
-            -coverprofile=coverage.out \
+            -coverprofile=./coverage.out \
             -race \
             -shuffle=on \
             -timeout=10m \
             ./...
+
+      - name: 'Coverage'
+        shell: 'bash'
+        run: |-
+          set -e
+
+          OUTPUT="$(go tool cover -func=./coverage.out)"
+          TOTAL="$(echo $OUTPUT | awk 'END{print $NF}')"
+          tee -a $GITHUB_STEP_SUMMARY > /dev/null <<EOF
+            ## Coverage: ${TOTAL}
+
+            \`\`\`text
+            ${OUTPUT}
+            \`\`\`
+          EOF
