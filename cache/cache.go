@@ -25,8 +25,6 @@ import (
 	"time"
 )
 
-const initialSize = 16
-
 // Func is a generic-based function that returns T, or an error if creating T
 // failed. This function is used as part of the WriteThruCache call.
 type Func[T any] func() (T, error)
@@ -62,7 +60,7 @@ func New[T any](expireAfter time.Duration) *Cache[T] {
 	}
 
 	return &Cache[T]{
-		data:        make(map[string]item[T], initialSize),
+		data:        make(map[string]item[T]),
 		expireAfter: expireAfter,
 	}
 }
@@ -90,7 +88,7 @@ func (c *Cache[T]) Size() int {
 func (c *Cache[T]) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.data = make(map[string]item[T], initialSize)
+	c.data = make(map[string]item[T])
 }
 
 // WriteThruLookup checks the cache for the value associated with name,
