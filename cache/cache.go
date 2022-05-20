@@ -27,19 +27,30 @@ import (
 
 const initialSize = 16
 
+// Func is a generic-based function that returns T, or an error if creating T
+// failed. This function is used as part of the WriteThruCache call.
 type Func[T any] func() (T, error)
 
+// Cache represents a generic cacher. All items in the cache must be of the same
+// type T, and all items in the cache share the same expiration duration
+// (expiration is not configurable per-item).
+//
+// For performance, it's strongly recommended that you store pointers to objects
+// instead of actual objects.
 type Cache[T any] struct {
 	data        map[string]item[T]
 	expireAfter time.Duration
 	mu          sync.RWMutex
 }
 
+// item is an internal representation of a cached item. It stores the actual
+// object and the upcoming expiration time.
 type item[T any] struct {
 	object    T
 	expiresAt int64
 }
 
+// expired returns true if the given item has expired, or false otherwise.
 func (c *item[T]) expired() bool {
 	return c.expiresAt < time.Now().UnixNano()
 }
