@@ -7,6 +7,10 @@ on:
         description: 'The version of Go to install and use.'
         type: 'string'
         required: true
+      directory:
+        description: 'Directory in which Go files reside.'
+        type: 'string'
+        default: '.'
 
 jobs:
   modules:
@@ -22,6 +26,8 @@ jobs:
           go-version: '${{ inputs.go_version }}'
 
       - name: 'Check modules'
+        shell: 'bash'
+        working-directory: '${{ inputs.directory }}'
         run: |-
           for d in $(find . -name go.mod); do
             (cd $(dirname $d) && go mod tidy)
@@ -33,7 +39,7 @@ jobs:
           fi
 
   golang_ci:
-    name: 'golang-ci'
+    name: 'golangci'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
@@ -45,8 +51,8 @@ jobs:
           go-version: '${{ inputs.go_version }}'
 
       - name: 'Lint (default configuration)'
-        uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
         if: ${{ hashFiles('.golangci.yml') == '' }}
+        uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
         with:
           args: |-
             --enable=${{ join(fromJson('[
@@ -94,7 +100,10 @@ jobs:
               "varcheck",
               "whitespace",
             ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0
+          working-directory: '${{ inputs.directory }}'
 
       - name: 'Lint (custom configuration)'
         if: ${{ hashFiles('.golangci.yml') != '' }}
         uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
+        with:
+          working-directory: '${{ inputs.directory }}'
