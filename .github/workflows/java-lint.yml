@@ -37,9 +37,15 @@ jobs:
       - name: 'Download google-java-format'
         shell: 'bash'
         run: |-
-          curl -sLfo "/tmp/google-java-format" \
-            "https://github.com/google/google-java-format/releases/download/v${{ inputs.google_java_format_version }}/google-java-format-${{ inputs.google_java_format_version }}-all-deps.jar"
-          chmod +x "/tmp/google-java-format"
+          BIN='${{ runner.tool_cache }}/google-java-format-${{ google_java_format_version }}'
+
+          if [[ -x "${BIN}" ]]; then
+            echo "Already installed!"
+          else
+            curl -sLfo "${BIN}" \
+              "https://github.com/google/google-java-format/releases/download/v${{ inputs.google_java_format_version }}/google-java-format-${{ inputs.google_java_format_version }}-all-deps.jar"
+            chmod +x "${BIN}"
+          fi
 
       - name: 'Check formatting'
         shell: 'bash'
@@ -47,11 +53,12 @@ jobs:
         run: |-
           shopt -s globstar
 
-          java -jar /tmp/google-java-format --set-exit-if-changed **/*.java
+          java -jar ${{ runner.tool_cache }}/google-java-format-${{ google_java_format_version }} -i **/*.java
 
-      - name: 'Post Download google-java-format'
-        if: '${{ always() }}'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          rm -rf /tmp/google-java-format || true
+          if [ -n "$(git status -s -uall)" ]; then
+            echo "::error title=Java formatting::Detected unformatted Java"
+            ::group::Diff
+            git -c color.ui=always diff
+            ::endgroup::
+            exit 1
+          fi
