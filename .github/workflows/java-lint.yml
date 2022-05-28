@@ -37,7 +37,7 @@ jobs:
       - name: 'Download google-java-format'
         shell: 'bash'
         run: |-
-          BIN='${{ runner.tool_cache }}/google-java-format-${{ google_java_format_version }}'
+          BIN='${{ runner.tool_cache }}/google-java-format-${{ inputs.google_java_format_version }}'
 
           if [[ -x "${BIN}" ]]; then
             echo "Already installed!"
@@ -53,7 +53,7 @@ jobs:
         run: |-
           shopt -s globstar
 
-          java -jar ${{ runner.tool_cache }}/google-java-format-${{ google_java_format_version }} -i **/*.java
+          java -jar ${{ runner.tool_cache }}/google-java-format-${{ inputs.google_java_format_version }} -i **/*.java
 
           if [ -n "$(git status -s -uall)" ]; then
             echo "::error title=Java formatting::Detected unformatted Java"
