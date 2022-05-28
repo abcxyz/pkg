@@ -34,9 +34,7 @@ jobs:
           done
           if [ -n "$(git status -s -uall)" ]; then
             echo "::error title=Go module changes::Detected go module changes"
-            echo "::group::Diff"
             git -c color.ui=always diff
-            echo "::endgroup::"
             exit 1
           fi
 
