@@ -57,8 +57,6 @@ jobs:
 
           if [ -n "$(git status -s -uall)" ]; then
             echo "::error title=Java formatting::Detected unformatted Java"
-            echo "::group::Diff"
             git -c color.ui=always diff
-            echo "::endgroup::"
             exit 1
           fi
