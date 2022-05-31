@@ -21,8 +21,13 @@ on:
         default: '.'
 
 jobs:
+  # format runs the google-java-formatter and checks if there are any resulting
+  # file changes. It downloads the formatter into the GitHub Actions tool-cache,
+  # to be shared with future step invocations.
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
   format:
-    name: 'format'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
