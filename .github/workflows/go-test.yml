@@ -3,6 +3,10 @@ name: 'Go test'
 on:
   workflow_call:
     inputs:
+      os:
+        description: 'Operating system on which to run tests.'
+        type: 'string'
+        default: 'ubuntu-latest'
       go_version:
         description: 'The version of Go to install and use.'
         type: 'string'
@@ -15,16 +19,33 @@ on:
         description: 'Timeout for Go tests.'
         type: 'string'
         default: '10m'
+      env:
+        description: 'JSON-stringified environment variables for tests.'
+        type: 'string'
+        default: '{}'
       directory:
-        description: 'Directory in which Go files reside.'
+        description: 'Directory to the root of the Go module.'
         type: 'string'
         default: '.'
 
 jobs:
-  go_test:
-    name: 'go test'
-    runs-on: 'ubuntu-latest'
+  # test runs the Go test files. It checks out the source code and configures
+  # the Go runtime. It also generates a coverage report and puts the coverage
+  # report as a job summary.
+  #
+  # By default, it tests all packages, but that can be customized by setting
+  # "go_packages".
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
+  test:
+    runs-on: '${{ inputs.os }}'
     steps:
+      - name: 'Configure environment variables'
+        if: ${{ inputs.env != '{}' }}
+        run: |-
+          jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> $GITHUB_ENV
+
       - name: 'Checkout'
         uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
 
