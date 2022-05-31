@@ -13,8 +13,11 @@ on:
         required: true
 
 jobs:
+  # lint runs Terraform formatting and validation checks.
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
   lint:
-    name: 'lint'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
@@ -25,15 +28,15 @@ jobs:
         with:
           go-version: '${{ inputs.terraform_version }}'
 
+      - name: 'Format'
+        shell: 'bash'
+        working-directory: '${{ inputs.directory }}'
+        run: |-
+          terraform fmt -check -diff -no-color
+
       - name: 'Validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
           terraform init -backend=false -input=false
           terraform validate -no-color
-
-      - name: 'Format'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          terraform fmt -check -diff -no-color

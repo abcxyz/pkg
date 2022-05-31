@@ -13,8 +13,13 @@ on:
         default: '.'
 
 jobs:
+  # modules checks if the go modules are all up-to-date. While rare with modern
+  # versions of Go, it's possible to take a dependency on a package without
+  # updating the module file.
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
   modules:
-    name: 'modules'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
@@ -38,8 +43,13 @@ jobs:
             exit 1
           fi
 
-  golang_ci:
-    name: 'golangci'
+  # golangci runs golangci-lint. If a .golangci.yml or .golangci.yaml file
+  # exists at the root of the repository, it uses those custom settings. If no
+  # such file exists, it uses a selection of sane defaults.
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
+  golangci:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
@@ -51,7 +61,7 @@ jobs:
           go-version: '${{ inputs.go_version }}'
 
       - name: 'Lint (default configuration)'
-        if: ${{ hashFiles('.golangci.yml') == '' }}
+        if: ${{ hashFiles('.golangci.yml') == '' && hashFiles('.golangci.yaml') == '' }}
         uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
         with:
           args: |-
@@ -103,7 +113,7 @@ jobs:
           working-directory: '${{ inputs.directory }}'
 
       - name: 'Lint (custom configuration)'
-        if: ${{ hashFiles('.golangci.yml') != '' }}
+        if: ${{ hashFiles('.golangci.yml') != '' && hashFiles('.golangci.yaml') != '' }}
         uses: 'golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc' # ratchet:golangci/golangci-lint-action@v3
         with:
           working-directory: '${{ inputs.directory }}'
