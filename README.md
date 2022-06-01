@@ -1,5 +1,7 @@
 # abcxyz Common Packages
 
+**"abcxyz Common Packages" is not an official Google product.**
+
 ```
                     ___
                   .' _ '.
