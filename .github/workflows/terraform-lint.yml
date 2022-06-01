@@ -1,4 +1,4 @@
-name: 'Terraform lint'
+name: 'terraform-lint'
 
 on:
   workflow_call:
