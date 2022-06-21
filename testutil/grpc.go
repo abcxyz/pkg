@@ -22,11 +22,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// RegisterFunc is the callback to register a fake gRPC service to the given
+// server.
+type RegisterFunc func(*grpc.Server)
+
 // FakeGRPCServer creates and registers a fake grpc server for testing. It
 // returns the bound address and a connected client. It ensures the server is
 // stopped when tests finish. It returns an error if the connection does not
 // establish.
-func FakeGRPCServer(tb testing.TB, registerFunc func(*grpc.Server)) (string, *grpc.ClientConn) {
+func FakeGRPCServer(tb testing.TB, registerFunc RegisterFunc) (string, *grpc.ClientConn) {
 	tb.Helper()
 
 	s := grpc.NewServer()
