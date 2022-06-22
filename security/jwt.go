@@ -48,7 +48,7 @@ func NewJWTVerifier(ctx context.Context, endpoint string) (*JWTVerifier, error) 
 
 	// check that cache is correctly set up and certs are available
 	if _, err := c.Refresh(ctx, endpoint); err != nil {
-		return nil, fmt.Errorf("failed to retrieve JVS public keys: %w", err)
+		return nil, fmt.Errorf("failed to retrieve public keys: %w", err)
 	}
 
 	cached := jwk.NewCachedSet(c, endpoint)
