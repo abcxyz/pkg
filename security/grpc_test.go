@@ -86,11 +86,11 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		svr.Close()
 	})
 
-	tok := createToken(t, "test_id", "user@example.com")
-	validJWT := signToken(t, tok, privateKey, keyID)
+	tok := testCreateToken(t, "test_id", "user@example.com")
+	validJWT := testSignToken(t, tok, privateKey, keyID)
 
-	tok2 := createToken(t, "test_id_2", "me@example.com")
-	validJWT2 := signToken(t, tok2, privateKey2, keyID2)
+	tok2 := testCreateToken(t, "test_id_2", "me@example.com")
+	validJWT2 := testSignToken(t, tok2, privateKey2, keyID2)
 
 	unsig, err := jwt.NewSerializer().Serialize(tok)
 	if err != nil {

@@ -94,11 +94,11 @@ func TestValidateJWT(t *testing.T) {
 		t.Fatalf("failed to create JVS client: %v", err)
 	}
 
-	tok := createToken(t, "test_id", "user@example.com")
-	validJWT := signToken(t, tok, privateKey, keyID)
+	tok := testCreateToken(t, "test_id", "user@example.com")
+	validJWT := testSignToken(t, tok, privateKey, keyID)
 
-	tok2 := createToken(t, "test_id_2", "me@example.com")
-	validJWT2 := signToken(t, tok2, privateKey2, keyID2)
+	tok2 := testCreateToken(t, "test_id_2", "me@example.com")
+	validJWT2 := testSignToken(t, tok2, privateKey2, keyID2)
 
 	unsig, err := jwt.NewSerializer().Serialize(tok)
 	if err != nil {
@@ -161,7 +161,7 @@ func TestValidateJWT(t *testing.T) {
 	}
 }
 
-func createToken(tb testing.TB, id string, email string) jwt.Token {
+func testCreateToken(tb testing.TB, id string, email string) jwt.Token {
 	tb.Helper()
 
 	tok, err := jwt.NewBuilder().
@@ -182,7 +182,7 @@ func createToken(tb testing.TB, id string, email string) jwt.Token {
 	return tok
 }
 
-func signToken(tb testing.TB, tok jwt.Token, privateKey *ecdsa.PrivateKey, keyID string) string {
+func testSignToken(tb testing.TB, tok jwt.Token, privateKey *ecdsa.PrivateKey, keyID string) string {
 	tb.Helper()
 
 	hdrs := jws.NewHeaders()
