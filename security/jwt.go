@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package security lorem ipsum...
+// Package security provides mechanisms for interacting with JWTs and getting authentication information.
 package security
 
 import (
