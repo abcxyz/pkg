@@ -25,17 +25,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/abcxyz/pkg/testutil"
-	"github.com/google/go-cmp/cmp"
-	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/jwt"
+	"google.golang.org/grpc/metadata"
 )
 
-func TestValidateJWT(t *testing.T) {
+func TestRequestPrincipalFromGRPC(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -89,11 +86,6 @@ func TestValidateJWT(t *testing.T) {
 		svr.Close()
 	})
 
-	client, err := NewJWTVerifier(ctx, svr.URL+path)
-	if err != nil {
-		t.Fatalf("failed to create JVS client: %v", err)
-	}
-
 	tok := createToken(t, "test_id", "user@example.com")
 	validJWT := signToken(t, tok, privateKey, keyID)
 
@@ -111,88 +103,66 @@ func TestValidateJWT(t *testing.T) {
 
 	invalidSignatureJWT := unsignedJWT + sig // signature from a different JWT
 
+	g, err := NewGRPCAuthenticationHandler(ctx, svr.URL+path)
+	if err != nil {
+		t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
+	}
+
 	tests := []struct {
-		name      string
-		jwt       string
-		wantErr   string
-		wantToken jwt.Token
+		name          string
+		ctx           context.Context //nolint:containedctx // Only for testing
+		want          string
+		wantErrSubstr string
 	}{
 		{
-			name:      "happy-path",
-			jwt:       validJWT,
-			wantToken: tok,
-		}, {
-			name:      "other-key",
-			jwt:       validJWT2,
-			wantToken: tok2,
-		}, {
-			name:    "unsigned",
-			jwt:     unsignedJWT,
-			wantErr: "required field \"signatures\" not present",
-		}, {
-			name:    "invalid",
-			jwt:     invalidSignatureJWT,
-			wantErr: "failed to verify jwt",
+			name: "grpc_valid_jwt",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "bearer " + validJWT,
+			})),
+			want: "user@example.com",
+		},
+		{
+			name: "grpc_different_case_jwt",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + validJWT,
+			})),
+			want: "user@example.com",
+		},
+		{
+			name: "grpc_different_key",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + validJWT2,
+			})),
+			want: "me@example.com",
+		},
+		{
+			name: "grpc_invalid",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + invalidSignatureJWT,
+			})),
+			wantErrSubstr: "failed to verify jwt",
+		},
+		{
+			name: "grpc_unsigned",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + unsignedJWT,
+			})),
+			wantErrSubstr: "failed to verify jwt",
 		},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			res, err := client.ValidateJWT(tc.jwt)
-			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
-				t.Errorf("Unexpected err: %s", diff)
+
+			got, err := g.RequestPrincipalFromGRPC(tc.ctx)
+			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
+				t.Errorf("j.RequestPrincipal()) got unexpected error substring: %v", diff)
 			}
-			if err != nil {
-				return
-			}
-			got, err := json.MarshalIndent(res, "", " ")
-			if err != nil {
-				t.Errorf("couldn't marshal returned token %v", err)
-			}
-			want, err := json.MarshalIndent(tc.wantToken, "", " ")
-			if err != nil {
-				t.Errorf("couldn't marshal expected token %v", err)
-			}
-			if diff := cmp.Diff(want, got); diff != "" {
-				t.Errorf("Token diff (-want, +got): %v", diff)
+
+			if got != tc.want {
+				t.Errorf("j.RequestPrincipal() = %v, want %v", got, tc.want)
 			}
 		})
 	}
-}
-
-func createToken(tb testing.TB, id string, email string) jwt.Token {
-	tb.Helper()
-
-	tok, err := jwt.NewBuilder().
-		Audience([]string{"test_aud"}).
-		Expiration(time.Now().UTC().Add(5 * time.Minute)).
-		JwtID(id).
-		IssuedAt(time.Now().UTC()).
-		Issuer(`test_iss`).
-		NotBefore(time.Now().UTC()).
-		Subject("test_sub").
-		Build()
-	if err != nil {
-		tb.Fatalf("failed to build token: %s\n", err)
-	}
-	if err := tok.Set("email", email); err != nil {
-		tb.Fatal(err)
-	}
-	return tok
-}
-
-func signToken(tb testing.TB, tok jwt.Token, privateKey *ecdsa.PrivateKey, keyID string) string {
-	tb.Helper()
-
-	hdrs := jws.NewHeaders()
-	if err := hdrs.Set(jws.KeyIDKey, keyID); err != nil {
-		tb.Fatal(err)
-	}
-
-	valid, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256, privateKey, jws.WithProtectedHeaders(hdrs)))
-	if err != nil {
-		tb.Fatalf("failed to sign token: %s\n", err)
-	}
-	return string(valid)
 }
