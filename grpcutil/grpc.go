@@ -24,16 +24,14 @@ import (
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
-const (
-	IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
-	jwtKey         = "authorization"
-	jwtPrefix      = "bearer "
-	emailKey       = "email"
-)
+const IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
 
 // GRPCAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
 type GRPCAuthenticationHandler struct {
 	*jwtutil.JWTVerifier
+	JWTPrefix         string
+	JWTKey            string
+	PrincipalClaimKey string
 }
 
 // NewGRPCAuthenticationHandler returns a GRPCAuthenticationHandler with a verifier initialized.
@@ -42,7 +40,12 @@ func NewGRPCAuthenticationHandler(ctx context.Context, endpoint string) (*GRPCAu
 	if err != nil {
 		return nil, err
 	}
-	return &GRPCAuthenticationHandler{verifier}, nil
+	return &GRPCAuthenticationHandler{
+		JWTVerifier:       verifier,
+		JWTPrefix:         "bearer ",
+		JWTKey:            "authorization",
+		PrincipalClaimKey: "email",
+	}, nil
 }
 
 // RequestPrincipalFromGRPC extracts the JWT principal from the grpcmetadata in the context.
@@ -52,16 +55,16 @@ func (g *GRPCAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context
 		return "", fmt.Errorf("gRPC metadata in incoming context is missing")
 	}
 
-	vals := md.Get(jwtKey)
+	vals := md.Get(g.JWTKey)
 	if len(vals) == 0 {
 		return "", fmt.Errorf("unable to find matching jwt in grpc metadata")
 	}
 	jwtRaw := vals[0]
 	// We compare prefix case insensitively.
-	if !strings.HasPrefix(strings.ToLower(jwtRaw), jwtPrefix) {
-		return "", fmt.Errorf("expected prefix %s, but not found in jwt: %s", jwtPrefix, jwtRaw)
+	if !strings.HasPrefix(strings.ToLower(jwtRaw), g.JWTPrefix) {
+		return "", fmt.Errorf("expected prefix %s, but not found in jwt: %s", g.JWTPrefix, jwtRaw)
 	}
-	idToken := jwtRaw[len(jwtPrefix):]
+	idToken := jwtRaw[len(g.JWTPrefix):]
 
 	validatedToken, err := g.ValidateJWT(idToken)
 	if err != nil {
@@ -74,16 +77,16 @@ func (g *GRPCAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context
 	}
 
 	// Retrieve the principal from claims.
-	principalRaw, ok := tokenMap[emailKey]
+	principalRaw, ok := tokenMap[g.PrincipalClaimKey]
 	if !ok {
-		return "", fmt.Errorf("jwt claims are missing the email key %q", emailKey)
+		return "", fmt.Errorf("jwt claims are missing the email key %q", g.PrincipalClaimKey)
 	}
 	principal, ok := principalRaw.(string)
 	if !ok {
-		return "", fmt.Errorf("expecting string in jwt claims %q, got %T", emailKey, principalRaw)
+		return "", fmt.Errorf("expecting string in jwt claims %q, got %T", g.PrincipalClaimKey, principalRaw)
 	}
 	if principal == "" {
-		return "", fmt.Errorf("nil principal under claims %q", emailKey)
+		return "", fmt.Errorf("nil principal under claims %q", g.PrincipalClaimKey)
 	}
 
 	return principal, nil
