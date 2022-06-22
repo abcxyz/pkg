@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	cloud.google.com/go/compute v1.6.1
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.5.8
 	github.com/lestrrat-go/jwx/v2 v2.0.3
 	go.uber.org/zap v1.21.0

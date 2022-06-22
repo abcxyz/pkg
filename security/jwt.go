@@ -33,13 +33,13 @@ const (
 	emailKey       = "email"
 )
 
-// JWTVerifier allows for getting JWK keys from the JVS and validating JWTs with
+// JWTVerifier allows for getting public JWK keys from an endpoint and validating JWTs with
 // those keys.
 type JWTVerifier struct {
 	keys jwk.Set
 }
 
-// NewJWTVerifier returns a JWTVerifier with the cache initialized.
+// NewJWTVerifier returns a JWTVerifier with the cache initialized. The cache is set up using defaults, and refreshes happen every 15 minutes.
 func NewJWTVerifier(ctx context.Context, endpoint string) (*JWTVerifier, error) {
 	c := jwk.NewCache(ctx)
 	if err := c.Register(endpoint); err != nil {
@@ -58,14 +58,14 @@ func NewJWTVerifier(ctx context.Context, endpoint string) (*JWTVerifier, error) 
 	}, nil
 }
 
-// ValidateJWT takes a jwt string, converts it to a jwt.Token, and validates the signature.
-func (j *JWTVerifier) ValidateJWT(jwtStr string) (*jwt.Token, error) {
+// ValidateJWT takes a jwt string, converts it to a jwt.Token, and validates the signature against the public keys in the JWKS endpoint.
+func (j *JWTVerifier) ValidateJWT(jwtStr string) (jwt.Token, error) {
 	verifiedToken, err := jwt.Parse([]byte(jwtStr), jwt.WithKeySet(j.keys, jws.WithInferAlgorithmFromKey(true)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify jwt %s: %w", jwtStr, err)
 	}
 
-	return &verifiedToken, nil
+	return verifiedToken, nil
 }
 
 type GRPCAuthenticationHandler struct {
@@ -101,12 +101,12 @@ func (g *GRPCAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context
 
 	validatedToken, err := g.ValidateJWT(idToken)
 	if err != nil {
-		return "", fmt.Errorf("unable to validate jwt: %s", err)
+		return "", fmt.Errorf("unable to validate jwt: %w", err)
 	}
 
-	tokenMap, err := (*validatedToken).AsMap(ctx)
+	tokenMap, err := validatedToken.AsMap(ctx)
 	if err != nil {
-		return "", fmt.Errorf("couldn't convert token to map: %s", err)
+		return "", fmt.Errorf("couldn't convert token to map: %w", err)
 	}
 
 	// Retrieve the principal from claims.
