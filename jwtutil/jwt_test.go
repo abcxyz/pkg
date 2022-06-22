@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+package jwtutil
 
 import (
 	"context"
@@ -27,12 +27,12 @@ import (
 	"testing"
 
 	"github.com/abcxyz/pkg/testutil"
+	"github.com/google/go-cmp/cmp"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
-	"google.golang.org/grpc/metadata"
 )
 
-func TestRequestPrincipalFromGRPC(t *testing.T) {
+func TestValidateJWT(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -86,11 +86,16 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		svr.Close()
 	})
 
-	tok := testCreateToken(t, "test_id", "user@example.com")
-	validJWT := testSignToken(t, tok, privateKey, keyID)
+	client, err := NewJWTVerifier(ctx, svr.URL+path)
+	if err != nil {
+		t.Fatalf("failed to create JVS client: %v", err)
+	}
 
-	tok2 := testCreateToken(t, "test_id_2", "me@example.com")
-	validJWT2 := testSignToken(t, tok2, privateKey2, keyID2)
+	tok := testutil.TestCreateToken(t, "test_id", "user@example.com")
+	validJWT := testutil.TestSignToken(t, tok, privateKey, keyID)
+
+	tok2 := testutil.TestCreateToken(t, "test_id_2", "me@example.com")
+	validJWT2 := testutil.TestSignToken(t, tok2, privateKey2, keyID2)
 
 	unsig, err := jwt.NewSerializer().Serialize(tok)
 	if err != nil {
@@ -103,65 +108,51 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 
 	invalidSignatureJWT := unsignedJWT + sig // signature from a different JWT
 
-	g, err := NewGRPCAuthenticationHandler(ctx, svr.URL+path)
-	if err != nil {
-		t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
-	}
-
 	tests := []struct {
-		name          string
-		ctx           context.Context //nolint:containedctx // Only for testing
-		want          string
-		wantErrSubstr string
+		name      string
+		jwt       string
+		wantErr   string
+		wantToken jwt.Token
 	}{
 		{
-			name: "grpc_valid_jwt",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
-				"authorization": "bearer " + validJWT,
-			})),
-			want: "user@example.com",
-		},
-		{
-			name: "grpc_different_case_jwt",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
-				"authorization": "Bearer " + validJWT,
-			})),
-			want: "user@example.com",
-		},
-		{
-			name: "grpc_different_key",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
-				"authorization": "Bearer " + validJWT2,
-			})),
-			want: "me@example.com",
-		},
-		{
-			name: "grpc_invalid",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
-				"authorization": "Bearer " + invalidSignatureJWT,
-			})),
-			wantErrSubstr: "failed to verify jwt",
-		},
-		{
-			name: "grpc_unsigned",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
-				"authorization": "Bearer " + unsignedJWT,
-			})),
-			wantErrSubstr: "failed to verify jwt",
+			name:      "happy-path",
+			jwt:       validJWT,
+			wantToken: tok,
+		}, {
+			name:      "other-key",
+			jwt:       validJWT2,
+			wantToken: tok2,
+		}, {
+			name:    "unsigned",
+			jwt:     unsignedJWT,
+			wantErr: "required field \"signatures\" not present",
+		}, {
+			name:    "invalid",
+			jwt:     invalidSignatureJWT,
+			wantErr: "failed to verify jwt",
 		},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-
-			got, err := g.RequestPrincipalFromGRPC(tc.ctx)
-			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
-				t.Errorf("j.RequestPrincipal()) got unexpected error substring: %v", diff)
+			res, err := client.ValidateJWT(tc.jwt)
+			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
+				t.Errorf("Unexpected err: %s", diff)
 			}
-
-			if got != tc.want {
-				t.Errorf("j.RequestPrincipal() = %v, want %v", got, tc.want)
+			if err != nil {
+				return
+			}
+			got, err := json.MarshalIndent(res, "", " ")
+			if err != nil {
+				t.Errorf("couldn't marshal returned token %v", err)
+			}
+			want, err := json.MarshalIndent(tc.wantToken, "", " ")
+			if err != nil {
+				t.Errorf("couldn't marshal expected token %v", err)
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("Token diff (-want, +got): %v", diff)
 			}
 		})
 	}

@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+// Package grpcutil provides utilities for getting information from the grpc context.
+package grpcutil
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
+	"github.com/abcxyz/pkg/jwtutil"
 	grpcmetadata "google.golang.org/grpc/metadata"
+)
+
+const (
+	IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
+	jwtKey         = "authorization"
+	jwtPrefix      = "bearer "
+	emailKey       = "email"
 )
 
 // GRPCAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
 type GRPCAuthenticationHandler struct {
-	*JWTVerifier
+	*jwtutil.JWTVerifier
 }
 
 // NewGRPCAuthenticationHandler returns a GRPCAuthenticationHandler with a verifier initialized.
 func NewGRPCAuthenticationHandler(ctx context.Context, endpoint string) (*GRPCAuthenticationHandler, error) {
-	verifier, err := NewJWTVerifier(ctx, endpoint)
+	verifier, err := jwtutil.NewJWTVerifier(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}

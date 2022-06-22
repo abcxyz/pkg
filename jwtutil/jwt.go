@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package security provides mechanisms for interacting with JWTs and getting authentication information.
-package security
+// Package jwtutil provides mechanisms for interacting with JWTs.
+package jwtutil
 
 import (
 	"context"
@@ -22,13 +22,6 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jws"
 	"github.com/lestrrat-go/jwx/v2/jwt"
-)
-
-const (
-	IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
-	jwtKey         = "authorization"
-	jwtPrefix      = "bearer "
-	emailKey       = "email"
 )
 
 // JWTVerifier allows for getting public JWK keys from an endpoint and validating JWTs with
