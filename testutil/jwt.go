@@ -24,6 +24,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
+// CreateJWT creates a JWT for use in testing. Fills out standard claims.
 func CreateJWT(tb testing.TB, id string, email string) jwt.Token {
 	tb.Helper()
 
@@ -45,6 +46,7 @@ func CreateJWT(tb testing.TB, id string, email string) jwt.Token {
 	return tok
 }
 
+// SignToken signs a JWT token for use in testing. Expects an ecdsa p256 private key.
 func SignToken(tb testing.TB, tok jwt.Token, privateKey *ecdsa.PrivateKey, keyID string) string {
 	tb.Helper()
 

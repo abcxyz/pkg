@@ -32,8 +32,8 @@ type Verifier struct {
 	keys jwk.Set
 }
 
-// NewJWTVerifier returns a Verifier with the cache initialized. The cache is set up using defaults, and refreshes happen every 15 minutes.
-func NewJWTVerifier(ctx context.Context, endpoint string) (*Verifier, error) {
+// NewVerifier returns a Verifier with the cache initialized. The cache is set up using defaults, and refreshes happen every 15 minutes.
+func NewVerifier(ctx context.Context, endpoint string) (*Verifier, error) {
 	c := jwk.NewCache(ctx)
 	if err := c.Register(endpoint); err != nil {
 		return nil, fmt.Errorf("failed to register: %w", err)

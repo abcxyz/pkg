@@ -155,7 +155,7 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := g.RequestPrincipalFromGRPC(tc.ctx)
+			got, err := g.RequestPrincipal(tc.ctx)
 			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
 				t.Errorf("j.RequestPrincipal()) got unexpected error substring: %v", diff)
 			}

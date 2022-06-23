@@ -38,7 +38,7 @@ type JWTAuthenticationHandler struct {
 // NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retreive a user email when using IAM on GCP.
 func NewJWTAuthenticationHandler(ctx context.Context, endpoint string) (*JWTAuthenticationHandler, error) {
-	verifier, err := jwtutil.NewJWTVerifier(ctx, endpoint)
+	verifier, err := jwtutil.NewVerifier(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func NewJWTAuthenticationHandler(ctx context.Context, endpoint string) (*JWTAuth
 	}, nil
 }
 
-// RequestPrincipalFromGRPC extracts the JWT principal from the grpcmetadata in the context.
-func (g *JWTAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context) (string, error) {
+// RequestPrincipal extracts the JWT principal from the grpcmetadata in the context.
+func (g *JWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string, error) {
 	md, ok := grpcmetadata.FromIncomingContext(ctx)
 	if !ok {
 		return "", fmt.Errorf("gRPC metadata in incoming context is missing")

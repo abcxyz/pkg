@@ -86,7 +86,7 @@ func TestValidateJWT(t *testing.T) {
 		svr.Close()
 	})
 
-	client, err := NewJWTVerifier(ctx, svr.URL+path)
+	client, err := NewVerifier(ctx, svr.URL+path)
 	if err != nil {
 		t.Fatalf("failed to create JVS client: %v", err)
 	}
