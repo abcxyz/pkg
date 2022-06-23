@@ -40,7 +40,7 @@ resource "google_iam_workload_identity_pool" "pool" {
   description               = "GitHub pool"
 }
 
-resource "google_iam_workload_identity_pool_provider" "provider" {
+resource "google_iam_workload_identity_pool_provider" "pool_provider" {
   provider                           = google-beta
   project                            = var.project_id
   workload_identity_pool_id          = google_iam_workload_identity_pool.pool.workload_identity_pool_id

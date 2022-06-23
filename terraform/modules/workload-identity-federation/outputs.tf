@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-output "workload_identity_pool_name" {
+output "pool_name" {
   value = google_iam_workload_identity_pool.pool.name
 }
 
-output "workload_identity_pool_provider_name" {
-  value = google_iam_workload_identity_pool_provider.provider.name
+output "pool_provider_name" {
+  value = google_iam_workload_identity_pool_provider.pool_provider.name
 }
