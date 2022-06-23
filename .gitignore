@@ -13,3 +13,28 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+### IDE related and tmp files ###
+bazel-*
+*~
+.idea/
+.vscode/
+.DS_Store
+*.swp
+.history
+tmp/
+
+### Terraform related ###
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
