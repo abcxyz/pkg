@@ -24,14 +24,16 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-// JWTVerifier allows for getting public JWK keys from an endpoint and validating JWTs with
+const IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
+
+// Verifier allows for getting public JWK keys from an endpoint and validating JWTs with
 // those keys.
-type JWTVerifier struct {
+type Verifier struct {
 	keys jwk.Set
 }
 
-// NewJWTVerifier returns a JWTVerifier with the cache initialized. The cache is set up using defaults, and refreshes happen every 15 minutes.
-func NewJWTVerifier(ctx context.Context, endpoint string) (*JWTVerifier, error) {
+// NewJWTVerifier returns a Verifier with the cache initialized. The cache is set up using defaults, and refreshes happen every 15 minutes.
+func NewJWTVerifier(ctx context.Context, endpoint string) (*Verifier, error) {
 	c := jwk.NewCache(ctx)
 	if err := c.Register(endpoint); err != nil {
 		return nil, fmt.Errorf("failed to register: %w", err)
@@ -44,13 +46,13 @@ func NewJWTVerifier(ctx context.Context, endpoint string) (*JWTVerifier, error) 
 
 	cached := jwk.NewCachedSet(c, endpoint)
 
-	return &JWTVerifier{
+	return &Verifier{
 		keys: cached,
 	}, nil
 }
 
 // ValidateJWT takes a jwt string, converts it to a jwt.Token, and validates the signature against the public keys in the JWKS endpoint.
-func (j *JWTVerifier) ValidateJWT(jwtStr string) (jwt.Token, error) {
+func (j *Verifier) ValidateJWT(jwtStr string) (jwt.Token, error) {
 	verifiedToken, err := jwt.Parse([]byte(jwtStr), jwt.WithKeySet(j.keys, jws.WithInferAlgorithmFromKey(true)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify jwt %s: %w", jwtStr, err)

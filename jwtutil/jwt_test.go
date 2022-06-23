@@ -91,11 +91,11 @@ func TestValidateJWT(t *testing.T) {
 		t.Fatalf("failed to create JVS client: %v", err)
 	}
 
-	tok := testutil.TestCreateToken(t, "test_id", "user@example.com")
-	validJWT := testutil.TestSignToken(t, tok, privateKey, keyID)
+	tok := testutil.CreateJWT(t, "test_id", "user@example.com")
+	validJWT := testutil.SignToken(t, tok, privateKey, keyID)
 
-	tok2 := testutil.TestCreateToken(t, "test_id_2", "me@example.com")
-	validJWT2 := testutil.TestSignToken(t, tok2, privateKey2, keyID2)
+	tok2 := testutil.CreateJWT(t, "test_id_2", "me@example.com")
+	validJWT2 := testutil.SignToken(t, tok2, privateKey2, keyID2)
 
 	unsig, err := jwt.NewSerializer().Serialize(tok)
 	if err != nil {

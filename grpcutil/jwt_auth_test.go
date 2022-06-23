@@ -86,11 +86,11 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		svr.Close()
 	})
 
-	tok := testutil.TestCreateToken(t, "test_id", "user@example.com")
-	validJWT := testutil.TestSignToken(t, tok, privateKey, keyID)
+	tok := testutil.CreateJWT(t, "test_id", "user@example.com")
+	validJWT := testutil.SignToken(t, tok, privateKey, keyID)
 
-	tok2 := testutil.TestCreateToken(t, "test_id_2", "me@example.com")
-	validJWT2 := testutil.TestSignToken(t, tok2, privateKey2, keyID2)
+	tok2 := testutil.CreateJWT(t, "test_id_2", "me@example.com")
+	validJWT2 := testutil.SignToken(t, tok2, privateKey2, keyID2)
 
 	unsig, err := jwt.NewSerializer().Serialize(tok)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 
 	invalidSignatureJWT := unsignedJWT + sig // signature from a different JWT
 
-	g, err := NewGRPCAuthenticationHandler(ctx, svr.URL+path)
+	g, err := NewJWTAuthenticationHandler(ctx, svr.URL+path)
 	if err != nil {
 		t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
 	}
@@ -115,35 +115,35 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		wantErrSubstr string
 	}{
 		{
-			name: "grpc_valid_jwt",
+			name: "valid_jwt",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "bearer " + validJWT,
 			})),
 			want: "user@example.com",
 		},
 		{
-			name: "grpc_different_case_jwt",
+			name: "different_case_jwt",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT,
 			})),
 			want: "user@example.com",
 		},
 		{
-			name: "grpc_different_key",
+			name: "different_key",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT2,
 			})),
 			want: "me@example.com",
 		},
 		{
-			name: "grpc_invalid",
+			name: "invalid",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + invalidSignatureJWT,
 			})),
 			wantErrSubstr: "failed to verify jwt",
 		},
 		{
-			name: "grpc_unsigned",
+			name: "unsigned",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + unsignedJWT,
 			})),

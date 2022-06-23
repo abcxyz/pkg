@@ -24,11 +24,9 @@ import (
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
-const IAMKeyEndpoint = "https://www.googleapis.com/oauth2/v3/certs"
-
-// GRPCAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
-type GRPCAuthenticationHandler struct {
-	*jwtutil.JWTVerifier
+// JWTAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
+type JWTAuthenticationHandler struct {
+	*jwtutil.Verifier
 	// JWTPrefix is a prefix that occurs in a string before the signed JWT token.
 	JWTPrefix string
 	// JWTKey is the key in the GRPC metadata which holds the wanted JWT token.
@@ -37,15 +35,15 @@ type GRPCAuthenticationHandler struct {
 	PrincipalClaimKey string
 }
 
-// NewGRPCAuthenticationHandler returns a GRPCAuthenticationHandler with a verifier initialized. Uses defaults
+// NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retreive a user email when using IAM on GCP.
-func NewGRPCAuthenticationHandler(ctx context.Context, endpoint string) (*GRPCAuthenticationHandler, error) {
+func NewJWTAuthenticationHandler(ctx context.Context, endpoint string) (*JWTAuthenticationHandler, error) {
 	verifier, err := jwtutil.NewJWTVerifier(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	return &GRPCAuthenticationHandler{
-		JWTVerifier:       verifier,
+	return &JWTAuthenticationHandler{
+		Verifier:          verifier,
 		JWTPrefix:         "bearer ",
 		JWTKey:            "authorization",
 		PrincipalClaimKey: "email",
@@ -53,7 +51,7 @@ func NewGRPCAuthenticationHandler(ctx context.Context, endpoint string) (*GRPCAu
 }
 
 // RequestPrincipalFromGRPC extracts the JWT principal from the grpcmetadata in the context.
-func (g *GRPCAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context) (string, error) {
+func (g *JWTAuthenticationHandler) RequestPrincipalFromGRPC(ctx context.Context) (string, error) {
 	md, ok := grpcmetadata.FromIncomingContext(ctx)
 	if !ok {
 		return "", fmt.Errorf("gRPC metadata in incoming context is missing")
