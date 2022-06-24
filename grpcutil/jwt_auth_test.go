@@ -102,58 +102,96 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 	sig := split[len(split)-1]
 
 	invalidSignatureJWT := unsignedJWT + sig // signature from a different JWT
-
-	g, err := NewJWTAuthenticationHandler(ctx, svr.URL+path)
-	if err != nil {
-		t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
-	}
+	redactedSignatureJWT := unsignedJWT + ".SIGNATURE_REMOVED_BY_GOOGLE"
 
 	tests := []struct {
-		name          string
-		ctx           context.Context //nolint:containedctx // Only for testing
-		want          string
-		wantErrSubstr string
+		name              string
+		ctx               context.Context //nolint:containedctx // Only for testing
+		disableValidation bool
+		want              string
+		wantErrSubstr     string
 	}{
 		{
 			name: "valid_jwt",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "bearer " + validJWT,
 			})),
-			want: "user@example.com",
+			disableValidation: false,
+			want:              "user@example.com",
 		},
 		{
 			name: "different_case_jwt",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT,
 			})),
-			want: "user@example.com",
+			disableValidation: false,
+			want:              "user@example.com",
 		},
 		{
 			name: "different_key",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT2,
 			})),
-			want: "me@example.com",
+			disableValidation: false,
+			want:              "me@example.com",
 		},
 		{
 			name: "invalid",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + invalidSignatureJWT,
 			})),
-			wantErrSubstr: "failed to verify jwt",
+			disableValidation: false,
+			wantErrSubstr:     "failed to verify jwt",
+		},
+		{
+			name: "redacted",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + redactedSignatureJWT,
+			})),
+			disableValidation: false,
+			wantErrSubstr:     "failed to verify jwt",
 		},
 		{
 			name: "unsigned",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 				"authorization": "Bearer " + unsignedJWT,
 			})),
-			wantErrSubstr: "failed to verify jwt",
+			disableValidation: false,
+			wantErrSubstr:     "failed to verify jwt",
+		},
+		{
+			name: "invalid_disable_validation",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + invalidSignatureJWT,
+			})),
+			disableValidation: true,
+			want:              "user@example.com",
+		},
+		{
+			name: "redacted_disable_validation",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + redactedSignatureJWT,
+			})),
+			disableValidation: true,
+			want:              "user@example.com",
+		},
+		{
+			name: "unsigned_disable_validation",
+			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+				"authorization": "Bearer " + unsignedJWT,
+			})),
+			disableValidation: true,
+			want:              "user@example.com",
 		},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			g, err := NewJWTAuthenticationHandler(ctx, svr.URL+path, tc.disableValidation)
+			if err != nil {
+				t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
+			}
 
 			got, err := g.RequestPrincipal(tc.ctx)
 			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
