@@ -105,90 +105,102 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 	redactedSignatureJWT := unsignedJWT + ".SIGNATURE_REMOVED_BY_GOOGLE"
 
 	tests := []struct {
-		name              string
-		ctx               context.Context //nolint:containedctx // Only for testing
-		disableValidation bool
-		want              string
-		wantErrSubstr     string
+		name          string
+		ctx           context.Context //nolint:containedctx // Only for testing
+		opts          []HandlerOption
+		want          string
+		wantErrSubstr string
 	}{
 		{
 			name: "valid_jwt",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "bearer " + validJWT,
 			})),
-			disableValidation: false,
-			want:              "user@example.com",
+			want: "user@example.com",
 		},
 		{
 			name: "different_case_jwt",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT,
 			})),
-			disableValidation: false,
-			want:              "user@example.com",
+			want: "user@example.com",
 		},
 		{
 			name: "different_key",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + validJWT2,
 			})),
-			disableValidation: false,
-			want:              "me@example.com",
+			want: "me@example.com",
+		},
+		{
+			name: "different_options",
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
+				"key": "prefix " + validJWT,
+			})),
+			opts: []HandlerOption{
+				WithKey("key"),
+				WithPrefix("prefix "),
+			},
+			want: "user@example.com",
 		},
 		{
 			name: "invalid",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + invalidSignatureJWT,
 			})),
-			disableValidation: false,
-			wantErrSubstr:     "failed to verify jwt",
+			wantErrSubstr: "failed to verify jwt",
 		},
 		{
 			name: "redacted",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + redactedSignatureJWT,
 			})),
-			disableValidation: false,
-			wantErrSubstr:     "failed to verify jwt",
+			wantErrSubstr: "failed to verify jwt",
 		},
 		{
 			name: "unsigned",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + unsignedJWT,
 			})),
-			disableValidation: false,
-			wantErrSubstr:     "failed to verify jwt",
+			wantErrSubstr: "failed to verify jwt",
 		},
 		{
 			name: "invalid_disable_validation",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + invalidSignatureJWT,
 			})),
-			disableValidation: true,
-			want:              "user@example.com",
+			opts: []HandlerOption{
+				NoValidation(),
+			},
+			want: "user@example.com",
 		},
 		{
 			name: "redacted_disable_validation",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + redactedSignatureJWT,
 			})),
-			disableValidation: true,
-			want:              "user@example.com",
+			opts: []HandlerOption{
+				NoValidation(),
+			},
+			want: "user@example.com",
 		},
 		{
 			name: "unsigned_disable_validation",
-			ctx: metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
+			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + unsignedJWT,
 			})),
-			disableValidation: true,
-			want:              "user@example.com",
+			opts: []HandlerOption{
+				NoValidation(),
+			},
+			want: "user@example.com",
 		},
 	}
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			g, err := NewJWTAuthenticationHandler(ctx, svr.URL+path, tc.disableValidation)
+			opts := append(tc.opts, WithEndpoint(svr.URL+path))
+			g, err := NewJWTAuthenticationHandler(tc.ctx, opts...)
 			if err != nil {
 				t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
 			}
