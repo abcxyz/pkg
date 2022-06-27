@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/abcxyz/pkg/jwtutil"
+	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/lestrrat-go/jwx/v2/jwt/openid"
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
@@ -33,20 +35,25 @@ type JWTAuthenticationHandler struct {
 	JWTKey string
 	// PrincipalClaimKey is the key in the JWTs claims which corresponds to the user's email.
 	PrincipalClaimKey string
+	// In some cases (such as cloud run) the JWT's signature is redacted. In this case, we cannot validate
+	// the jwt ourselves. This flag skips the validation, and instead trusts the JWT has been validated
+	// upstream.
+	ValidationDisabled bool
 }
 
 // NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retreive a user email when using IAM on GCP.
-func NewJWTAuthenticationHandler(ctx context.Context, endpoint string) (*JWTAuthenticationHandler, error) {
+func NewJWTAuthenticationHandler(ctx context.Context, endpoint string, disableValidation bool) (*JWTAuthenticationHandler, error) {
 	verifier, err := jwtutil.NewVerifier(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}
 	return &JWTAuthenticationHandler{
-		Verifier:          verifier,
-		JWTPrefix:         "bearer ",
-		JWTKey:            "authorization",
-		PrincipalClaimKey: "email",
+		Verifier:           verifier,
+		JWTPrefix:          "bearer ",
+		JWTKey:             "authorization",
+		PrincipalClaimKey:  "email",
+		ValidationDisabled: disableValidation,
 	}, nil
 }
 
@@ -68,12 +75,20 @@ func (g *JWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string
 	}
 	idToken := jwtRaw[len(g.JWTPrefix):]
 
-	validatedToken, err := g.ValidateJWT(idToken)
-	if err != nil {
-		return "", fmt.Errorf("unable to validate jwt: %w", err)
+	var token jwt.Token
+	if g.ValidationDisabled {
+		var err error
+		if token, err = jwt.Parse([]byte(idToken), jwt.WithToken(openid.New()), jwt.WithVerify(false), jwt.WithValidate(false)); err != nil {
+			return "", fmt.Errorf("failed to parse jwt: %w", err)
+		}
+	} else {
+		var err error
+		if token, err = g.ValidateJWT(idToken); err != nil {
+			return "", fmt.Errorf("unable to validate jwt: %w", err)
+		}
 	}
 
-	tokenMap, err := validatedToken.AsMap(ctx)
+	tokenMap, err := token.AsMap(ctx)
 	if err != nil {
 		return "", fmt.Errorf("couldn't convert token to map: %w", err)
 	}
