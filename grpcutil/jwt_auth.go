@@ -45,7 +45,7 @@ type JWTAuthenticationHandler struct {
 
 // NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retreive a user email when using IAM on GCP.
-func NewJWTAuthenticationHandler(ctx context.Context, opts ...HandlerOption) (*JWTAuthenticationHandler, error) {
+func NewJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*JWTAuthenticationHandler, error) {
 	j := &JWTAuthenticationHandler{
 		JWTPrefix:          "bearer ",
 		JWTKey:             "authorization",
@@ -64,7 +64,7 @@ func NewJWTAuthenticationHandler(ctx context.Context, opts ...HandlerOption) (*J
 
 	// validation is enabled, ensure endpoint has been specified and create verifier
 	if j.Endpoint == "" {
-		return nil, fmt.Errorf("no endpoint specified, must specify using WithEndpoint() option")
+		return nil, fmt.Errorf("no endpoint specified, must specify using WithJWTAuthEndpoint() option")
 	}
 	verifier, err := jwtutil.NewVerifier(ctx, j.Endpoint)
 	if err != nil {
@@ -126,42 +126,42 @@ func (g *JWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string
 	return principal, nil
 }
 
-type HandlerOption func(handler *JWTAuthenticationHandler) *JWTAuthenticationHandler
+type JWTAuthOption func(handler *JWTAuthenticationHandler) *JWTAuthenticationHandler
 
-// NoValidation disables certificate validation for JWT.
-func NoValidation() HandlerOption {
+// NoJWTAuthValidation disables certificate validation for JWT.
+func NoJWTAuthValidation() JWTAuthOption {
 	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.ValidationDisabled = true
 		return j
 	}
 }
 
-// WithEndpoint specifies the endpoint to get JWKs keys. Required unless NoValidation() is also specified.
-func WithEndpoint(endpoint string) HandlerOption {
+// WithJWTAuthEndpoint specifies the endpoint to get JWKs keys. Required unless NoJWTAuthValidation() is also specified.
+func WithJWTAuthEndpoint(endpoint string) JWTAuthOption {
 	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.Endpoint = endpoint
 		return j
 	}
 }
 
-// WithPrefix specifies a case-insensitive prefix that proceeds a JWT in the header. Defaults to "bearer ".
-func WithPrefix(prefix string) HandlerOption {
+// WithJWTAuthPrefix specifies a case-insensitive prefix that proceeds a JWT in the header. Defaults to "bearer ".
+func WithJWTAuthPrefix(prefix string) JWTAuthOption {
 	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.JWTPrefix = strings.ToLower(prefix)
 		return j
 	}
 }
 
-// WithKey specifies the key that the JWT is expected to be under in the GRPC metadata. Defaults to "authorization ".
-func WithKey(key string) HandlerOption {
+// WithJWTAuthKey specifies the key that the JWT is expected to be under in the GRPC metadata. Defaults to "authorization ".
+func WithJWTAuthKey(key string) JWTAuthOption {
 	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.JWTKey = key
 		return j
 	}
 }
 
-// WithClaimKey specifies the key that the principal is expected to be under in the JWT claims. Defaults to "email".
-func WithClaimKey(key string) HandlerOption {
+// WithJWTAuthClaimKey specifies the key that the principal is expected to be under in the JWT claims. Defaults to "email".
+func WithJWTAuthClaimKey(key string) JWTAuthOption {
 	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.PrincipalClaimKey = key
 		return j

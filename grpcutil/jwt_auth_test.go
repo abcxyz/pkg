@@ -107,7 +107,7 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 	tests := []struct {
 		name          string
 		ctx           context.Context //nolint:containedctx // Only for testing
-		opts          []HandlerOption
+		opts          []JWTAuthOption
 		want          string
 		wantErrSubstr string
 	}{
@@ -137,9 +137,9 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"key": "prefix " + validJWT,
 			})),
-			opts: []HandlerOption{
-				WithKey("key"),
-				WithPrefix("prefix "),
+			opts: []JWTAuthOption{
+				WithJWTAuthKey("key"),
+				WithJWTAuthPrefix("prefix "),
 			},
 			want: "user@example.com",
 		},
@@ -169,8 +169,8 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + invalidSignatureJWT,
 			})),
-			opts: []HandlerOption{
-				NoValidation(),
+			opts: []JWTAuthOption{
+				NoJWTAuthValidation(),
 			},
 			want: "user@example.com",
 		},
@@ -179,8 +179,8 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + redactedSignatureJWT,
 			})),
-			opts: []HandlerOption{
-				NoValidation(),
+			opts: []JWTAuthOption{
+				NoJWTAuthValidation(),
 			},
 			want: "user@example.com",
 		},
@@ -189,8 +189,8 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			ctx: metadata.NewIncomingContext(ctx, metadata.New(map[string]string{
 				"authorization": "Bearer " + unsignedJWT,
 			})),
-			opts: []HandlerOption{
-				NoValidation(),
+			opts: []JWTAuthOption{
+				NoJWTAuthValidation(),
 			},
 			want: "user@example.com",
 		},
@@ -199,7 +199,7 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			opts := append(tc.opts, WithEndpoint(svr.URL+path))
+			opts := append(tc.opts, WithJWTAuthEndpoint(svr.URL+path))
 			g, err := NewJWTAuthenticationHandler(tc.ctx, opts...)
 			if err != nil {
 				t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
