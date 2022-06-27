@@ -39,22 +39,39 @@ type JWTAuthenticationHandler struct {
 	// the jwt ourselves. This flag skips the validation, and instead trusts the JWT has been validated
 	// upstream.
 	ValidationDisabled bool
+	// Endpoint is the endpoint where JWKs public keys can be found to do JWT validation.
+	Endpoint string
 }
 
 // NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retreive a user email when using IAM on GCP.
-func NewJWTAuthenticationHandler(ctx context.Context, endpoint string, disableValidation bool) (*JWTAuthenticationHandler, error) {
-	verifier, err := jwtutil.NewVerifier(ctx, endpoint)
-	if err != nil {
-		return nil, err
-	}
-	return &JWTAuthenticationHandler{
-		Verifier:           verifier,
+func NewJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*JWTAuthenticationHandler, error) {
+	j := &JWTAuthenticationHandler{
 		JWTPrefix:          "bearer ",
 		JWTKey:             "authorization",
 		PrincipalClaimKey:  "email",
-		ValidationDisabled: disableValidation,
-	}, nil
+		ValidationDisabled: false,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			j = opt(j)
+		}
+	}
+	if j.ValidationDisabled {
+		// no verifier necessary
+		return j, nil
+	}
+
+	// validation is enabled, ensure endpoint has been specified and create verifier
+	if j.Endpoint == "" {
+		return nil, fmt.Errorf("no endpoint specified, must specify using WithJWTAuthEndpoint() option")
+	}
+	verifier, err := jwtutil.NewVerifier(ctx, j.Endpoint)
+	if err != nil {
+		return nil, err
+	}
+	j.Verifier = verifier
+	return j, nil
 }
 
 // RequestPrincipal extracts the JWT principal from the grpcmetadata in the context.
@@ -107,4 +124,46 @@ func (g *JWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string
 	}
 
 	return principal, nil
+}
+
+type JWTAuthOption func(handler *JWTAuthenticationHandler) *JWTAuthenticationHandler
+
+// NoJWTAuthValidation disables certificate validation for JWT.
+func NoJWTAuthValidation() JWTAuthOption {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
+		j.ValidationDisabled = true
+		return j
+	}
+}
+
+// WithJWTAuthEndpoint specifies the endpoint to get JWKs keys. Required unless NoJWTAuthValidation() is also specified.
+func WithJWTAuthEndpoint(endpoint string) JWTAuthOption {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
+		j.Endpoint = endpoint
+		return j
+	}
+}
+
+// WithJWTAuthPrefix specifies a case-insensitive prefix that proceeds a JWT in the header. Defaults to "bearer ".
+func WithJWTAuthPrefix(prefix string) JWTAuthOption {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
+		j.JWTPrefix = strings.ToLower(prefix)
+		return j
+	}
+}
+
+// WithJWTAuthKey specifies the key that the JWT is expected to be under in the GRPC metadata. Defaults to "authorization ".
+func WithJWTAuthKey(key string) JWTAuthOption {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
+		j.JWTKey = key
+		return j
+	}
+}
+
+// WithJWTAuthClaimKey specifies the key that the principal is expected to be under in the JWT claims. Defaults to "email".
+func WithJWTAuthClaimKey(key string) JWTAuthOption {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
+		j.PrincipalClaimKey = key
+		return j
+	}
 }
