@@ -26,136 +26,184 @@ type order struct {
 	Fries   int
 }
 
-func checkSize(t *testing.T, c *Cache[*order], want int) {
-	t.Helper()
-
-	if got := c.Size(); got != want {
-		t.Errorf("wrong size want: %v, got: %v", want, got)
-	}
-}
-
-func TestCache(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
-	duration := time.Millisecond * 500
-	cache := New[*order](duration)
+	t.Run("new", func(t *testing.T) {
+		t.Parallel()
 
-	checkSize(t, cache, 0)
+		cache := New[*order](1 * time.Second)
+		defer cache.Stop()
 
-	if err := cache.Set("foo", &order{2, 1}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	time.Sleep(duration)
-	if got, hit := cache.Lookup("foo"); got != nil || hit {
-		t.Fatalf("key did not expire as expected")
-	}
-
-	if got, hit := cache.Lookup("bar"); got != nil || hit {
-		t.Fatalf("got key that was never inserted")
-	}
-
-	want := &order{42, 37}
-	if err := cache.Set("foo", want); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got, hit := cache.Lookup("foo"); got == nil || !hit {
-		t.Fatalf("lookup failed want: %v, got %v", want, got)
-	} else {
-		if diff := cmp.Diff(want, got); diff != "" {
-			t.Fatalf("mismatch (-want, +got):\n%s", diff)
+		if got, want := cache.Size(), 0; got != want {
+			t.Errorf("expected %d to be %d", got, want)
 		}
-	}
-	time.Sleep(duration * 2)
-	if got, hit := cache.Lookup("foo"); got != nil || hit {
-		t.Fatalf("expected key to expire, but still available")
-	}
-	// potential race, yield CPU so that the purge go routine has a chance to run.
-	time.Sleep(duration)
-	checkSize(t, cache, 0)
+	})
+
+	t.Run("panic_on_negative", func(t *testing.T) {
+		t.Parallel()
+
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("The code did not panic")
+			}
+		}()
+
+		cache := New[*order](-1 * time.Second)
+		defer cache.Stop()
+
+		t.Fatal("expected test to fail")
+	})
 }
 
-func TestCacheClear(t *testing.T) {
+func TestCache_Size(t *testing.T) {
 	t.Parallel()
 
 	cache := New[string](30 * time.Second)
+	defer cache.Stop()
 
-	if err := cache.Set("foo", "bar"); err != nil {
-		t.Fatal(err)
-	}
+	cache.Set("foo", "bar")
 	if got, hit := cache.Lookup("foo"); got == "" || !hit {
 		t.Fatalf("lookup failed got %#v", got)
 	}
+	if got, want := cache.Size(), 1; got != want {
+		t.Errorf("expected %d to be %d", got, want)
+	}
+}
 
+func TestCache_Clear(t *testing.T) {
+	t.Parallel()
+
+	cache := New[string](30 * time.Second)
+	defer cache.Stop()
+
+	cache.Set("foo", "bar")
 	cache.Clear()
 
-	if got, _ := cache.Lookup("foo"); got != "" {
+	if got, ok := cache.Lookup("foo"); ok {
 		t.Fatalf("lookup failed expected nil got %#v", got)
 	}
 }
 
-func TestWriteThruCache(t *testing.T) {
+func TestCache_WriteThruLookup(t *testing.T) {
 	t.Parallel()
 
-	cache := New[*order](time.Second)
+	t.Run("found", func(t *testing.T) {
+		t.Parallel()
 
-	lookupCount := 0
-	want := &order{12, 34}
-	lookerUpper := func() (*order, error) {
-		lookupCount++
-		return want, nil
-	}
+		cache := New[*order](time.Second)
+		defer cache.Stop()
 
-	for i := 0; i < 2; i++ {
+		lookupCount := 0
+		want := &order{12, 34}
+		lookerUpper := func() (*order, error) {
+			lookupCount++
+			return want, nil
+		}
+
+		for i := 0; i < 2; i++ {
+			got, err := cache.WriteThruLookup("foo", lookerUpper)
+			if err != nil {
+				t.Fatalf("unexpected error on WriteThruLookup: %v", err)
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Fatalf("mismatch (-want, +got):\n%s", diff)
+			}
+		}
+
+		if lookupCount != 1 {
+			t.Fatalf("incorrect lookup count, want: 1, got: %v", lookupCount)
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		t.Parallel()
+
+		cache := New[*order](time.Second)
+		defer cache.Stop()
+
+		lookerUpper := func() (*order, error) {
+			return nil, fmt.Errorf("nope")
+		}
+
 		got, err := cache.WriteThruLookup("foo", lookerUpper)
-		if err != nil {
-			t.Fatalf("unexpected error on WriteThruLookup: %v", err)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
 		}
-		if diff := cmp.Diff(want, got); diff != "" {
-			t.Fatalf("mismatch (-want, +got):\n%s", diff)
+		if err.Error() != "nope" {
+			t.Errorf("incorrect error, want: `nope` got: %v", err.Error())
 		}
-	}
-
-	if lookupCount != 1 {
-		t.Fatalf("incorrect lookup count, want: 1, got: %v", lookupCount)
-	}
+		if got != nil {
+			t.Errorf("unexpected cached item, want: nil, got %v", got)
+		}
+	})
 }
 
-func TestWriteThruError(t *testing.T) {
+func TestCache_Lookup(t *testing.T) {
 	t.Parallel()
 
-	cache := New[*order](time.Second)
+	t.Run("exists", func(t *testing.T) {
+		t.Parallel()
 
-	lookerUpper := func() (*order, error) {
-		return nil, fmt.Errorf("nope")
-	}
+		cache := New[string](30 * time.Second)
+		defer cache.Stop()
 
-	got, err := cache.WriteThruLookup("foo", lookerUpper)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
-	if err.Error() != "nope" {
-		t.Errorf("incorrect error, want: `nope` got: %v", err.Error())
-	}
-	if got != nil {
-		t.Errorf("unexpected cached item, want: nil, got %v", got)
-	}
-}
-
-func TestInvalidDuration(t *testing.T) {
-	t.Parallel()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
+		cache.Set("foo", "bar")
+		if got, ok := cache.Lookup("foo"); got == "" || !ok {
+			t.Errorf("lookup failed got %#v (%t)", got, ok)
 		}
-	}()
+	})
 
-	New[*order](-1 * time.Second)
+	t.Run("no_exist", func(t *testing.T) {
+		t.Parallel()
+
+		cache := New[string](30 * time.Second)
+		defer cache.Stop()
+
+		if got, ok := cache.Lookup("baz"); ok {
+			t.Errorf("expected lookup to fail, got %v", got)
+		}
+	})
 }
 
-func TestConcurrentReaders(t *testing.T) {
+func TestCache_Set(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sets", func(t *testing.T) {
+		t.Parallel()
+
+		cache := New[string](30 * time.Second)
+		defer cache.Stop()
+
+		cache.Set("foo", "bar")
+		if got, _ := cache.Lookup("foo"); got != "bar" {
+			t.Errorf("expected %q to be %q", got, "bar")
+		}
+	})
+
+	t.Run("overwrites", func(t *testing.T) {
+		t.Parallel()
+
+		cache := New[string](30 * time.Second)
+		defer cache.Stop()
+
+		cache.Set("foo", "bar")
+		if got, _ := cache.Lookup("foo"); got != "bar" {
+			t.Errorf("expected %q to be %q", got, "bar")
+		}
+
+		cache.Set("foo", "baz")
+		if got, _ := cache.Lookup("foo"); got != "baz" {
+			t.Errorf("expected %q to be %q", got, "baz")
+		}
+	})
+}
+
+func TestCache_Concurrent(t *testing.T) {
 	t.Parallel()
 
 	cache := New[*order](time.Second * 5)
+	defer cache.Stop()
 
 	lookupCount := 0
 	want := &order{12, 34}
@@ -197,5 +245,91 @@ func TestConcurrentReaders(t *testing.T) {
 
 	if lookupCount != 1 {
 		t.Errorf("unexpected lookupCount, want: 1, got: %v", lookupCount)
+	}
+}
+
+func TestTTL_Stop(t *testing.T) {
+	t.Parallel()
+
+	t.Run("deletes_all_entries", func(t *testing.T) {
+		t.Parallel()
+
+		cache := New[int](5 * time.Minute)
+		cache.Set("foo", 5)
+		cache.Set("bar", 10)
+		cache.Set("baz", 15)
+
+		cache.Stop()
+
+		if cache.data != nil {
+			t.Errorf("expected %#v to be nil", cache.data)
+		}
+	})
+
+	t.Run("panics_writethrulookup", func(t *testing.T) {
+		t.Parallel()
+
+		defer func() {
+			if got, want := fmt.Sprintf("%s", recover()), "cache is stopped"; got != want {
+				t.Errorf("expected %q to contain %q", got, want)
+			}
+		}()
+
+		cache := New[int](5 * time.Minute)
+		cache.Stop()
+		if _, err := cache.WriteThruLookup("foo", func() (int, error) {
+			return 5, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		t.Errorf("did not panic")
+	})
+
+	t.Run("panics_lookup", func(t *testing.T) {
+		t.Parallel()
+
+		defer func() {
+			if got, want := fmt.Sprintf("%s", recover()), "cache is stopped"; got != want {
+				t.Errorf("expected %q to contain %q", got, want)
+			}
+		}()
+
+		cache := New[int](5 * time.Minute)
+		cache.Stop()
+		cache.Lookup("foo")
+		t.Errorf("did not panic")
+	})
+
+	t.Run("panics_set", func(t *testing.T) {
+		t.Parallel()
+
+		defer func() {
+			if got, want := fmt.Sprintf("%s", recover()), "cache is stopped"; got != want {
+				t.Errorf("expected %q to contain %q", got, want)
+			}
+		}()
+
+		cache := New[int](5 * time.Minute)
+		cache.Stop()
+		cache.Set("foo", 5)
+		t.Errorf("did not panic")
+	})
+}
+
+func TestCache_Expires(t *testing.T) {
+	t.Parallel()
+
+	cache := New[string](50 * time.Millisecond)
+	defer cache.Stop()
+
+	cache.Set("foo", "bar")
+	if got, _ := cache.Lookup("foo"); got != "bar" {
+		t.Errorf("expected %q to be %q", got, "bar")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	if got, ok := cache.Lookup("foo"); ok {
+		t.Errorf("expected %q to not exist", got)
 	}
 }
