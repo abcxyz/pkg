@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cache implements an inmemory cache for any object.
+// Package cache implements an in-memory cache for arbitrary objects.
 //
-// This package was created and adapted from:
+// This package was originally adapted from
+// https://github.com/google/exposure-notifications-server, but it has evolved
+// beyond that specific use case.
 //
-//     https://github.com/google/exposure-notifications-server/blob/main/pkg/cache/cache.go
+// At the time of this writing, there is no standard, general-purpose TTL-based
+// caching library for Go. There are multiple LRU-based caches, but those do not
+// satisfy the requirements for a TTL-based cache. If a standard package were to
+// emerge in the future, we should consider switching.
 //
 // This package assumes the system time has minimal skew. In case of major clock
 // skew or system clock reset, cache expirations could occur out of order.
@@ -69,7 +74,21 @@ func New[T any](expireAfter time.Duration) *Cache[T] {
 		stopCh:      make(chan struct{}),
 	}
 
-	// Start the sweep, with a minimum sweep of 50ms.
+	// Start the sweep, with a minimum sweep of 50ms. We want to sweep more
+	// frequently than the expiration time, because otherwise recently-expired
+	// cache items might persist in the cache for 2*expire which would be less
+	// than ideal for memory efficiency. Sweeping at quarter steps ensures that
+	// expired items will persist no more than 50% past their expire time in the
+	// worst case, 0% past their expire time in the best case, and 33% past their
+	// expire time in the average case.
+	//
+	// Of similar note, we bound the minimum sweep time to avoid total CPU
+	// pegging. This is largely to avoid situations in which a developer requests
+	// a caches for an unreasonably short period of time (e.g. 10ns). In that
+	// scenario, our sweep operation would run every 2ns, effectively saturating
+	// the CPU with cleanup. This would make the cache extremely inefficient and
+	// largely defeat the purpose. In this case, 50ms is somewhat arbitrary, but
+	// it ensures the CPU is not entirely bound by the sweep operation.
 	sweep := expireAfter / 4.0
 	if min := 50 * time.Millisecond; sweep < min {
 		sweep = min
