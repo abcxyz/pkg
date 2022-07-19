@@ -123,6 +123,7 @@ func (c *Cache[T]) clear() {
 	for node != nil {
 		node.key = nil
 		node.value = zeroV
+		node.prev = nil
 		node, node.next = node.next, nil
 	}
 	c.head = nil
@@ -215,14 +216,31 @@ func (c *Cache[T]) set(name string, object T, now time.Time) {
 	node.value = object
 	node.expiresAt = &exp
 
+	// Remove the item from the list.
+	if node == c.head {
+		c.head = node.next
+	}
+	if node == c.tail {
+		c.tail = node.prev
+	}
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+	if node.next != nil {
+		node.next.prev = node.prev
+	}
+	node.next = nil
+	node.prev = nil
+
 	// If this is the first entry in the cache, update the head.
 	if c.head == nil {
 		c.head = node
 	}
 
-	// This entry is new, so add it to the end of the list.
+	// Move to the end of the list.
 	if c.tail != nil {
 		c.tail.next = node
+		node.prev = c.tail
 	}
 	c.tail = node
 }
@@ -238,26 +256,7 @@ func (c *Cache[T]) Stop() {
 	}
 	close(c.stopCh)
 
-	for k, v := range c.data {
-		var zeroV T
-		v.key = nil
-		v.value = zeroV
-		v.expiresAt = nil
-		delete(c.data, k)
-	}
-	c.data = nil
-
-	var zeroV T
-
-	node := c.head
-	for node != nil {
-		node.key = nil
-		node.value = zeroV
-		node, node.next = node.next, nil
-	}
-
-	c.head = nil
-	c.tail = nil
+	c.clear()
 }
 
 // start begins the background reaping process for expired entries. It runs
@@ -283,30 +282,41 @@ func (c *Cache[T]) start(sweep time.Duration) {
 				c.mu.Lock()
 				defer c.mu.Unlock()
 
-				// Walk the LinkedList from the front, since those are the oldest items.
-				node := c.head
-				for node != nil {
-					// If this item isn't a candidate for expiration, then no future items
-					// will be a candidate either, since they are in increasing order.
-					if node.expiresAt.After(now) {
-						break
-					}
-
-					delete(c.data, *node.key)
-
-					var zeroV T
-					node.key = nil
-					node.value = zeroV
-					node.expiresAt = nil
-					node, node.next = node.next, nil
-				}
-
-				c.head = node
-				if node == nil {
-					c.tail = nil
-				}
+				c.cleanUntil(now)
 			}()
 		}
+	}
+}
+
+// cleanUntil deletes entries from the linked list and map until the expiration
+// is greater than the given time.
+func (c *Cache[T]) cleanUntil(when time.Time) {
+	// Walk the LinkedList from the front, since those are the oldest items.
+	node := c.head
+	for node != nil {
+		// If this item isn't a candidate for expiration, then no future items
+		// will be a candidate either, since they are in increasing order.
+		if node.expiresAt.After(when) {
+			break
+		}
+
+		delete(c.data, *node.key)
+
+		var zeroV T
+		node.key = nil
+		node.value = zeroV
+		node.expiresAt = nil
+		node.prev = nil
+		node, node.next = node.next, nil
+	}
+
+	c.head = node
+	if node != nil {
+		// reset if the node pointed to its previous; that node is now gone.
+		node.prev = nil
+	} else {
+		// deleted everything, delete the tail too.
+		c.tail = nil
 	}
 }
 
@@ -317,8 +327,8 @@ func (c *Cache[T]) isStopped() bool {
 
 // cacheListItem represents an entry in the linked list.
 type cacheListItem[T any] struct {
-	next      *cacheListItem[T]
-	key       *string
-	value     T
-	expiresAt *time.Time
+	next, prev *cacheListItem[T]
+	key        *string
+	value      T
+	expiresAt  *time.Time
 }
