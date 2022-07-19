@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cache implements an inmemory cache for any object.
+// Package cache implements an in-memory cache for arbitrary objects.
 //
-// This package was created and adapted from:
+// This package was originally adapted from
+// https://github.com/google/exposure-notifications-server, but it has evolved
+// beyond that specific use case.
 //
-//     https://github.com/google/exposure-notifications-server/blob/main/pkg/cache/cache.go
+// At the time of this writing, there is no standard, general-purpose TTL-based
+// caching library for Go. There are multiple LRU-based caches, but those do not
+// satisfy the requirements for a TTL-based cache. If a standard package were to
+// emerge in the future, we should consider switching.
 //
 // This package assumes the system time has minimal skew. In case of major clock
 // skew or system clock reset, cache expirations could occur out of order.
@@ -24,6 +29,7 @@ package cache
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -38,21 +44,22 @@ type Func[T any] func() (T, error)
 // For performance, it's strongly recommended that you store pointers to objects
 // instead of actual objects.
 type Cache[T any] struct {
-	data        map[string]item[T]
+	// data is the actual internal cache storage.
+	data map[string]*cacheListItem[T]
+
+	// head points to the head of the linked list, tail points to the tail.
+	head, tail *cacheListItem[T]
+
+	// expireAfter is the global TTL value.
 	expireAfter time.Duration
-	mu          sync.RWMutex
-}
 
-// item is an internal representation of a cached item. It stores the actual
-// object and the upcoming expiration time.
-type item[T any] struct {
-	object    T
-	expiresAt int64
-}
+	// stopped indicates whether the cache is stopped. stopCh is a channel used to
+	// control cancellation.
+	stopped uint32
+	stopCh  chan struct{}
 
-// expired returns true if the given item has expired, or false otherwise.
-func (c *item[T]) expired() bool {
-	return c.expiresAt < time.Now().UnixNano()
+	// mu is the internal lock to allow for concurrent operations.
+	mu sync.RWMutex
 }
 
 // New creates a new in memory cache. Panics if expireAfter is 0 or negative.
@@ -61,76 +68,112 @@ func New[T any](expireAfter time.Duration) *Cache[T] {
 		panic("expireAfter duration must be positive")
 	}
 
-	return &Cache[T]{
-		data:        make(map[string]item[T]),
+	c := &Cache[T]{
+		data:        make(map[string]*cacheListItem[T]),
 		expireAfter: expireAfter,
+		stopCh:      make(chan struct{}),
 	}
+
+	// Start the sweep, with a minimum sweep of 50ms. We want to sweep more
+	// frequently than the expiration time, because otherwise recently-expired
+	// cache items might persist in the cache for 2*expire which would be less
+	// than ideal for memory efficiency. Sweeping at quarter steps ensures that
+	// expired items will persist no more than 50% past their expire time in the
+	// worst case, 0% past their expire time in the best case, and 33% past their
+	// expire time in the average case.
+	//
+	// Of similar note, we bound the minimum sweep time to avoid total CPU
+	// pegging. This is largely to avoid situations in which a developer requests
+	// a caches for an unreasonably short period of time (e.g. 10ns). In that
+	// scenario, our sweep operation would run every 2ns, effectively saturating
+	// the CPU with cleanup. This would make the cache extremely inefficient and
+	// largely defeat the purpose. In this case, 50ms is somewhat arbitrary, but
+	// it ensures the CPU is not entirely bound by the sweep operation.
+	sweep := expireAfter / 4.0
+	if min := 50 * time.Millisecond; sweep < min {
+		sweep = min
+	}
+	go c.start(sweep)
+
+	return c
 }
 
-// Removes an item by name and expiry time when the purge was scheduled.
-// If there is a race, and the item has been refreshed, it will not be purged.
-func (c *Cache[T]) purgeExpired(name string, expectedExpiryTime int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if item, ok := c.data[name]; ok && item.expiresAt == expectedExpiryTime {
-		// found, and the expiry time is still the same as when the purge was requested.
-		delete(c.data, name)
-	}
-}
-
-// Size returns the number of items in the cache.
+// Size returns the current number of items in the cache.
 func (c *Cache[T]) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if c.isStopped() {
+		panic("cache is stopped")
+	}
+
 	return len(c.data)
 }
 
-// Clear removes all items from the cache, regardless of their expiration.
+// Clear removes all items from the cache, regardless of their expiration. Note
+// this is different from Stop() which deletes all cached items and prevents new
+// items from being added.
 func (c *Cache[T]) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.data = make(map[string]item[T])
+
+	if c.isStopped() {
+		panic("cache is stopped")
+	}
+
+	c.clear()
 }
 
-// WriteThruLookup checks the cache for the value associated with name,
-// and if not found or expired, invokes the provided primaryLookup function
-// to local the value.
-func (c *Cache[T]) WriteThruLookup(name string, primaryLookup Func[T]) (T, error) {
-	var nilT T
+// clear removes all items from the cache, zeroing out as many items as possible
+// for efficient GC. Callers must check if the cache is stopped and acquire a
+// full lock before calling this function.
+func (c *Cache[T]) clear() {
+	var zeroV T
 
-	c.mu.RLock()
-	val, hit := c.lookup(name)
-	if hit {
-		c.mu.RUnlock()
-		return val, nil
+	for k, v := range c.data {
+		v.key = nil
+		v.value = zeroV
+		v.expiresAt = nil
+		delete(c.data, k)
 	}
-	c.mu.RUnlock()
+	c.data = nil
 
-	// Ensure the value hasn't been set by another goroutine by escalating to a RW
-	// lock. We need the W lock anyway if we're about to write.
+	node := c.head
+	for node != nil {
+		node.key = nil
+		node.value = zeroV
+		node.prev = nil
+		node, node.next = node.next, nil
+	}
+	c.head = nil
+	c.tail = nil
+}
+
+// WriteThruLookup checks the cache for the value associated with name, and if
+// not found or expired, invokes the provided lookup function to resolve the
+// value.
+func (c *Cache[T]) WriteThruLookup(name string, fn Func[T]) (T, error) {
+	now := time.Now().UTC()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	val, hit = c.lookup(name)
-	if hit {
-		return val, nil
+
+	if c.isStopped() {
+		panic("cache is stopped")
 	}
 
-	// If we got this far, it was either a miss, or hit w/ expired value, execute
-	// the function.
+	if v, ok := c.lookup(name, now); ok {
+		return v, nil
+	}
 
-	// Value does indeed need to be refreshed. Used the provided function.
-	newData, err := primaryLookup()
+	v, err := fn()
 	if err != nil {
-		return nilT, err
+		var zeroV T
+		return zeroV, err
 	}
 
-	// save the newData in the cache. newData may be nil, if that's what the WriteThruFunction provided.
-	c.data[name] = item[T]{
-		object:    newData,
-		expiresAt: time.Now().Add(c.expireAfter).UnixNano(),
-	}
-	return newData, nil
+	c.set(name, v, now)
+	return v, nil
 }
 
 // Lookup checks the cache for a non-expired object by the supplied key name.
@@ -139,40 +182,172 @@ func (c *Cache[T]) WriteThruLookup(name string, primaryLookup Func[T]) (T, error
 // Where nil, false indicates a cache miss or that the value is expired and should
 // be refreshed.
 func (c *Cache[T]) Lookup(name string) (T, bool) {
+	now := time.Now().UTC()
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return c.lookup(name)
+	if c.isStopped() {
+		panic("cache is stopped")
+	}
+
+	return c.lookup(name, now)
+}
+
+// lookup is the internal implementation of Lookup. Callers are responsible for
+// acquring a lock and checking whether the cache is stopped.
+func (c *Cache[T]) lookup(name string, now time.Time) (T, bool) {
+	v, ok := c.data[name]
+	if !ok || v.expiresAt.Before(now) {
+		var zeroV T
+		return zeroV, false
+	}
+	return v.value, true
 }
 
 // Set saves the current value of an object in the cache, with the supplied
 // durintion until the object expires.
-func (c *Cache[T]) Set(name string, object T) error {
+func (c *Cache[T]) Set(name string, object T) {
+	now := time.Now().UTC()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.data[name] = item[T]{
-		object:    object,
-		expiresAt: time.Now().Add(c.expireAfter).UnixNano(),
+	if c.isStopped() {
+		panic("cache is stopped")
 	}
 
-	return nil
+	c.set(name, object, now)
 }
 
-// lookup finds an unexpired item at the given name. The bool indicates if a hit
-// occurred. This is an internal API that is NOT thread-safe. Consumers must
-// take out a read or read-write lock.
-func (c *Cache[T]) lookup(name string) (T, bool) {
-	var nilT T
-	if item, ok := c.data[name]; ok && item.expired() {
-		// Cache hit, but expired. The removal from the cache is deferred.
-		go c.purgeExpired(name, item.expiresAt)
-		return nilT, false
-	} else if ok {
-		// Cache hit, not expired.
-		return item.object, true
+func (c *Cache[T]) set(name string, object T, now time.Time) {
+	// Calculate expiration after acquiring a lock. The item is valid from when
+	// insertion started, not when insertion finishes.
+	exp := now.Add(c.expireAfter)
+
+	node, ok := c.data[name]
+	if !ok {
+		node = &cacheListItem[T]{
+			key: &name,
+		}
+		c.data[name] = node
+	}
+	node.value = object
+	node.expiresAt = &exp
+
+	// Remove the item from the list.
+	if node == c.head {
+		c.head = node.next
+	}
+	if node == c.tail {
+		c.tail = node.prev
+	}
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+	if node.next != nil {
+		node.next.prev = node.prev
+	}
+	node.next = nil
+	node.prev = nil
+
+	// If this is the first entry in the cache, update the head.
+	if c.head == nil {
+		c.head = node
 	}
 
-	// Cache miss.
-	return nilT, false
+	// Move to the end of the list.
+	if c.tail != nil {
+		c.tail.next = node
+		node.prev = c.tail
+	}
+	c.tail = node
+}
+
+// Stop clears the cache and prevents new entries from being added and
+// retrieved.
+func (c *Cache[T]) Stop() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !atomic.CompareAndSwapUint32(&c.stopped, 0, 1) {
+		return
+	}
+	close(c.stopCh)
+
+	c.clear()
+}
+
+// start begins the background reaping process for expired entries. It runs
+// until stopped via Stop() and is intended to be called as a goroutine.
+func (c *Cache[T]) start(sweep time.Duration) {
+	ticker := time.NewTicker(sweep)
+	defer ticker.Stop()
+
+	for {
+		// Check if we're stopped first to prevent entering a race between a short
+		// time ticker and the stop channel.
+		if c.isStopped() {
+			return
+		}
+
+		select {
+		case <-c.stopCh:
+			return
+		case <-ticker.C:
+			func() {
+				now := time.Now().UTC()
+
+				c.mu.Lock()
+				defer c.mu.Unlock()
+
+				c.cleanUntil(now)
+			}()
+		}
+	}
+}
+
+// cleanUntil deletes entries from the linked list and map until the expiration
+// is greater than the given time.
+func (c *Cache[T]) cleanUntil(when time.Time) {
+	// Walk the LinkedList from the front, since those are the oldest items.
+	node := c.head
+	for node != nil {
+		// If this item isn't a candidate for expiration, then no future items
+		// will be a candidate either, since they are in increasing order.
+		if node.expiresAt.After(when) {
+			break
+		}
+
+		delete(c.data, *node.key)
+
+		var zeroV T
+		node.key = nil
+		node.value = zeroV
+		node.expiresAt = nil
+		node.prev = nil
+		node, node.next = node.next, nil
+	}
+
+	c.head = node
+	if node != nil {
+		// reset if the node pointed to its previous; that node is now gone.
+		node.prev = nil
+	} else {
+		// deleted everything, delete the tail too.
+		c.tail = nil
+	}
+}
+
+// isStopped is a helper for checking if the queue is stopped.
+func (c *Cache[T]) isStopped() bool {
+	return atomic.LoadUint32(&c.stopped) == 1
+}
+
+// cacheListItem represents an entry in the linked list.
+type cacheListItem[T any] struct {
+	next, prev *cacheListItem[T]
+	key        *string
+	value      T
+	expiresAt  *time.Time
 }
