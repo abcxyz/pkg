@@ -202,7 +202,7 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			opts := append(tc.opts, WithJWTAuthEndpoint(svr.URL+path))
 			g, err := NewJWTAuthenticationHandler(tc.ctx, opts...)
 			if err != nil {
-				t.Fatal(fmt.Printf("couldn't create grpc authentication handler: %s", err))
+				t.Fatalf("couldn't create grpc authentication handler: %s", err)
 			}
 
 			got, err := g.RequestPrincipal(tc.ctx)
