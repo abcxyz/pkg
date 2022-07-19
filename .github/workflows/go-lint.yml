@@ -109,7 +109,7 @@ jobs:
               "unused",
               "varcheck",
               "whitespace",
-            ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0
+            ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0 --timeout=5m
           working-directory: '${{ inputs.directory }}'
 
       - name: 'Lint (custom configuration)'
