@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package testserver provides an ephemeral MySQL server for testing database integration. It's
+// Package mysqltest provides an ephemeral MySQL server for testing database integration. It's
 // designed to be used in code that needs to work inside and outside Google.
 package mysqltest
 
@@ -24,10 +24,7 @@ import (
 
 var connInfo ConnInfo
 
-// A Stopper stops the Docker container that is started by this package.
-type Stopper func() error
-
-// ConnInfo specifies how to connect to the server that is created by this package.
+// ConnInfo specifies how to connect to the MySQL server that is created by this package.
 type ConnInfo struct {
 	Username string
 	Password string
@@ -58,7 +55,7 @@ func Get() ConnInfo {
 //
 // Example usage:
 //
-//		func TestMain(m *testing.T) {
+//		func TestMain(m *testing.M) {
 //		  mysqltest.TestMainHelper(m)
 //		}
 //
@@ -69,19 +66,19 @@ func Get() ConnInfo {
 //		}
 func TestMainHelper(m *testing.M, opts ...Option) {
 	conf := buildConfig(opts...)
-	ci, stopper, err := start(conf)
+	ci, closer, err := start(conf)
 	if err != nil {
-		// The stopper must be called even if there's an error. We can't use a "defer" because deferred
+		// The Closer must be called even if there's an error. We can't use a "defer" because deferred
 		// functions don't run in the case of os.Exit() or log.Exit().
-		stopper()
+		_ = closer.Close()
 		log.Fatalf("mysqltest.start(): %v", err)
 	}
 
 	connInfo = ci
 
 	out := m.Run()
-	if err := stopper(); err != nil {
-		log.Fatalf("stopper(): %v", err)
+	if err := closer.Close(); err != nil {
+		log.Fatalf("Close(): %v", err)
 	}
 
 	os.Exit(out)

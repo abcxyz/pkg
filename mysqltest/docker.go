@@ -14,27 +14,23 @@
 
 package mysqltest
 
-// This file implements docker integration. This file should only be used outside of Google's build
-// system.
+// This file implements docker integration.
+//
+// This file is only intended to be used outside of Google. Inside of Google, this file should be
+// replaced with the Google-internal version.
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
-	"log"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql" // Force mysql driver to be included.
 	dockertest "github.com/ory/dockertest/v3"
-)
-
-var (
-	once    sync.Once
-	port    int
-	stopper Stopper
-	err     error
+	"github.com/ory/dockertest/v3/docker"
 )
 
 const (
@@ -42,23 +38,18 @@ const (
 	// having a well-known password can help with human inspection for debugging. The value chosen for
 	// the password is arbitrary. It can be changed without breaking anything; it's not hardcoded into
 	// the docker image or anything like that.
-	password = "8mo5lfYKjy6ebTK"
-
-	// Containers might not be shutdown if the test terminates abnormally, such as when ctrl-C is
-	// pressed during a test. Therefore we instruct the container to kill itself after a while. The
-	// duration must be longer than longest test that uses MySQL (currently about 30 seconds), and
-	// should also be longer than the bazel test timeout (currently about 1 minute). There's no harm
-	// in leaving lots of extra time.
-	mySQLContainerDeadlineSec = 10 * 60
+	password = "8mo5lfYKjy6ebTK" //nolint:gosec
 )
+
+var nopCloser = io.NopCloser(nil)
 
 // start starts a docker container running a MySQL server. A struct is returned describing how to
 // connect to MySQL, along with a cleanup function that should be called once all tests have
 // finished.
 //
-// The returned Stopper should be called in every case, even if this function returns an error. This
+// The returned Closer should be called in every case, even if this function returns an error. This
 // ensures that the Docker container will be cleaned up if the error occurred after the container
-// was created. The Stopper will never be nil.
+// was created. The Closer will never be nil.
 //
 // Since the startup time for this MySQL container is about 20 seconds, we share the container among
 // every test. Each test should use a randomly-created database/schema name to avoid collisions
@@ -69,10 +60,10 @@ const (
 // other custom signal handlers that are installed may not get a chance to run.
 //
 // Docker must be installed on localhost for this to work. No environment vars are needed.
-func start(conf *config) (ConnInfo, Stopper, error) {
-	port, stopper, err := startContainer(conf)
+func start(conf *config) (ConnInfo, io.Closer, error) {
+	port, closer, err := startContainer(conf)
 	if err != nil {
-		return ConnInfo{}, noOpStopper, err
+		return ConnInfo{}, nopCloser, err
 	}
 
 	return ConnInfo{
@@ -80,25 +71,41 @@ func start(conf *config) (ConnInfo, Stopper, error) {
 		Password: password,
 		Hostname: "localhost",
 		Port:     port,
-	}, stopper, nil
+	}, closer, nil
 }
 
 // Runs a MySQL docker container and returns the TCP port number for its MySQL port, along with a
 // cleanup function that stops the container.
-func startContainer(conf *config) (int, Stopper, error) {
-	// The following is based on the example from https://github.com/ory/dockertest#using-dockertest.
+func startContainer(conf *config) (int, io.Closer, error) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return 0, noOpStopper, fmt.Errorf("dockertest.NewPool(): %w", err)
+		return 0, nopCloser, fmt.Errorf("dockertest.NewPool(): %w", err)
 	}
+	container, err := runContainer(conf, pool)
+	if err != nil {
+		return 0, nopCloser, err
+	}
+	closer := newContainerCloser(pool, container)
+	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
+		return 0, closer, fmt.Errorf("resource.Expire(): %w", err)
+	}
+	outPort, err := waitUntilUp(conf, pool, container)
+	if err != nil {
+		return 0, closer, err
+	}
+	return outPort, closer, nil
+}
 
+// Starts the mysql container and returns a Resource that points to it.
+func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, error) {
 	// pulls an image, creates a container based on it and runs it
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+	container, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "mysql",
 		Tag:        conf.mySQLVersion,
 		Env:        []string{"MYSQL_ROOT_PASSWORD=" + password},
-		Entrypoint: []string{"/usr/bin/timeout", strconv.Itoa(conf.killAfterSec), "docker-entrypoint.sh"},
-		Cmd:        []string{"mysqld"},
+	}, func(config *docker.HostConfig) {
+		config.AutoRemove = true // remove storage after container exits
+		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
 	if err != nil {
 		var extraMsg string
@@ -113,45 +120,34 @@ func startContainer(conf *config) (int, Stopper, error) {
 					1. Run "sudo adduser $USER docker" to add your user to the docker group
 					2. Reboot the machine to make the group membership effective`
 		}
-		return 0, noOpStopper, fmt.Errorf("pool.Run() failed starting mysql container: %w%s", err, extraMsg)
+		return nil, fmt.Errorf("pool.Run() failed starting mysql container: %w%s", err, extraMsg)
 	}
+	return container, nil
+}
 
-	var stopOnce sync.Once // only the first call to the stopper will have an effect.
-	stop := func() error {
-		var err error
-		stopOnce.Do(func() {
-			err = pool.Purge(resource)
-		})
-		if err != nil {
-			return fmt.Errorf("failed stopping MySQL docker container: %w", err)
-		}
-		return nil
-	}
-
+// waitUntilUp waits for mysql to be reachable.
+func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (int, error) {
+	var outPort int
 	// To get the TCP port number for the mysql server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
-	var outPort int
-
-	// Repeatedly try to connect to the container until it's up.
+	pool.MaxWait = time.Minute
 	if err := pool.Retry(func() error {
-		p, err := fetchPort(resource)
+		p, err := fetchPort(container)
 		if err != nil {
 			return err
 		}
 
-		if err := tryLogin(p); err != nil {
-			msg := fmt.Sprintf("MySQL isn't ready yet: %v", err)
-			log.Print(msg)
-			return errors.New(msg)
+		if err := tryLogin(conf, p); err != nil {
+			conf.progressLogger.Printf("MySQL isn't ready yet: %v", err)
+			return fmt.Errorf("MySQL isn't ready yet: %w", err)
 		}
 
 		outPort = p
 		return nil
 	}); err != nil {
-		return 0, stop, fmt.Errorf("Could not connect to database within timeout. The final attempt returned: %w", err)
+		return 0, fmt.Errorf("failed to connect to database within timeout. The final attempt returned: %w", err)
 	}
-
-	return outPort, stop, nil
+	return outPort, nil
 }
 
 func fetchPort(r *dockertest.Resource) (int, error) {
@@ -159,20 +155,20 @@ func fetchPort(r *dockertest.Resource) (int, error) {
 	if portStr == "" {
 		return 0, fmt.Errorf("resource.GetPort() returned empty string, container isn't ready yet")
 	}
-	port, err = strconv.Atoi(portStr)
+	port, err := strconv.Atoi(portStr)
 	if err != nil || port <= 0 {
-		return 0, fmt.Errorf("Internal error: malformed response from GetPort(): %q. "+
-			"Wanted a string containing an integer.", portStr)
+		return 0, fmt.Errorf("internal error: malformed response from GetPort(): %q; "+
+			"Wanted a string containing an integer", portStr)
 	}
 
 	return port, nil
 }
 
-func tryLogin(port int) error {
-	// Disabling TLS is OK because no sensitive data is exchanged, only test data.
+func tryLogin(conf *config, port int) error {
+	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("root:%s@tcp(localhost:%d)/mysql?tls=false", password, port)
 
-	log.Printf(`Checking if MySQL is up yet on localhost at %d. It's normal to see "unexpected EOF" output while it's starting.`, port)
+	conf.progressLogger.Printf(`Checking if MySQL is up yet on localhost at %d. It's normal to see "unexpected EOF" output while it's starting.`, port)
 	db, err := sql.Open("mysql", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)
@@ -182,11 +178,31 @@ func tryLogin(port int) error {
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("db.Ping(): %w", err)
 	}
-	log.Printf("The MySQL container is fully up and healthy")
+	conf.progressLogger.Printf("The MySQL container is fully up and healthy")
 
 	return nil
 }
 
-func noOpStopper() error {
+type containerCloser struct {
+	once      sync.Once
+	pool      *dockertest.Pool
+	container *dockertest.Resource
+}
+
+func newContainerCloser(pool *dockertest.Pool, container *dockertest.Resource) *containerCloser {
+	return &containerCloser{
+		pool:      pool,
+		container: container,
+	}
+}
+
+func (p *containerCloser) Close() error {
+	var err error
+	p.once.Do(func() {
+		err = p.pool.Purge(p.container)
+	})
+	if err != nil {
+		return fmt.Errorf("failed stopping MySQL docker container: %w", err)
+	}
 	return nil
 }

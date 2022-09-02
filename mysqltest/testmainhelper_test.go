@@ -30,6 +30,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestGet(t *testing.T) {
+	t.Parallel()
+
 	ci := mysqltest.Get()
 	db := connect(t, ci)
 	defer db.Close()

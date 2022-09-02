@@ -14,39 +14,63 @@
 
 package mysqltest
 
+import "log"
+
 // This file implements the "functional options" pattern.
 
 type config struct {
-	killAfterSec int
-	mySQLVersion string
+	killAfterSec   int // This is in integer seconds because that's what Docker takes.
+	mySQLVersion   string
+	progressLogger Logger
 }
 
-var defaultConfig = config{
-	killAfterSec: 10 * 60,
-	mySQLVersion: "5.7",
+type Logger interface {
+	Printf(fmtStr string, args ...any)
+}
+
+func makeDefaultConfig() *config {
+	return &config{
+		killAfterSec:   10 * 60,
+		mySQLVersion:   "5.7",
+		progressLogger: stdlibLogger{},
+	}
 }
 
 func buildConfig(opts ...Option) *config {
-	out := defaultConfig // shallow copy is good enough. There are no pointers.
+	config := makeDefaultConfig()
 	for _, opt := range opts {
-		opt(&out)
+		config = opt(config)
 	}
-	return &out
+	return config
 }
 
-type Option func(*config)
+type Option func(*config) *config
 
 // KillAfterSeconds is an option that overrides the default time period after which the mysql docker
 // container will kill itself.
+//
+// Containers might bypass the normal clean shutdown logic if the test terminates abnormally, such
+// as when ctrl-C is pressed during a test. Therefore we instruct the container to kill itself after
+// a while. The duration must be longer than longest test that uses MySQL. There's no harm in
+// leaving lots of extra time.
 func KillAfterSeconds(seconds int) Option {
-	return func(c *config) {
+	return func(c *config) *config {
 		c.killAfterSec = seconds
+		return c
 	}
 }
 
-// Version is an option that overrides the default MySQL server version.
+// Version chooses a MySQL server version. This overrides the default MySQL server version.
 func Version(v string) Option {
-	return func(c *config) {
+	return func(c *config) *config {
 		c.mySQLVersion = v
+		return c
 	}
+}
+
+// stdlibLogger is the default implementation of the Logger interface that calls log.Printf.
+type stdlibLogger struct{}
+
+func (s stdlibLogger) Printf(fmtStr string, args ...any) {
+	log.Printf(fmtStr, args...)
 }

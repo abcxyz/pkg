@@ -14,7 +14,8 @@
 
 package mysqltest
 
-// This file should only be used outside of Google's build system.
+// This file is only intended to be used outside of Google. Inside of Google, this file should be
+// replaced with the Google-internal version.
 
 import (
 	"database/sql"
@@ -25,6 +26,8 @@ import (
 )
 
 func TestKillAfter(t *testing.T) {
+	t.Parallel()
+
 	// This "kill after" time was chosen because it's long enough for the MySQL container to start up.
 	// As of 2022-08-31 on MySQL 5.7, it takes 12.5 seconds to start. We add some buffer to leave room
 	// for normal variation between test machines.
@@ -34,9 +37,11 @@ func TestKillAfter(t *testing.T) {
 		killAfter               = expectedStartupDuration + extraBuffer
 		killAfterSec            = int(killAfter / time.Second)
 	)
-
-	ci, stopper, err := start(buildConfig(KillAfterSeconds(killAfterSec)))
-	defer stopper()
+	conf := buildConfig(KillAfterSeconds(killAfterSec))
+	ci, closer, err := start(conf)
+	defer func() {
+		_ = closer.Close()
+	}()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +57,7 @@ func TestKillAfter(t *testing.T) {
 		if err := db.Ping(); err != nil {
 			// It would be cleaner to do a type assertion on the error, but the actual type we get is
 			// just an *errors.errorString, so we have to examine the text of the error.
-			const want = "connection"
+			const want = "bad connection"
 			if strings.Contains(err.Error(), want) {
 				// This is success. The ping failed because the database killed itself as intended.
 				t.Log("the docker container stopped itself successfully")
