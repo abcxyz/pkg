@@ -57,13 +57,15 @@ func TestKillAfter(t *testing.T) {
 		if err := db.Ping(); err != nil {
 			// It would be cleaner to do a type assertion on the error, but the actual type we get is
 			// just an *errors.errorString, so we have to examine the text of the error.
-			const want = "bad connection"
+			//
+			// The text of the error varies: either "invalid connection" or "bad connection."
+			const want = "connection"
 			if strings.Contains(err.Error(), want) {
 				// This is success. The ping failed because the database killed itself as intended.
 				t.Log("the docker container stopped itself successfully")
 				return
 			}
-			t.Fatalf("got an error %q, but wanted one containing %s", err, want)
+			t.Fatalf("got an error %q, but wanted one containing %q", err, want)
 		}
 		time.Sleep(200 * time.Millisecond) // Wait a bit between each ping
 	}
