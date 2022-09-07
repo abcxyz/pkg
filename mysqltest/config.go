@@ -32,7 +32,7 @@ func makeDefaultConfig() *config {
 	return &config{
 		killAfterSec:   10 * 60,
 		mySQLVersion:   "5.7",
-		progressLogger: stdlibLogger{},
+		progressLogger: &stdlibLogger{},
 	}
 }
 
@@ -46,22 +46,22 @@ func buildConfig(opts ...Option) *config {
 
 type Option func(*config) *config
 
-// KillAfterSeconds is an option that overrides the default time period after which the mysql docker
+// WithKillAfterSeconds is an option that overrides the default time period after which the mysql docker
 // container will kill itself.
 //
 // Containers might bypass the normal clean shutdown logic if the test terminates abnormally, such
 // as when ctrl-C is pressed during a test. Therefore we instruct the container to kill itself after
 // a while. The duration must be longer than longest test that uses MySQL. There's no harm in
 // leaving lots of extra time.
-func KillAfterSeconds(seconds int) Option {
+func WithKillAfterSeconds(seconds int) Option {
 	return func(c *config) *config {
 		c.killAfterSec = seconds
 		return c
 	}
 }
 
-// Version chooses a MySQL server version. This overrides the default MySQL server version.
-func Version(v string) Option {
+// WithVersion chooses a MySQL server version. This overrides the default MySQL server version.
+func WithVersion(v string) Option {
 	return func(c *config) *config {
 		c.mySQLVersion = v
 		return c
@@ -71,6 +71,6 @@ func Version(v string) Option {
 // stdlibLogger is the default implementation of the Logger interface that calls log.Printf.
 type stdlibLogger struct{}
 
-func (s stdlibLogger) Printf(fmtStr string, args ...any) {
+func (s *stdlibLogger) Printf(fmtStr string, args ...any) {
 	log.Printf(fmtStr, args...)
 }

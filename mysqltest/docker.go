@@ -23,7 +23,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -74,24 +73,24 @@ func start(conf *config) (ConnInfo, io.Closer, error) {
 	}, closer, nil
 }
 
-// Runs a MySQL docker container and returns the TCP port number for its MySQL port, along with a
-// cleanup function that stops the container.
-func startContainer(conf *config) (int, io.Closer, error) {
+// Runs a MySQL docker container and returns its TCP port, along with a cleanup function that stops
+// the container.
+func startContainer(conf *config) (string, io.Closer, error) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return 0, nopCloser, fmt.Errorf("dockertest.NewPool(): %w", err)
+		return "", nopCloser, fmt.Errorf("dockertest.NewPool(): %w", err)
 	}
 	container, err := runContainer(conf, pool)
 	if err != nil {
-		return 0, nopCloser, err
+		return "", nopCloser, err
 	}
 	closer := newContainerCloser(pool, container)
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
-		return 0, closer, fmt.Errorf("resource.Expire(): %w", err)
+		return "", closer, fmt.Errorf("resource.Expire(): %w", err)
 	}
 	outPort, err := waitUntilUp(conf, pool, container)
 	if err != nil {
-		return 0, closer, err
+		return "", closer, err
 	}
 	return outPort, closer, nil
 }
@@ -126,49 +125,35 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 }
 
 // waitUntilUp waits for mysql to be reachable.
-func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (int, error) {
-	var outPort int
+func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (string, error) {
+	var outPort string
 	// To get the TCP port number for the mysql server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
 	if err := pool.Retry(func() error {
-		p, err := fetchPort(container)
-		if err != nil {
-			return err
+		port := container.GetPort("3306/tcp")
+		if port == "" {
+			return fmt.Errorf("resource.GetPort() returned empty string, container isn't ready yet")
 		}
 
-		if err := tryLogin(conf, p); err != nil {
+		if err := tryLogin(conf, port); err != nil {
 			conf.progressLogger.Printf("MySQL isn't ready yet: %v", err)
 			return fmt.Errorf("MySQL isn't ready yet: %w", err)
 		}
 
-		outPort = p
+		outPort = port
 		return nil
 	}); err != nil {
-		return 0, fmt.Errorf("failed to connect to database within timeout. The final attempt returned: %w", err)
+		return "", fmt.Errorf("failed to connect to database within timeout. The final attempt returned: %w", err)
 	}
 	return outPort, nil
 }
 
-func fetchPort(r *dockertest.Resource) (int, error) {
-	portStr := r.GetPort("3306/tcp")
-	if portStr == "" {
-		return 0, fmt.Errorf("resource.GetPort() returned empty string, container isn't ready yet")
-	}
-	port, err := strconv.Atoi(portStr)
-	if err != nil || port <= 0 {
-		return 0, fmt.Errorf("internal error: malformed response from GetPort(): %q; "+
-			"Wanted a string containing an integer", portStr)
-	}
-
-	return port, nil
-}
-
-func tryLogin(conf *config, port int) error {
+func tryLogin(conf *config, port string) error {
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
-	addr := fmt.Sprintf("root:%s@tcp(localhost:%d)/mysql?tls=false", password, port)
+	addr := fmt.Sprintf("root:%s@tcp(localhost:%s)/mysql?tls=false", password, port)
 
-	conf.progressLogger.Printf(`Checking if MySQL is up yet on localhost at %d. It's normal to see "unexpected EOF" output while it's starting.`, port)
+	conf.progressLogger.Printf(`Checking if MySQL is up yet on localhost at %s. It's normal to see "unexpected EOF" output while it's starting.`, port)
 	db, err := sql.Open("mysql", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)

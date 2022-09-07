@@ -37,7 +37,7 @@ func TestKillAfter(t *testing.T) {
 		killAfter               = expectedStartupDuration + extraBuffer
 		killAfterSec            = int(killAfter / time.Second)
 	)
-	conf := buildConfig(KillAfterSeconds(killAfterSec))
+	conf := buildConfig(WithKillAfterSeconds(killAfterSec))
 	ci, closer, err := start(conf)
 	defer func() {
 		_ = closer.Close()
@@ -74,7 +74,7 @@ func TestKillAfter(t *testing.T) {
 func connect(t *testing.T, ci ConnInfo) *sql.DB {
 	t.Helper()
 
-	uri := fmt.Sprintf("%s:%s@tcp([%s]:%d)/%s", ci.Username, ci.Password,
+	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", ci.Username, ci.Password,
 		ci.Hostname, ci.Port, "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {

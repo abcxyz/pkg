@@ -29,7 +29,7 @@ type ConnInfo struct {
 	Username string
 	Password string
 	Hostname string
-	Port     int
+	Port     string
 }
 
 // Get returns the address and credentials of the MySQL server. The server must already have been

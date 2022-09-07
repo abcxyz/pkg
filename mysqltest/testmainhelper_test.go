@@ -45,7 +45,7 @@ func TestGet(t *testing.T) {
 func connect(t *testing.T, ci mysqltest.ConnInfo) *sql.DB {
 	t.Helper()
 
-	uri := fmt.Sprintf("%s:%s@tcp([%s]:%d)/%s", ci.Username, ci.Password,
+	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", ci.Username, ci.Password,
 		ci.Hostname, ci.Port, "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {
