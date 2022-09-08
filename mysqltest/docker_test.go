@@ -57,20 +57,27 @@ func TestKillAfter(t *testing.T) {
 		if err := db.Ping(); err != nil {
 			// It would be cleaner to do a type assertion on the error, but the actual type we get is
 			// just an *errors.errorString, so we have to examine the text of the error.
-			//
-			// The text of the error varies: either "invalid connection" or "bad connection."
-			const want = "connection"
-			if strings.Contains(err.Error(), want) {
-				// This is success. The ping failed because the database killed itself as intended.
+			wantOneOf := []string{"bad connection", "invalid connection"}
+			if containsOneOf(err.Error(), wantOneOf) {
 				t.Log("the docker container stopped itself successfully")
 				return
 			}
-			t.Fatalf("got an error %q, but wanted one containing %q", err, want)
+			t.Fatalf("got an error %q, but wanted an error containing one of the substrings %q", err, wantOneOf)
 		}
 		time.Sleep(200 * time.Millisecond) // Wait a bit between each ping
 	}
 
 	t.Fatal("the docker container should have stopped itself by now")
+}
+
+// containsOneOf returns whether any of the "needles" are substrings of "haystack".
+func containsOneOf(haystack string, needles []string) bool {
+	for _, needle := range needles {
+		if strings.Contains(haystack, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func connect(t *testing.T, ci ConnInfo) *sql.DB {
