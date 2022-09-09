@@ -18,7 +18,6 @@ package mysqltest
 
 import (
 	"io"
-	"testing"
 )
 
 // ConnInfo specifies how to connect to the MySQL server that is created by this package.
@@ -30,7 +29,7 @@ type ConnInfo struct {
 }
 
 // MustStart starts a MySQL server, or panics if there was an error.
-func MustStart(t *testing.M, opts ...Option) (ConnInfo, io.Closer) {
+func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	conf := buildConfig(opts...)
 	ci, closer, err := start(conf)
 	if err != nil {

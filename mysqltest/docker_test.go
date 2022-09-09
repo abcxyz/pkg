@@ -67,7 +67,7 @@ func TestKillAfter(t *testing.T) {
 		time.Sleep(200 * time.Millisecond) // Wait a bit between each ping
 	}
 
-	t.Fatal("the docker container should have stopped itself by now")
+	t.Errorf("the docker container should have stopped itself by now")
 }
 
 // containsOneOf returns whether any of the "needles" are substrings of "haystack".
