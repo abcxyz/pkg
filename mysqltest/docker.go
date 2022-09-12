@@ -111,7 +111,6 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 		switch {
 		case strings.Contains(err.Error(), "no such file"):
 			extraMsg = `. Please install docker: 
-		Instructions for gLinux: https://g3doc.corp.google.com/cloud/containers/g3doc/glinux-docker/install.md
 		Instructions for Debian: https://docs.docker.com/engine/install/debian/
 		Instructions for Mac: https://docs.docker.com/desktop/mac/install/`
 		case strings.Contains(err.Error(), "permission denied"):
