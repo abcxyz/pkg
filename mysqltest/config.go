@@ -24,6 +24,8 @@ type config struct {
 	progressLogger Logger
 }
 
+// Logger allows the caller to optionally provide a custom logger for printing status updates about
+// MySQL startup progress. The default is to use the go "log" package.
 type Logger interface {
 	Printf(fmtStr string, args ...any)
 }
@@ -44,6 +46,8 @@ func buildConfig(opts ...Option) *config {
 	return config
 }
 
+// Option sets a configuration option for this package. Users should not implement these functions,
+// they should use one of the With* functions.
 type Option func(*config) *config
 
 // WithKillAfterSeconds is an option that overrides the default time period after which the mysql docker
@@ -64,6 +68,15 @@ func WithKillAfterSeconds(seconds int) Option {
 func WithVersion(v string) Option {
 	return func(c *config) *config {
 		c.mySQLVersion = v
+		return c
+	}
+}
+
+// WithLogger overrides the default logger. This logger will receive messages about MySQL startup
+// progress. The default is to use the go "log" package.
+func WithLogger(l Logger) Option {
+	return func(c *config) *config {
+		c.progressLogger = l
 		return c
 	}
 }
