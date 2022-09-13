@@ -37,7 +37,7 @@ func TestKillAfter(t *testing.T) {
 		killAfter               = expectedStartupDuration + extraBuffer
 		killAfterSec            = int(killAfter / time.Second)
 	)
-	conf := buildConfig(WithKillAfterSeconds(killAfterSec))
+	conf := buildConfig(WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
 	ci, closer, err := start(conf)
 	defer func() {
 		_ = closer.Close()
