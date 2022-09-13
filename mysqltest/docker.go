@@ -117,6 +117,8 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 			extraMsg = `. To fix this, enable sudo-less docker container creation:
 					1. Run "sudo adduser $USER docker" to add your user to the docker group
 					2. Reboot the machine to make the group membership effective`
+		case strings.Contains(err.Error(), "404"):
+			extraMsg = fmt.Sprintf(". Probably the requested version %q does not exist as a Docker image", conf.mySQLVersion)
 		}
 		return nil, fmt.Errorf("pool.Run() failed starting mysql container: %w%s", err, extraMsg)
 	}
