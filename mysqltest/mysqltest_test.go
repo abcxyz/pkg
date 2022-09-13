@@ -7,7 +7,9 @@ import (
 )
 
 func TestMustStart(t *testing.T) {
-	ci, closer := MustStart()
+	t.Parallel()
+
+	ci, closer := MustStart(WithLogger(&testLogger{t}))
 	defer closer.Close()
 
 	if ci.Username == "" {
@@ -25,6 +27,8 @@ func TestMustStart(t *testing.T) {
 }
 
 func TestMustStart_NonexistentVersion(t *testing.T) {
+	t.Parallel()
+
 	fakeVersion := "nonexistent_for_test"
 	defer func() {
 		r := recover()
@@ -40,11 +44,11 @@ func TestMustStart_NonexistentVersion(t *testing.T) {
 			t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
 		}
 	}()
-	MustStart(WithVersion(fakeVersion))
+	MustStart(WithVersion(fakeVersion), WithLogger(&testLogger{t}))
 }
 
 func TestBuildConfig(t *testing.T) {
-	logger := &fakeLogger{}
+	logger := &testLogger{t}
 	conf := buildConfig(
 		WithKillAfterSeconds(1),
 		WithVersion("2"),
@@ -56,11 +60,18 @@ func TestBuildConfig(t *testing.T) {
 	if conf.mySQLVersion != "2" {
 		t.Errorf(`got mySQLVersion=%v", want "2"`, conf.mySQLVersion)
 	}
-	if _, ok := conf.progressLogger.(*fakeLogger); !ok {
+	if _, ok := conf.progressLogger.(*testLogger); !ok {
 		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, logger)
 	}
 }
 
-type fakeLogger struct{}
+// testLogger is a Logger implementation that passes through to t.Logf. This means that test logs
+// are printed for test failures and otherwise hidden, which is convenient.
+type testLogger struct {
+	tb testing.TB
+}
 
-func (*fakeLogger) Printf(string, ...any) {}
+func (tl *testLogger) Printf(fmtStr string, args ...any) {
+	tl.tb.Helper()
+	tl.tb.Logf(fmtStr, args...)
+}
