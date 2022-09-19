@@ -13,6 +13,8 @@
 // limitations under the License.
 
 // Package cfgloader provides common functionality to load configs.
+// It's meant for loading configs from YAML and/or env vars. Don't use
+// it for initializing configs with defaults.
 package cfgloader
 
 import (
