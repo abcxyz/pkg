@@ -8,8 +8,10 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/lestrrat-go/jwx/v2 v2.0.3
 	github.com/ory/dockertest/v3 v3.9.1
+	github.com/sethvargo/go-envconfig v0.8.2
 	go.uber.org/zap v1.21.0
 	google.golang.org/grpc v1.47.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -51,5 +53,4 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20220421151946-72621c1f0bd3 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
