@@ -195,10 +195,13 @@ func TestRequestPrincipalFromGRPC(t *testing.T) {
 			want: "user@example.com",
 		},
 	}
+
 	for _, tc := range tests {
 		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
 			opts := append(tc.opts, WithJWTAuthEndpoint(svr.URL+path))
 			g, err := NewJWTAuthenticationHandler(tc.ctx, opts...)
 			if err != nil {

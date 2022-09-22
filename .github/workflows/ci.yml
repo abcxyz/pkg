@@ -16,9 +16,9 @@ jobs:
   lint:
     uses: './.github/workflows/go-lint.yml'
     with:
-      go_version: '1.18'
+      go_version: '1.19'
 
   test:
     uses: './.github/workflows/go-test.yml'
     with:
-      go_version: '1.18'
+      go_version: '1.19'
