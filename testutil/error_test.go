@@ -27,29 +27,36 @@ func TestDiffErrString(t *testing.T) {
 		msg      string
 		err      error
 		wantDiff string
-	}{{
-		name: "empty_string_nil_err",
-	}, {
-		name:     "empty_string_err",
-		err:      fmt.Errorf("some err"),
-		wantDiff: "got err=some err, want err=nil",
-	}, {
-		name:     "non_empty_string_nil_err",
-		msg:      "some err",
-		wantDiff: `got err=nil, want err containing "some err"`,
-	}, {
-		name:     "err_mismatch",
-		msg:      "some err",
-		err:      fmt.Errorf("other err"),
-		wantDiff: `got err=other err, want err containing "some err"`,
-	}, {
-		name: "err_match",
-		msg:  "some err",
-		err:  fmt.Errorf("xyz some err"),
-	}}
+	}{
+		{
+			name: "empty_string_nil_err",
+		},
+		{
+			name:     "empty_string_err",
+			err:      fmt.Errorf("some err"),
+			wantDiff: "got err=some err, want err=nil",
+		},
+		{
+			name:     "non_empty_string_nil_err",
+			msg:      "some err",
+			wantDiff: `got err=nil, want err containing "some err"`,
+		},
+		{
+			name:     "err_mismatch",
+			msg:      "some err",
+			err:      fmt.Errorf("other err"),
+			wantDiff: `got err=other err, want err containing "some err"`,
+		},
+		{
+			name: "err_match",
+			msg:  "some err",
+			err:  fmt.Errorf("xyz some err"),
+		},
+	}
 
 	for _, tc := range cases {
 		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

@@ -26,7 +26,7 @@ jobs:
         uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
 
       - name: 'Setup Go'
-        uses: 'actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a' # ratchet:actions/setup-go@v3
+        uses: 'actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f' # ratchet:actions/setup-go@v3
         with:
           go-version: '${{ inputs.go_version }}'
 
@@ -56,7 +56,7 @@ jobs:
         uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
 
       - name: 'Setup Go'
-        uses: 'actions/setup-go@84cbf8094393cdc5fe1fe1671ff2647332956b1a' # ratchet:actions/setup-go@v3
+        uses: 'actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f' # ratchet:actions/setup-go@v3
         with:
           go-version: '${{ inputs.go_version }}'
 
@@ -70,7 +70,6 @@ jobs:
               "bidichk",
               "bodyclose",
               "containedctx",
-              "deadcode",
               "depguard",
               "dogsled",
               "errcheck",
@@ -99,7 +98,6 @@ jobs:
               "revive",
               "sqlclosecheck",
               "staticcheck",
-              "structcheck",
               "stylecheck",
               "tenv",
               "thelper",
@@ -107,7 +105,6 @@ jobs:
               "typecheck",
               "unconvert",
               "unused",
-              "varcheck",
               "whitespace",
             ]'), ',') }} --max-issues-per-linter=0 --max-same-issues=0 --timeout=5m
           working-directory: '${{ inputs.directory }}'
