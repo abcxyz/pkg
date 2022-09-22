@@ -45,58 +45,65 @@ func TestLoad(t *testing.T) {
 		input   *fakeCfg
 		want    *fakeCfg
 		wantErr string
-	}{{
-		name:  "no_option_set_default",
-		opts:  []Option{},
-		input: &fakeCfg{},
-		want: &fakeCfg{
-			StrVal: "foo",
-			NumVal: 1,
+	}{
+		{
+			name:  "no_option_set_default",
+			opts:  []Option{},
+			input: &fakeCfg{},
+			want: &fakeCfg{
+				StrVal: "foo",
+				NumVal: 1,
+			},
 		},
-	}, {
-		name: "with_yaml",
-		opts: []Option{WithYAML([]byte(`str_val: bar
+		{
+			name: "with_yaml",
+			opts: []Option{WithYAML([]byte(`str_val: bar
 num_val: 2`))},
-		input: &fakeCfg{},
-		want: &fakeCfg{
-			StrVal: "bar",
-			NumVal: 2,
+			input: &fakeCfg{},
+			want: &fakeCfg{
+				StrVal: "bar",
+				NumVal: 2,
+			},
 		},
-	}, {
-		name: "with_prefix_lookuper",
-		opts: []Option{
-			WithEnvPrefix("TEST_"),
-			WithLookuper(envconfig.MapLookuper(map[string]string{
-				"TEST_STR_VAL": "bar",
-				"TEST_NUM_VAL": "2",
-			})),
+		{
+			name: "with_prefix_lookuper",
+			opts: []Option{
+				WithEnvPrefix("TEST_"),
+				WithLookuper(envconfig.MapLookuper(map[string]string{
+					"TEST_STR_VAL": "bar",
+					"TEST_NUM_VAL": "2",
+				})),
+			},
+			input: &fakeCfg{},
+			want: &fakeCfg{
+				StrVal: "bar",
+				NumVal: 2,
+			},
 		},
-		input: &fakeCfg{},
-		want: &fakeCfg{
-			StrVal: "bar",
-			NumVal: 2,
+		{
+			name: "config_already_has_values",
+			opts: []Option{},
+			input: &fakeCfg{
+				StrVal: "bar",
+			},
+			want: &fakeCfg{
+				StrVal: "bar",
+				NumVal: 1,
+			},
 		},
-	}, {
-		name: "config_already_has_values",
-		opts: []Option{},
-		input: &fakeCfg{
-			StrVal: "bar",
+		{
+			name: "validation_failure",
+			opts: []Option{},
+			input: &fakeCfg{
+				StrVal: "fail_me",
+			},
+			wantErr: "StrVal cannot be 'fail_me'",
 		},
-		want: &fakeCfg{
-			StrVal: "bar",
-			NumVal: 1,
-		},
-	}, {
-		name: "validation_failure",
-		opts: []Option{},
-		input: &fakeCfg{
-			StrVal: "fail_me",
-		},
-		wantErr: "StrVal cannot be 'fail_me'",
-	}}
+	}
 
 	for _, tc := range tests {
 		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

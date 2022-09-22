@@ -189,6 +189,8 @@ var developmentEncoderConfig = zapcore.EncoderConfig{
 func levelEncoder() zapcore.LevelEncoder {
 	return func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 		switch l {
+		case zapcore.InvalidLevel:
+			enc.AppendString(levelAlert)
 		case zapcore.DebugLevel:
 			enc.AppendString(levelDebug)
 		case zapcore.InfoLevel:

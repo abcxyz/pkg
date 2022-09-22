@@ -118,24 +118,30 @@ func TestValidateJWT(t *testing.T) {
 			name:      "happy-path",
 			jwt:       validJWT,
 			wantToken: tok,
-		}, {
+		},
+		{
 			name:      "other-key",
 			jwt:       validJWT2,
 			wantToken: tok2,
-		}, {
+		},
+		{
 			name:    "unsigned",
 			jwt:     unsignedJWT,
 			wantErr: "required field \"signatures\" not present",
-		}, {
+		},
+		{
 			name:    "invalid",
 			jwt:     invalidSignatureJWT,
 			wantErr: "failed to verify jwt",
 		},
 	}
+
 	for _, tc := range tests {
 		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
 			res, err := client.ValidateJWT(tc.jwt)
 			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
 				t.Errorf("Unexpected err: %s", diff)
