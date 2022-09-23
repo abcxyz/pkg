@@ -22,6 +22,8 @@ import (
 )
 
 func TestContext(t *testing.T) {
+	t.Parallel()
+
 	logger1 := zap.NewNop().Sugar()
 	logger2 := zap.NewExample().Sugar()
 
@@ -34,9 +36,10 @@ func TestContext(t *testing.T) {
 	checkFromContext(ctx, t, logger2)
 }
 
-func checkFromContext(ctx context.Context, t *testing.T, want *zap.SugaredLogger) {
-	t.Helper()
+func checkFromContext(ctx context.Context, tb testing.TB, want *zap.SugaredLogger) {
+	tb.Helper()
+
 	if got := FromContext(ctx); want != got {
-		t.Errorf("unexpected logger in context. got: %v, want: %v", got, want)
+		tb.Errorf("unexpected logger in context. got: %v, want: %v", got, want)
 	}
 }

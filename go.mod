@@ -5,7 +5,7 @@ go 1.18
 require (
 	cloud.google.com/go/compute v1.10.0
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/lestrrat-go/jwx/v2 v2.0.6
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/sethvargo/go-envconfig v0.8.2
@@ -18,6 +18,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect

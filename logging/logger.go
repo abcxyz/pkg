@@ -26,6 +26,7 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
@@ -104,6 +105,20 @@ func FromContext(ctx context.Context) *zap.SugaredLogger {
 		return logger
 	}
 	return Default()
+}
+
+// TestLogger returns a logger configured for tests. It will only output log
+// information if specific test fails or is run in verbose mode. See [zaptest]
+// for more information.
+//
+//	func TestMyThing(t *testing.T) {
+//		logger := logging.TestLogger(t)
+//		thing := &MyThing{logger: logger}
+//	}
+//
+// [zaptest]: https://pkg.go.dev/go.uber.org/zap/zaptest
+func TestLogger(tb zaptest.TestingT) *zap.SugaredLogger {
+	return zaptest.NewLogger(tb, zaptest.Level(zap.WarnLevel)).Sugar()
 }
 
 // GRPCInterceptor returns a gRPC interceptor that populates a logger in the context.
