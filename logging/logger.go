@@ -117,8 +117,10 @@ func FromContext(ctx context.Context) *zap.SugaredLogger {
 //	}
 //
 // [zaptest]: https://pkg.go.dev/go.uber.org/zap/zaptest
-func TestLogger(tb zaptest.TestingT) *zap.SugaredLogger {
-	return zaptest.NewLogger(tb, zaptest.Level(zap.WarnLevel)).Sugar()
+func TestLogger(tb zaptest.TestingT, opts ...zaptest.LoggerOption) *zap.SugaredLogger {
+	warnLevelOpt := zaptest.Level(zap.WarnLevel)
+	opts = append([]zaptest.LoggerOption{warnLevelOpt}, opts...)
+	return zaptest.NewLogger(tb, opts...).Sugar()
 }
 
 // GRPCInterceptor returns a gRPC interceptor that populates a logger in the context.
