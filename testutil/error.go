@@ -27,13 +27,13 @@ func DiffErrString(got error, want string) string {
 		if got == nil {
 			return ""
 		}
-		return fmt.Sprintf("got err=%v, want err=nil", got)
+		return fmt.Sprintf("expected error %q to be <nil>", got.Error())
 	}
 	if got == nil {
-		return fmt.Sprintf("got err=nil, want err containing %q", want)
+		return fmt.Sprintf("expected error <nil> to contain %q", want)
 	}
-	if !strings.Contains(got.Error(), want) {
-		return fmt.Sprintf("got err=%v, want err containing %q", got, want)
+	if msg := got.Error(); !strings.Contains(msg, want) {
+		return fmt.Sprintf("expected error %q to contain %q", msg, want)
 	}
 	return ""
 }

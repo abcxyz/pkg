@@ -34,18 +34,18 @@ func TestDiffErrString(t *testing.T) {
 		{
 			name:     "empty_string_err",
 			err:      fmt.Errorf("some err"),
-			wantDiff: "got err=some err, want err=nil",
+			wantDiff: `expected error "some err" to be <nil>`,
 		},
 		{
 			name:     "non_empty_string_nil_err",
 			msg:      "some err",
-			wantDiff: `got err=nil, want err containing "some err"`,
+			wantDiff: `expected error <nil> to contain "some err"`,
 		},
 		{
 			name:     "err_mismatch",
 			msg:      "some err",
 			err:      fmt.Errorf("other err"),
-			wantDiff: `got err=other err, want err containing "some err"`,
+			wantDiff: `expected error "other err" to contain "some err"`,
 		},
 		{
 			name: "err_match",
