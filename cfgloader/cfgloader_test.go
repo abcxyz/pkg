@@ -25,8 +25,9 @@ import (
 )
 
 type fakeCfg struct {
-	StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
-	NumVal int    `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
+	StrVal string            `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
+	NumVal int               `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
+	MapVal map[string]string `yaml:"map_val,omitempty"`
 }
 
 func (c *fakeCfg) Validate() error {
@@ -34,6 +35,12 @@ func (c *fakeCfg) Validate() error {
 		return fmt.Errorf("StrVal cannot be 'fail_me'")
 	}
 	return nil
+}
+
+func (c *fakeCfg) SetDefault() {
+	if c.MapVal == nil {
+		c.MapVal = map[string]string{"abc": "xyz"}
+	}
 }
 
 func TestLoad(t *testing.T) {
@@ -53,16 +60,20 @@ func TestLoad(t *testing.T) {
 			want: &fakeCfg{
 				StrVal: "foo",
 				NumVal: 1,
+				MapVal: map[string]string{"abc": "xyz"},
 			},
 		},
 		{
 			name: "with_yaml",
 			opts: []Option{WithYAML([]byte(`str_val: bar
 num_val: 2`))},
-			input: &fakeCfg{},
+			input: &fakeCfg{
+				MapVal: map[string]string{},
+			},
 			want: &fakeCfg{
 				StrVal: "bar",
 				NumVal: 2,
+				MapVal: map[string]string{},
 			},
 		},
 		{
@@ -74,10 +85,11 @@ num_val: 2`))},
 					"TEST_NUM_VAL": "2",
 				})),
 			},
-			input: &fakeCfg{},
+			input: &fakeCfg{MapVal: map[string]string{}},
 			want: &fakeCfg{
 				StrVal: "bar",
 				NumVal: 2,
+				MapVal: map[string]string{},
 			},
 		},
 		{
@@ -89,6 +101,7 @@ num_val: 2`))},
 			want: &fakeCfg{
 				StrVal: "bar",
 				NumVal: 1,
+				MapVal: map[string]string{"abc": "xyz"},
 			},
 		},
 		{

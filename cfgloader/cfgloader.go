@@ -30,6 +30,11 @@ type Validatable interface {
 	Validate() error
 }
 
+// Defaultable is the interface to set defaults with code logic.
+type Defaultable interface {
+	SetDefault()
+}
+
 type options struct {
 	yamlBytes []byte
 	envPrefix string
@@ -47,7 +52,8 @@ func WithYAML(b []byte) Option {
 	}
 }
 
-// WithEnvPrefix instructs the loader to load config from env vars with the given prefix.
+// WithEnvPrefix instructs the loader to load config from env vars with the
+// given prefix.
 func WithEnvPrefix(prefix string) Option {
 	return func(o *options) *options {
 		o.envPrefix = prefix
@@ -55,7 +61,8 @@ func WithEnvPrefix(prefix string) Option {
 	}
 }
 
-// WithLookuper instructs the loader to use the giver lookuper to find config values.
+// WithLookuper instructs the loader to use the giver lookuper to find config
+// values.
 func WithLookuper(lookuper envconfig.Lookuper) Option {
 	return func(o *options) *options {
 		o.lookuper = lookuper
@@ -71,12 +78,12 @@ func WithLookuper(lookuper envconfig.Lookuper) Option {
 //
 // The values loaded later will overwrite previously loaded values.
 //
-// The given config type must have the yaml tags to load from yaml bytes.
-// It must have the [env tag] to load from env vars. E.g.
+// The given config type must have the yaml tags to load from yaml bytes. It
+// must have the [env tag] to load from env vars. E.g.
 //
 //	type Cfg struct {
-//		StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
-//		NumVal int    `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
+//	  StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
+//	  NumVal int    `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
 //	}
 //
 // [env tag]: https://github.com/sethvargo/go-envconfig
@@ -103,6 +110,10 @@ func Load(ctx context.Context, cfg any, opt ...Option) error {
 
 	if err := envconfig.ProcessWith(ctx, cfg, lookuper); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if d, ok := cfg.(Defaultable); ok {
+		d.SetDefault()
 	}
 
 	v, ok := cfg.(Validatable)
