@@ -74,7 +74,9 @@ func WithLookuper(lookuper envconfig.Lookuper) Option {
 //
 //  1. The existing values in the given config.
 //  2. Unmarshaled yaml bytes
-//  3. Env vars
+//  3. Values from [SetDefault] func if implemented
+//  4. Default values from [env tag] if they were zero values.
+//  5. Env vars
 //
 // The values loaded later will overwrite previously loaded values.
 //
@@ -103,6 +105,10 @@ func Load(ctx context.Context, cfg any, opt ...Option) error {
 		}
 	}
 
+	if d, ok := cfg.(Defaultable); ok {
+		d.SetDefault()
+	}
+
 	lookuper := opts.lookuper
 	if opts.envPrefix != "" {
 		lookuper = envconfig.PrefixLookuper(opts.envPrefix, lookuper)
@@ -110,10 +116,6 @@ func Load(ctx context.Context, cfg any, opt ...Option) error {
 
 	if err := envconfig.ProcessWith(ctx, cfg, lookuper); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if d, ok := cfg.(Defaultable); ok {
-		d.SetDefault()
 	}
 
 	v, ok := cfg.(Validatable)

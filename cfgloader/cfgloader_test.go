@@ -25,21 +25,28 @@ import (
 )
 
 type fakeCfg struct {
-	StrVal string            `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
-	NumVal int               `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
-	MapVal map[string]string `yaml:"map_val,omitempty"`
+	StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
 }
 
-func (c *fakeCfg) Validate() error {
+type fakeCfgValidatable struct {
+	StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
+	NumVal int    `yaml:"num_val,omitempty" env:"NUM_VAL,overwrite,default=1"`
+}
+
+func (c *fakeCfgValidatable) Validate() error {
 	if c.StrVal == "fail_me" {
 		return fmt.Errorf("StrVal cannot be 'fail_me'")
 	}
 	return nil
 }
 
-func (c *fakeCfg) SetDefault() {
-	if c.MapVal == nil {
-		c.MapVal = map[string]string{"abc": "xyz"}
+type fakeCfgDefaultable struct {
+	StrVal string `yaml:"str_val,omitempty" env:"STR_VAL,overwrite,default=foo"`
+}
+
+func (c *fakeCfgDefaultable) SetDefault() {
+	if c.StrVal == "" {
+		c.StrVal = "bar"
 	}
 }
 
@@ -49,31 +56,27 @@ func TestLoad(t *testing.T) {
 	tests := []struct {
 		name    string
 		opts    []Option
-		input   *fakeCfg
-		want    *fakeCfg
+		input   any
+		want    any
 		wantErr string
 	}{
 		{
 			name:  "no_option_set_default",
 			opts:  []Option{},
-			input: &fakeCfg{},
-			want: &fakeCfg{
+			input: &fakeCfgValidatable{},
+			want: &fakeCfgValidatable{
 				StrVal: "foo",
 				NumVal: 1,
-				MapVal: map[string]string{"abc": "xyz"},
 			},
 		},
 		{
 			name: "with_yaml",
 			opts: []Option{WithYAML([]byte(`str_val: bar
 num_val: 2`))},
-			input: &fakeCfg{
-				MapVal: map[string]string{},
-			},
-			want: &fakeCfg{
+			input: &fakeCfgValidatable{},
+			want: &fakeCfgValidatable{
 				StrVal: "bar",
 				NumVal: 2,
-				MapVal: map[string]string{},
 			},
 		},
 		{
@@ -85,32 +88,55 @@ num_val: 2`))},
 					"TEST_NUM_VAL": "2",
 				})),
 			},
-			input: &fakeCfg{MapVal: map[string]string{}},
-			want: &fakeCfg{
+			input: &fakeCfgValidatable{},
+			want: &fakeCfgValidatable{
 				StrVal: "bar",
 				NumVal: 2,
-				MapVal: map[string]string{},
 			},
 		},
 		{
 			name: "config_already_has_values",
 			opts: []Option{},
-			input: &fakeCfg{
+			input: &fakeCfgValidatable{
 				StrVal: "bar",
 			},
-			want: &fakeCfg{
+			want: &fakeCfgValidatable{
 				StrVal: "bar",
 				NumVal: 1,
-				MapVal: map[string]string{"abc": "xyz"},
 			},
 		},
 		{
 			name: "validation_failure",
 			opts: []Option{},
-			input: &fakeCfg{
+			input: &fakeCfgValidatable{
 				StrVal: "fail_me",
 			},
 			wantErr: "StrVal cannot be 'fail_me'",
+		},
+		{
+			name:  "set_default_with_initial_value_no_change",
+			opts:  []Option{},
+			input: &fakeCfgDefaultable{StrVal: "abc"},
+			want:  &fakeCfgDefaultable{StrVal: "abc"},
+		},
+		{
+			name:  "set_default_no_overwrite",
+			opts:  []Option{},
+			input: &fakeCfgDefaultable{},
+			want:  &fakeCfgDefaultable{StrVal: "bar"},
+		},
+		{
+			name: "set_default_with_overwrite",
+			opts: []Option{WithLookuper(envconfig.MapLookuper(map[string]string{
+				"STR_VAL": "xyz",
+			}))},
+			input: &fakeCfgDefaultable{},
+			want:  &fakeCfgDefaultable{StrVal: "xyz"},
+		},
+		{
+			name:  "not_validatable_defaultable_ok",
+			input: &fakeCfg{},
+			want:  &fakeCfg{StrVal: "foo"},
 		},
 	}
 
