@@ -25,7 +25,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Validatable is the interface to validate a config.
+// Validatable is the interface to validate a config. In addition to validating
+// inputs, [Validate] may optionally fill or mutate config values.
 type Validatable interface {
 	Validate() error
 }
