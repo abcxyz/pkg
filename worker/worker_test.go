@@ -196,7 +196,7 @@ func TestWorker_Done(t *testing.T) {
 		}
 	})
 
-	t.Run("concurreny", func(t *testing.T) {
+	t.Run("concurrency", func(t *testing.T) {
 		t.Parallel()
 
 		w := New[int](3)

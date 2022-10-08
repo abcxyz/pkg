@@ -87,10 +87,16 @@ func New[T any](concurrency int64) *Worker[T] {
 // until a worker becomes available or until the provided context is cancelled.
 // The function returns when the work has been successfully scheduled.
 //
-// To wait for all work to be completed and read the results, call [Done]. After
-// the worker has been stopped via [Done], this will return [ErrStopped].
+// To wait for all work to be completed and read the results, call
+// [worker.Done]. This function only returns an error on two conditions:
 //
-// Never call [Do] from within a [Do] function because it will deadlock.
+//   - The worker was stopped via a call to [worker.Done]. You should not
+//     enqueue more work. The error will be [ErrStopped].
+//   - The incoming context was cancelled. You should probably not enqueue more
+//     work, but this is an application-specific decision. The error will be
+//     [context.DeadlineExceeded] or [context.Canceled].
+//
+// Never call Do from within a Do function because it will deadlock.
 func (w *Worker[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 	// Do not enqueue new work if the worker is stopped.
 	if w.isStopped() {
