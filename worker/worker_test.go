@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -147,6 +148,81 @@ func TestWorker_Done(t *testing.T) {
 		}
 		if diff := cmp.Diff(want, got); diff != "" {
 			t.Errorf("justs: diff (-want, +got):\n%s", diff)
+		}
+	})
+
+	t.Run("cancelled", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, done := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		t.Cleanup(done)
+
+		w := New[int](2)
+
+		for i := 0; i < 5; i++ {
+			i := i
+
+			err := w.Do(ctx, func() (int, error) {
+				time.Sleep(100 * time.Millisecond)
+				return i, nil
+			})
+
+			// The worker has a size of 2, so the first 2 should queue non-blocking
+			// and sleep for 100ms. The third should block and then the context should
+			// cancel at 10ms.
+			if i < 2 {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if !errors.Is(err, context.DeadlineExceeded) {
+					t.Errorf("expected %v to be %v", err, context.DeadlineExceeded)
+				}
+			}
+		}
+
+		finishCtx := context.Background()
+		results, err := w.Done(finishCtx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []int{0, 1}
+		var got []int
+		for _, result := range results {
+			got = append(got, result.Value)
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("justs: diff (-want, +got):\n%s", diff)
+		}
+	})
+
+	t.Run("concurreny", func(t *testing.T) {
+		t.Parallel()
+
+		w := New[int](3)
+		var wg sync.WaitGroup
+
+		for i := 0; i < 15; i++ {
+			i := i
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				_ = w.Do(ctx, func() (int, error) {
+					time.Sleep(time.Duration(i) * time.Millisecond)
+					return i, nil
+				})
+			}()
+		}
+
+		wg.Wait()
+
+		results, err := w.Done(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := len(results), 15; got != want {
+			t.Errorf("expected %d to be %d: %v", got, want, results)
 		}
 	})
 }

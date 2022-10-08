@@ -79,7 +79,7 @@ func New[T any](concurrency int64) *Worker[T] {
 		size:    concurrency,
 		i:       -1,
 		sem:     semaphore.NewWeighted(concurrency),
-		results: make([]*result[T], 0, concurrency*4),
+		results: make([]*result[T], 0, concurrency),
 	}
 }
 
