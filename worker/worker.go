@@ -110,7 +110,7 @@ func (w *Worker[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 	// It's possible the worker was stopped while we were waiting for the
 	// semaphore to acquire, but the worker is actually stopped.
 	if w.isStopped() {
-		defer w.sem.Release(1)
+		w.sem.Release(1)
 		return ErrStopped
 	}
 
