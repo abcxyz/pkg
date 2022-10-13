@@ -7,17 +7,20 @@ integration between Go code and MySQL.
 
 ## How to use it
 
-Since it takes about 15 second to start the MySQL Docker container, we recommend sharing a single
+Since it takes about 15 seconds to start the MySQL Docker container, we recommend sharing a single
 MySQL instance between all of your tests. `USE` separate databases/namespaces or separate tables to
 isolate your tests from each other.
 
 Call `MustStart()` from your `TestMain()` function, If you're not familiar with Go's `TestMain()`
 mechanism for global test initialization, see the docs: https://pkg.go.dev/testing#hdr-Main.
 
-```
+```go
+package mypackage
+
 import (
     "database/sql"
     "fmt"
+    "io"
     "os"
     "testing"
 
@@ -31,9 +34,14 @@ var ci mysqltest.ConnInfo
 func TestMain(m *testing.M) {
     var closer io.Closer
     ci, closer = mysqltest.MustStart() // Start the docker container. Can also pass options.
-    defer closer.Close()
+    exitCode := m.Run() // Runs unit tests
+    
+    // Remove container. If tests panic, this won't run, but there's nothing we can do about that:
+    // https://github.com/golang/go/issues/37206#issuecomment-590441512. In that case, then the
+    // container will eventually time out and be cleaned up.
+    closer.Close()
 
-    os.Exit(m.Run()) // Runs unit tests    
+    os.Exit(exitCode)
 }
 
 func TestFoo(t *testing.T) {
@@ -45,7 +53,7 @@ func TestFoo(t *testing.T) {
     }
 
     // application logic goes here
-    
+    _ = db
 }
 ```
 
@@ -68,7 +76,7 @@ step can run in the base VM, or it can run inside a Docker container, for isolat
 
 So, in your GitHub actions yaml file, do this:
 
-```
+```yaml
 jobs:
   test:
     name: Go Test
@@ -81,7 +89,7 @@ jobs:
 
 ... and *don't* do this:
 
-```
+```yaml
 jobs:
   test:
     name: Go Test
