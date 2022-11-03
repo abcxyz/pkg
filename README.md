@@ -2,7 +2,7 @@
 
 **"abcxyz Common Packages" is not an official Google product.**
 
-<img src="./pkg.png" alt="Logo" width="300" />
+![Kitchen Sink](./docs/sink.svg)
 
 abcxyz `pkg` provides a place for sharing common abcxyz packages across the
 abcxyz repos.
