@@ -2,22 +2,7 @@
 
 **"abcxyz Common Packages" is not an official Google product.**
 
-```
-                    ___
-                  .' _ '.
-                 / /` `\ \
-                 | |   [__]
-                 | |    {{
-                 | |    }}
-              _  | |  _ {{
-  ___________<_>_| |_<_>}}________
-      .=======^=(___)=^={{====.
-     / .----------------}}---. \
-    / /                 {{    \ \
-   / /                  }}     \ \
-  (  '========================='  )
-   '-----------------------------'
-```
+<img src="./pkg.png" alt="Logo" width="100" />
 
 abcxyz `pkg` provides a place for sharing common abcxyz packages across the
 abcxyz repos.
