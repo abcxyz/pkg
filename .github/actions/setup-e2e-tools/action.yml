@@ -1,0 +1,13 @@
+name: 'setup-e2e-tools'
+description: 'Set up required tooling for creating an e2e test environment'
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Install Skaffold'
+      shell: bash
+      run: |
+        curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && sudo install skaffold /usr/local/bin/ && skaffold version
+    - name: 'Install and start minikube'
+      id: minikube
+      uses: medyagh/setup-minikube@b127ace2ffdece4eb28e7dedb9da39f495ab7af0
