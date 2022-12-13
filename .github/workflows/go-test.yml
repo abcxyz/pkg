@@ -47,15 +47,15 @@ jobs:
           jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> $GITHUB_ENV
 
       - name: 'Checkout'
-        uses: 'actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b' # ratchet:actions/checkout@v3
+        uses: 'actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b' # ratchet:actions/checkout@v3
 
       - name: 'Setup Go'
-        uses: 'actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f' # ratchet:actions/setup-go@v3
+        uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
         with:
           go-version: '${{ inputs.go_version }}'
 
       - name: 'Cache dependencies'
-        uses: 'actions/cache@fd5de65bc895cf536527842281bea11763fefd77' # ratchet:actions/cache@v3
+        uses: 'actions/cache@9b0c1fce7a93df8e3bb8926b0d6e9d89e92f20a7' # ratchet:actions/cache@v3
         with:
           path: |-
             ~/go/pkg/mod
