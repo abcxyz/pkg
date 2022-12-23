@@ -46,7 +46,6 @@ func TestKillAfter(t *testing.T) {
 		t.Fatal(err)
 	}
 	db := connect(t, ci)
-	defer db.Close()
 
 	if err := db.Ping(); err != nil {
 		t.Fatalf("db.Ping: %v", err)
