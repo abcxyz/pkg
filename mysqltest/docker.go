@@ -159,7 +159,6 @@ func tryLogin(conf *config, port string) error {
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)
 	}
-	defer db.Close()
 
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("db.Ping(): %w", err)
