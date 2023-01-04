@@ -25,7 +25,7 @@ import (
 )
 
 // CreateJWT creates a JWT for use in testing. Fills out standard claims.
-func CreateJWT(tb testing.TB, id string, email string) jwt.Token {
+func CreateJWT(tb testing.TB, id, email string) jwt.Token {
 	tb.Helper()
 
 	tok, err := jwt.NewBuilder().
