@@ -38,6 +38,7 @@ func IsIntegration() bool {
 
 // SkipIfNotIntegration skips the test if [IsIntegration] returns false.
 func SkipIfNotIntegration(tb testing.TB) {
+	tb.Helper()
 	if !IsIntegration() {
 		tb.Skip("Not integration test, skipping")
 	}
