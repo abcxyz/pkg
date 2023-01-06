@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"testing"
 )
 
 // IsIntegration checks env var TEST_INTEGRATION and consider that we're in an
@@ -33,4 +34,11 @@ func IsIntegration() bool {
 		return false
 	}
 	return isInteg
+}
+
+// SkipIfNotIntegration skips the test if [IsIntegration] returns false.
+func SkipIfNotIntegration(tb testing.TB) {
+	if !IsIntegration() {
+		tb.Skip("Not integration test, skipping")
+	}
 }
