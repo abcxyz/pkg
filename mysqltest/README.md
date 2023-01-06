@@ -68,7 +68,7 @@ passing `WithTimeout(...)` to `MustStart()`.
 ## Warning on GitHub Actions
 
 This library doesn't currently work when the Go tests are themselves running inside a Docker
-container. It can succesfully start a new container, but networking between the two containers
+container. It can successfully start a new container, but networking between the two containers
 doesn't work. This can cause problems if you configure GitHub Actions in a certain way.
 
 Background: a GitHub Actions workflow runs inside a VM. A workflow consists of multiple steps. Each

@@ -11,7 +11,7 @@ abcxyz repos.
 ## GitHub Actions
 
 There are reusable workflows inside [./.github/workflows](.github/workflows),
-which incapsulate common CI/CD logic to reduce repetition. For security, the
+which encapsulate common CI/CD logic to reduce repetition. For security, the
 reusable workflows are pinned to specific references using
 [ratchet](https://github.com/sethvargo/ratchet).
 
