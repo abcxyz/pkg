@@ -15,7 +15,6 @@
 package testutil
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"testing"
@@ -23,15 +22,15 @@ import (
 
 // IsIntegration checks env var TEST_INTEGRATION and consider that we're in an
 // integration test if it's set to true.
-func IsIntegration() bool {
+func IsIntegration(tb testing.TB) bool {
+	tb.Helper()
 	integVal := os.Getenv("TEST_INTEGRATION")
 	if integVal == "" {
 		return false
 	}
 	isInteg, err := strconv.ParseBool(integVal)
 	if err != nil {
-		log.Printf("WARNING: failed to parse TEST_INTEGRATION; will default to 'false': %v", err)
-		return false
+		tb.Fatalf("failed to parse TEST_INTEGRATION: %v", err)
 	}
 	return isInteg
 }
@@ -39,7 +38,7 @@ func IsIntegration() bool {
 // SkipIfNotIntegration skips the test if [IsIntegration] returns false.
 func SkipIfNotIntegration(tb testing.TB) {
 	tb.Helper()
-	if !IsIntegration() {
+	if !IsIntegration(tb) {
 		tb.Skip("Not integration test, skipping")
 	}
 }
