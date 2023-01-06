@@ -5,7 +5,7 @@ import (
 )
 
 func TestIsIntegration(t *testing.T) {
-	t.Parallel()
+	// Can't be paralleled since we set env var.
 
 	if IsIntegration() {
 		t.Errorf("IsIntegration() got 'true' want 'false'")
