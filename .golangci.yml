@@ -113,7 +113,7 @@ linters-settings:
     values:
       regexp:
         YEAR_AUTHOR: '\d{4} .*'
-        INDENTATION: '[\t\f ]{2,}'
+        INDENTATION: '[\t\f]+|[ ]{2,}'
     # default: ""
     template: |-
       Copyright {{ YEAR_AUTHOR }}
