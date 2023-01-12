@@ -110,7 +110,7 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 		var extraMsg string
 		switch {
 		case strings.Contains(err.Error(), "no such file"):
-			extraMsg = `. Please install docker: 
+			extraMsg = `. Please install docker:
 		Instructions for Debian: https://docs.docker.com/engine/install/debian/
 		Instructions for Mac: https://docs.docker.com/desktop/mac/install/`
 		case strings.Contains(err.Error(), "permission denied"):
