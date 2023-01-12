@@ -104,7 +104,7 @@ func (w *Worker[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 	}
 
 	if err := w.sem.Acquire(ctx, 1); err != nil {
-		return err
+		return fmt.Errorf("failed to acquire semaphore: %w", err)
 	}
 
 	// It's possible the worker was stopped while we were waiting for the
@@ -148,7 +148,7 @@ func (w *Worker[T]) Done(ctx context.Context) ([]*Result[T], error) {
 	}
 
 	if err := w.sem.Acquire(ctx, w.size); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
 	}
 	defer w.sem.Release(w.size)
 

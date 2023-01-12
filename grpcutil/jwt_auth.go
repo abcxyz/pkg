@@ -44,7 +44,7 @@ type JWTAuthenticationHandler struct {
 }
 
 // NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
-// for JWT related fields that will retreive a user email when using IAM on GCP.
+// for JWT related fields that will retrieve a user email when using IAM on GCP.
 func NewJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*JWTAuthenticationHandler, error) {
 	j := &JWTAuthenticationHandler{
 		JWTPrefix:          "bearer ",
@@ -68,7 +68,7 @@ func NewJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*J
 	}
 	verifier, err := jwtutil.NewVerifier(ctx, j.Endpoint)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
 	j.Verifier = verifier
 	return j, nil
