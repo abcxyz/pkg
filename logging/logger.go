@@ -51,6 +51,15 @@ var (
 	// include upon calling DefaultLogger.
 	defaultLogger     *zap.SugaredLogger
 	defaultLoggerOnce sync.Once
+
+	// googleCloudProjectIDOnce controls project ID lazy loading. We don't want to
+	// compute this on boot so that we minimize cold boot times, so we cache it on
+	// the first invocation.
+	//
+	// googleCloudProjectIDValue stores the actual value, but callers should
+	// invoke googleCloudProjectID() instead.
+	googleCloudProjectIDOnce  sync.Once
+	googleCloudProjectIDValue string
 )
 
 // NewFromEnv creates a new logger from env vars.
@@ -135,7 +144,7 @@ func GRPCInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
 		}
 
 		// Best effort to get the current project ID.
-		projectID, _ := metadata.ProjectID()
+		projectID := googleCloudProjectID(ctx)
 
 		// This allows us to associate logs to traces.
 		// See "logging.googleapis.com/trace" at:
@@ -231,4 +240,31 @@ func timeEncoder() zapcore.TimeEncoder {
 	return func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(t.Format(time.RFC3339Nano))
 	}
+}
+
+// googleCloudProjectID attempts to get the project ID, starting with the
+// fastest resolution ($PROJECT_ID, $GOOGLE_PROJECT, $GOOGLE_CLOUD_PROJECT) and
+// then evetually querying the metadata server. If it fails to find a project
+// ID, it logs an error.
+func googleCloudProjectID(ctx context.Context) string {
+	googleCloudProjectIDOnce.Do(func() {
+		for _, name := range []string{
+			"PROJECT_ID",
+			"GOOGLE_PROJECT",
+			"GOOGLE_CLOUD_PROJECT",
+		} {
+			if v := os.Getenv(name); v != "" {
+				googleCloudProjectIDValue = v
+			}
+		}
+
+		v, err := metadata.ProjectID()
+		if err != nil {
+			FromContext(ctx).Errorw("failed to compute project id", "error", err)
+			return
+		}
+		googleCloudProjectIDValue = v
+	})
+
+	return googleCloudProjectIDValue
 }
