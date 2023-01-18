@@ -17,10 +17,10 @@ package logging
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
@@ -36,13 +36,13 @@ var (
 
 // GRPCStreamingInterceptor returns client-side a gRPC streaming interceptor
 // that populates a logger with trace data in the context.
-func GRPCStreamingInterceptor(inLogger *zap.SugaredLogger, projectID string) grpc.StreamClientInterceptor {
+func GRPCStreamingInterceptor(inLogger *slog.Logger, projectID string) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		// Only override the logger if it's the default logger. This is only used
 		// for testing and is intentionally a strict object equality check because
 		// the default logger is a global default in the logger package.
 		logger := inLogger
-		if existing := FromContext(ctx); existing != Default() {
+		if existing := FromContext(ctx); existing != DefaultLogger() {
 			logger = existing
 		}
 		ctx = WithLogger(ctx, logger)
@@ -65,13 +65,13 @@ func GRPCStreamingInterceptor(inLogger *zap.SugaredLogger, projectID string) grp
 
 // GRPCUnaryInterceptor returns a client-side gRPC unary interceptor that
 // populates a logger with trace data in the context.
-func GRPCUnaryInterceptor(inLogger *zap.SugaredLogger, projectID string) grpc.UnaryServerInterceptor {
+func GRPCUnaryInterceptor(inLogger *slog.Logger, projectID string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// Only override the logger if it's the default logger. This is only used
 		// for testing and is intentionally a strict object equality check because
 		// the default logger is a global default in the logger package.
 		logger := inLogger
-		if existing := FromContext(ctx); existing != Default() {
+		if existing := FromContext(ctx); existing != DefaultLogger() {
 			logger = existing
 		}
 		ctx = WithLogger(ctx, logger)
@@ -90,7 +90,7 @@ func GRPCUnaryInterceptor(inLogger *zap.SugaredLogger, projectID string) grpc.Un
 
 // HTTPInterceptor returns an HTTP middleware that populates a logger with trace
 // data onto the incoming and outgoing [http.Request] context.
-func HTTPInterceptor(inLogger *zap.SugaredLogger, projectID string) func(http.Handler) http.Handler {
+func HTTPInterceptor(inLogger *slog.Logger, projectID string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -99,7 +99,7 @@ func HTTPInterceptor(inLogger *zap.SugaredLogger, projectID string) func(http.Ha
 			// for testing and is intentionally a strict object equality check because
 			// the default logger is a global default in the logger package.
 			logger := inLogger
-			if existing := FromContext(ctx); existing != Default() {
+			if existing := FromContext(ctx); existing != DefaultLogger() {
 				logger = existing
 			}
 			ctx = WithLogger(ctx, logger)

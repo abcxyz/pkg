@@ -101,7 +101,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v4
       with:
-        go-version: '1.20' # Optional
+        go-version: '1.21' # Optional
 ```
 
 ... and *don't* do this:
@@ -111,5 +111,5 @@ jobs:
   test:
     name: Go Test
     runs-on: ubuntu-latest
-    container: golang:1.20  # DON'T DO THIS
+    container: golang:1.21  # DON'T DO THIS
 ```

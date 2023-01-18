@@ -43,7 +43,7 @@ func ProjectID(ctx context.Context) string {
 
 	v, err := metadata.ProjectID()
 	if err != nil {
-		logging.FromContext(ctx).Errorw("failed to get project id", "error", err)
+		logging.FromContext(ctx).ErrorContext(ctx, "failed to get project id", "error", err)
 		return ""
 	}
 	return v

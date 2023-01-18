@@ -20,13 +20,16 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/timeutil"
+
 	"github.com/kr/text"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
@@ -865,6 +868,43 @@ func (f *FlagSection) Uint64Var(i *Uint64Var) {
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
+	})
+}
+
+type LogLevelVar struct {
+	Logger *slog.Logger
+}
+
+func (f *FlagSection) LogLevelVar(i *LogLevelVar) {
+	parser := func(s string) (slog.Level, error) {
+		v, err := logging.LookupLevel(s)
+		if err != nil {
+			return 0, err
+		}
+		return v, nil
+	}
+
+	printer := func(v slog.Level) string { return logging.LevelString(v) }
+
+	setter := func(_ *slog.Level, val slog.Level) { logging.SetLevel(i.Logger, val) }
+
+	// trick the CLI into thinking we need a value to set.
+	var fake slog.Level
+
+	levelNames := logging.LevelNames()
+
+	Flag(f, &Var[slog.Level]{
+		Name:    "log-level",
+		Aliases: []string{"l"},
+		Usage: `Sets the logging verbosity. Valid values include: ` +
+			strings.Join(levelNames, ",") + `.`,
+		Example: "warn",
+		Default: slog.LevelInfo,
+		Predict: predict.Set(levelNames),
+		Target:  &fake,
+		Parser:  parser,
+		Printer: printer,
+		Setter:  setter,
 	})
 }
 

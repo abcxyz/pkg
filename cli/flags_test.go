@@ -15,13 +15,16 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/testutil"
 	"github.com/google/go-cmp/cmp"
 )
@@ -313,4 +316,65 @@ func ExampleFlagSet_AfterParse_checkIfError() {
 
 func ptrTo[T any](v T) *T {
 	return &v
+}
+
+func TestLogLevelVar(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		args []string
+
+		wantLevel slog.Level
+		wantError string
+	}{
+		{
+			name:      "empty",
+			args:      nil,
+			wantLevel: slog.LevelInfo,
+		},
+		{
+			name:      "long",
+			args:      []string{"-log-level", "debug"},
+			wantLevel: slog.LevelDebug,
+		},
+		{
+			name:      "short",
+			args:      []string{"-l", "debug"},
+			wantLevel: slog.LevelDebug,
+		},
+		{
+			name:      "invalid",
+			args:      []string{"-log-level", "pants"},
+			wantError: `invalid value "pants" for flag -log-level`,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			logger := logging.DefaultLogger()
+
+			set := NewFlagSet()
+			f := set.NewSection("FLAGS")
+
+			f.LogLevelVar(&LogLevelVar{
+				Logger: logger,
+			})
+
+			err := set.Parse(tc.args)
+			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
+				t.Error(diff)
+			}
+
+			if !logger.Handler().Enabled(ctx, tc.wantLevel) {
+				t.Errorf("expected handler to be at least %s", tc.wantLevel)
+			}
+		})
+	}
 }

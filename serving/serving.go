@@ -108,8 +108,8 @@ func (s *Server) StartHTTP(ctx context.Context, srv *http.Server) error {
 	go func() {
 		defer close(doneCh)
 
-		logger.Infow("server is starting", "ip", s.ip, "port", s.port)
-		defer logger.Infow("server is stopped")
+		logger.InfoContext(ctx, "server is starting", "ip", s.ip, "port", s.port)
+		defer logger.InfoContext(ctx, "server is stopped")
 
 		if err := srv.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			select {
@@ -124,14 +124,14 @@ func (s *Server) StartHTTP(ctx context.Context, srv *http.Server) error {
 	case err := <-errCh:
 		return fmt.Errorf("failed to serve: %w", err)
 	case <-ctx.Done():
-		logger.Debugw("provided context is done")
+		logger.DebugContext(ctx, "provided context is done")
 	}
 
 	// Shutdown the server.
 	shutdownCtx, done := context.WithTimeout(context.Background(), 10*time.Second)
 	defer done()
 
-	logger.Debugw("server is shutting down")
+	logger.DebugContext(ctx, "server is shutting down")
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown server: %w", err)
 	}
@@ -179,8 +179,8 @@ func (s *Server) StartGRPC(ctx context.Context, srv *grpc.Server) error {
 	go func() {
 		defer close(doneCh)
 
-		logger.Infow("server is starting", "ip", s.ip, "port", s.port)
-		defer logger.Infow("server is stopped")
+		logger.InfoContext(ctx, "server is starting", "ip", s.ip, "port", s.port)
+		defer logger.InfoContext(ctx, "server is stopped")
 
 		if err := srv.Serve(s.listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			select {
@@ -195,10 +195,10 @@ func (s *Server) StartGRPC(ctx context.Context, srv *grpc.Server) error {
 	case err := <-errCh:
 		return fmt.Errorf("failed to serve: %w", err)
 	case <-ctx.Done():
-		logger.Debugw("provided context is done")
+		logger.DebugContext(ctx, "provided context is done")
 	}
 
-	logger.Debugw("server is shutting down")
+	logger.DebugContext(ctx, "server is shutting down")
 	srv.GracefulStop()
 	close(errCh)
 

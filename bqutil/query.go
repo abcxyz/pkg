@@ -110,13 +110,13 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]T, error) {
 //	result, err := RetryQueryEntries(ctx, q, 1, backoff)
 func RetryQueryEntries[T any](ctx context.Context, q Query[T], wantCount int, backoff retry.Backoff) ([]T, error) {
 	logger := logging.FromContext(ctx)
-	logger.Debugw("Start retrying query", "query", q.String())
+	logger.DebugContext(ctx, "start retrying query", "query", q.String())
 
 	var result []T
 	if err := retry.Do(ctx, backoff, func(ctx context.Context) error {
 		entries, err := q.Execute(ctx)
 		if err != nil {
-			logger.Debugw("Query failed; will retry", "error", err)
+			logger.DebugContext(ctx, "query failed; will retry", "error", err)
 			return retry.RetryableError(err)
 		}
 
@@ -126,7 +126,7 @@ func RetryQueryEntries[T any](ctx context.Context, q Query[T], wantCount int, ba
 			return nil
 		}
 
-		logger.Debugw("Not enough entries; will retry", "gotCount", gotCount, "wantCount", wantCount)
+		logger.DebugContext(ctx, "not enough entries; will retry", "got_count", gotCount, "want_count", wantCount)
 		return retry.RetryableError(fmt.Errorf("not enough entries"))
 	}); err != nil {
 		return nil, fmt.Errorf("retry backoff exhausted: %w", err)
