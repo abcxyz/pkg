@@ -52,6 +52,18 @@ func TestParseProject(t *testing.T) {
 				}),
 			}},
 		},
+		{
+			name: "failure_with_json_marshal",
+			input: map[string]any{
+				"FieldA": make(chan int),
+			},
+			wantErrSubstr: "json.Marshal: json: unsupported type: chan int",
+		},
+		{
+			name:          "failure_with_structpb_unmarshal",
+			input:         nil,
+			wantErrSubstr: "structpb.Struct.UnmarshalJSON: proto:",
+		},
 	}
 
 	for _, tc := range cases {
