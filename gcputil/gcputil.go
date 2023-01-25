@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gpcutil exposes helpers for interacting with Google Cloud.
-package gpcutil
+// Package gcputil exposes helpers for interacting with Google Cloud.
+package gcputil
 
 import (
 	"context"
