@@ -17,18 +17,14 @@ package logging
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"cloud.google.com/go/compute/metadata"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
-	"google.golang.org/grpc"
-	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
 // contextKey is a private string type to prevent collisions in the context map.
@@ -37,13 +33,6 @@ type contextKey string
 const (
 	// loggerKey points to the value in the context where the logger is stored.
 	loggerKey = contextKey("logger")
-
-	// googleCloudTraceHeader is the header with trace data.
-	googleCloudTraceHeader = "X-Cloud-Trace-Context"
-
-	// googleCloudTraceKey is the key in the structured log where trace information
-	// is expected to be present.
-	googleCloudTraceKey = "logging.googleapis.com/trace"
 )
 
 var (
@@ -51,15 +40,6 @@ var (
 	// include upon calling DefaultLogger.
 	defaultLogger     *zap.SugaredLogger
 	defaultLoggerOnce sync.Once
-
-	// googleCloudProjectIDOnce controls project ID lazy loading. We don't want to
-	// compute this on boot so that we minimize cold boot times, so we cache it on
-	// the first invocation.
-	//
-	// googleCloudProjectIDValue stores the actual value, but callers should
-	// invoke googleCloudProjectID() instead.
-	googleCloudProjectIDOnce  sync.Once
-	googleCloudProjectIDValue string
 )
 
 // NewFromEnv creates a new logger from env vars.
@@ -130,39 +110,6 @@ func TestLogger(tb zaptest.TestingT, opts ...zaptest.LoggerOption) *zap.SugaredL
 	warnLevelOpt := zaptest.Level(zap.WarnLevel)
 	opts = append([]zaptest.LoggerOption{warnLevelOpt}, opts...)
 	return zaptest.NewLogger(tb, opts...).Sugar()
-}
-
-// GRPCInterceptor returns a gRPC interceptor that populates a logger in the context.
-func GRPCInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		var th string
-		md, ok := grpcmetadata.FromIncomingContext(ctx)
-		if ok {
-			if len(md.Get(googleCloudTraceHeader)) > 0 {
-				th = md.Get(googleCloudTraceHeader)[0]
-			}
-		}
-
-		// Best effort to get the current project ID.
-		projectID := googleCloudProjectID(ctx)
-
-		// This allows us to associate logs to traces.
-		// See "logging.googleapis.com/trace" at:
-		// https://cloud.google.com/logging/docs/agent/logging/configuration#special-fields
-		if th != "" && projectID != "" {
-			// The trace header is in the format:
-			// "X-Cloud-Trace-Context: TRACE_ID/SPAN_ID;o=TRACE_TRUE"
-			// See: https://cloud.google.com/trace/docs/setup#force-trace
-			parts := strings.Split(th, "/")
-			if len(parts) > 0 && len(parts[0]) > 0 {
-				val := fmt.Sprintf("projects/%s/traces/%s", projectID, parts[0])
-				logger = logger.With(googleCloudTraceKey, val)
-			}
-		}
-
-		ctx = WithLogger(ctx, logger)
-		return handler(ctx, req)
-	}
 }
 
 const (
@@ -240,31 +187,4 @@ func timeEncoder() zapcore.TimeEncoder {
 	return func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(t.Format(time.RFC3339Nano))
 	}
-}
-
-// googleCloudProjectID attempts to get the project ID, starting with the
-// fastest resolution ($PROJECT_ID, $GOOGLE_PROJECT, $GOOGLE_CLOUD_PROJECT) and
-// then evetually querying the metadata server. If it fails to find a project
-// ID, it logs an error.
-func googleCloudProjectID(ctx context.Context) string {
-	googleCloudProjectIDOnce.Do(func() {
-		for _, name := range []string{
-			"PROJECT_ID",
-			"GOOGLE_PROJECT",
-			"GOOGLE_CLOUD_PROJECT",
-		} {
-			if v := os.Getenv(name); v != "" {
-				googleCloudProjectIDValue = v
-			}
-		}
-
-		v, err := metadata.ProjectID()
-		if err != nil {
-			FromContext(ctx).Errorw("failed to compute project id", "error", err)
-			return
-		}
-		googleCloudProjectIDValue = v
-	})
-
-	return googleCloudProjectIDValue
 }
