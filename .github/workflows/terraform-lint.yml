@@ -34,7 +34,7 @@ jobs:
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
-          DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u)"
+          DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
           echo "TERRAFORM_DIRS=${DIRS}" >> $GITHUB_ENV
 
       - name: 'Check formatting'
