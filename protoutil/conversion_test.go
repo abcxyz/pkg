@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func TestParseProject(t *testing.T) {
+func TestToProtoStruct(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -78,6 +78,64 @@ func TestParseProject(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.want, got, protocmp.Transform()); diff != "" {
 				t.Errorf("ToProtoStruct(%+v) got diff (-want, +got): %v", tc.name, diff)
+			}
+		})
+	}
+}
+
+func TestUnmarshalYAML(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		b             []byte
+		want          *structpb.Struct
+		wantErrSubstr string
+	}{
+		{
+			name: "success",
+			b: []byte(`foo: bar
+slice:
+- abc
+- xyz
+num: 1
+bool: true
+`),
+			want: &structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"foo": structpb.NewStringValue("bar"),
+					"slice": structpb.NewListValue(&structpb.ListValue{
+						Values: []*structpb.Value{
+							structpb.NewStringValue("abc"),
+							structpb.NewStringValue("xyz"),
+						},
+					}),
+					"num":  structpb.NewNumberValue(1),
+					"bool": structpb.NewBoolValue(true),
+				},
+			},
+		},
+		{
+			name:          "invalid_yaml_error",
+			b:             []byte("foobar: {}{}"),
+			want:          &structpb.Struct{},
+			wantErrSubstr: "failed to unmarshal yaml",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var msg structpb.Struct
+			err := UnmarshalYAML(tc.b, &msg)
+			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
+				t.Errorf("unexpected error: %s", diff)
+			}
+			if diff := cmp.Diff(tc.want, &msg, protocmp.Transform()); diff != "" {
+				t.Errorf("UnmarshalYAML (-want,+got):\n%s", diff)
 			}
 		})
 	}
