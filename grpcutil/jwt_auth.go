@@ -26,8 +26,8 @@ import (
 	grpcmetadata "google.golang.org/grpc/metadata"
 )
 
-// GrpcJWTAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
-type GrpcJWTAuthenticationHandler struct {
+// JWTAuthenticationHandler allows for retrieving principal information from JWT tokens stored in GRPC metadata.
+type JWTAuthenticationHandler struct {
 	*jwtutil.Verifier
 	// JWTPrefix is a prefix that occurs in a string before the signed JWT token.
 	JWTPrefix string
@@ -43,10 +43,10 @@ type GrpcJWTAuthenticationHandler struct {
 	Endpoint string
 }
 
-// NewGrpcJWTAuthenticationHandler returns a GrpcJWTAuthenticationHandler with a verifier initialized. Uses defaults
+// NewJWTAuthenticationHandler returns a JWTAuthenticationHandler with a verifier initialized. Uses defaults
 // for JWT related fields that will retrieve a user email when using IAM on GCP.
-func NewGrpcJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*GrpcJWTAuthenticationHandler, error) {
-	j := &GrpcJWTAuthenticationHandler{
+func NewJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption) (*JWTAuthenticationHandler, error) {
+	j := &JWTAuthenticationHandler{
 		JWTPrefix:          "bearer ",
 		JWTKey:             "authorization",
 		PrincipalClaimKey:  "email",
@@ -75,7 +75,7 @@ func NewGrpcJWTAuthenticationHandler(ctx context.Context, opts ...JWTAuthOption)
 }
 
 // RequestPrincipal extracts the JWT principal from the grpcmetadata in the context.
-func (g *GrpcJWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string, error) {
+func (g *JWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (string, error) {
 	md, ok := grpcmetadata.FromIncomingContext(ctx)
 	if !ok {
 		return "", fmt.Errorf("gRPC metadata in incoming context is missing")
@@ -126,11 +126,39 @@ func (g *GrpcJWTAuthenticationHandler) RequestPrincipal(ctx context.Context) (st
 	return principal, nil
 }
 
-type JWTAuthOption func(handler *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler
+// RequestPrincipalFromIAP validates and extracts the JWT principal from the IAP JWT.
+func (g *JWTAuthenticationHandler) RequestPrincipalFromIAP(ctx context.Context, iapJWT string) (string, error) {
+	token, err := g.ValidateJWT(iapJWT)
+	if err != nil {
+		return "", fmt.Errorf("unable to validate jwt: %w", err)
+	}
+
+	tokenMap, err := token.AsMap(ctx)
+	if err != nil {
+		return "", fmt.Errorf("couldn't convert token to map: %w", err)
+	}
+
+	// Retrieve the principal from claims.
+	principalRaw, ok := tokenMap[g.PrincipalClaimKey]
+	if !ok {
+		return "", fmt.Errorf("jwt claims are missing the email key %q", g.PrincipalClaimKey)
+	}
+	principal, ok := principalRaw.(string)
+	if !ok {
+		return "", fmt.Errorf("expecting string in jwt claims %q, got %T", g.PrincipalClaimKey, principalRaw)
+	}
+	if principal == "" {
+		return "", fmt.Errorf("nil principal under claims %q", g.PrincipalClaimKey)
+	}
+
+	return principal, nil
+}
+
+type JWTAuthOption func(handler *JWTAuthenticationHandler) *JWTAuthenticationHandler
 
 // NoJWTAuthValidation disables certificate validation for JWT.
 func NoJWTAuthValidation() JWTAuthOption {
-	return func(j *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.ValidationDisabled = true
 		return j
 	}
@@ -138,7 +166,7 @@ func NoJWTAuthValidation() JWTAuthOption {
 
 // WithJWTAuthEndpoint specifies the endpoint to get JWKs keys. Required unless NoJWTAuthValidation() is also specified.
 func WithJWTAuthEndpoint(endpoint string) JWTAuthOption {
-	return func(j *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.Endpoint = endpoint
 		return j
 	}
@@ -146,7 +174,7 @@ func WithJWTAuthEndpoint(endpoint string) JWTAuthOption {
 
 // WithJWTAuthPrefix specifies a case-insensitive prefix that proceeds a JWT in the header. Defaults to "bearer ".
 func WithJWTAuthPrefix(prefix string) JWTAuthOption {
-	return func(j *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.JWTPrefix = strings.ToLower(prefix)
 		return j
 	}
@@ -154,7 +182,7 @@ func WithJWTAuthPrefix(prefix string) JWTAuthOption {
 
 // WithJWTAuthKey specifies the key that the JWT is expected to be under in the GRPC metadata. Defaults to "authorization ".
 func WithJWTAuthKey(key string) JWTAuthOption {
-	return func(j *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.JWTKey = key
 		return j
 	}
@@ -162,7 +190,7 @@ func WithJWTAuthKey(key string) JWTAuthOption {
 
 // WithJWTAuthClaimKey specifies the key that the principal is expected to be under in the JWT claims. Defaults to "email".
 func WithJWTAuthClaimKey(key string) JWTAuthOption {
-	return func(j *GrpcJWTAuthenticationHandler) *GrpcJWTAuthenticationHandler {
+	return func(j *JWTAuthenticationHandler) *JWTAuthenticationHandler {
 		j.PrincipalClaimKey = key
 		return j
 	}
