@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
     var closer io.Closer
     ci, closer = mysqltest.MustStart() // Start the docker container. Can also pass options.
     exitCode := m.Run() // Runs unit tests
-    
+
     // Remove container. If tests panic, this won't run, but there's nothing we can do about that:
     // https://github.com/golang/go/issues/37206#issuecomment-590441512. In that case, then the
     // container will eventually time out and be cleaned up.
@@ -84,7 +84,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v3
       with:
-        go-version: '1.19' # Optional
+        go-version: '1.20' # Optional
 ```
 
 ... and *don't* do this:
@@ -94,6 +94,5 @@ jobs:
   test:
     name: Go Test
     runs-on: ubuntu-latest
-    container: golang:1.19  # DON'T DO THIS
+    container: golang:1.20  # DON'T DO THIS
 ```
-
