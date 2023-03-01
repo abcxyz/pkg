@@ -12,6 +12,9 @@ on:
         type: 'string'
         required: true
 
+env:
+  TF_IN_AUTOMATION: 'true'
+
 jobs:
   # lint runs Terraform formatting and validation checks. It finds all Terraform
   # nested directories within the given parent directory.
@@ -29,33 +32,25 @@ jobs:
         with:
           terraform_version: '${{ inputs.terraform_version }}'
 
-      - id: 'dirs'
-        name: 'Find Terraform directories'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
-          echo "TERRAFORM_DIRS=${DIRS}" >> $GITHUB_ENV
-
       - name: 'Check formatting'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
-          for DIR in ${TERRAFORM_DIRS}; do
-            pushd "${DIR}" &>/dev/null
-            echo "Checking ${DIR}..."
-            terraform fmt -check -diff
-            popd &>/dev/null
-          done
+          terraform fmt -recursive -check -diff
 
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
+          TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
+
           for DIR in ${TERRAFORM_DIRS}; do
+            echo "::group::${DIR}"
+
             pushd "${DIR}" &>/dev/null
-            echo "Checking ${DIR}..."
             terraform init -backend=false -input=false
             terraform validate
             popd &>/dev/null
+
+            echo "::endgroup::"
           done
