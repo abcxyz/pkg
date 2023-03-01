@@ -1,2 +1,5 @@
-* @abcxyz/infrastructure-team
-* @abcxyz/products-team
+# Default fallback
+*    @abcxyz/breakglass
+
+# products owns all files
+*    @abcxyz/infrastructure-team @abcxyz/products-team
