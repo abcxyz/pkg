@@ -11,17 +11,13 @@ on:
         description: 'The directory upon which to lint Terraform configurations.'
         type: 'string'
         required: true
-      workflow_github_token:
-        description: 'A GitHub token to use for accessing private repositories.'
-        type: 'string'
-        required: false
 
 env:
   TF_IN_AUTOMATION: 'true'
 
 jobs:
-  # lint runs Terraform formatting and validation checks. It finds all Terraform
-  # nested directories within the given parent directory.
+  # lint finds all Terraform nested directories within the given parent
+  # directory and runs Terraform formatting and validation checks.
   #
   # Do not change this job name. Job names are used as identifiers in status
   # checks, and changing this name will cause status checks to fail.
@@ -42,18 +38,9 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
-      # secrets cannot be used for conditional `if` for steps, default to github.token (https://github.com/actions/runner/issues/520)
-      - name: 'Set Git Credentials'
-        shell: 'bash'
-        run: |-
-          GH_TOKEN='${{ inputs.workflow_github_token }}'
-          git config --global url."https://terraform-lint:${{ inputs.workflow_github_token || github.token }}@github.com".insteadOf "https://github.com"
-
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
-        env:
-          GITHUB_TOKEN: '${{ inputs.workflow_github_token || github.token }}'
         run: |-
           TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
 
