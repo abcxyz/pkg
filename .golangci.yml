@@ -18,12 +18,12 @@ run:
 
   # default: []
   build-tags:
-  - 'all'
+    - 'all'
 
   # default: []
   skip-dirs:
-  - 'internal/pb'
-  - 'third_party'
+    - 'internal/pb'
+    - 'third_party'
 
   # default: true
   skip-dirs-use-default: false
@@ -36,60 +36,62 @@ run:
 
 linters:
   enable:
-  - 'asasalint'
-  - 'asciicheck'
-  - 'bidichk'
-  - 'bodyclose'
-  - 'containedctx'
-  - 'depguard'
-  - 'dupword'
-  - 'durationcheck'
-  - 'errcheck'
-  - 'errchkjson'
-  - 'errname'
-  - 'errorlint'
-  - 'execinquery'
-  - 'exhaustive'
-  - 'exportloopref'
-  - 'forcetypeassert'
-  - 'godot'
-  - 'gofmt'
-  - 'gofumpt'
-  - 'goheader'
-  - 'goimports'
-  - 'gomodguard'
-  - 'goprintffuncname'
-  - 'gosec'
-  - 'gosimple'
-  - 'govet'
-  - 'importas'
-  - 'ineffassign'
-  - 'loggercheck'
-  - 'makezero'
-  - 'misspell'
-  - 'noctx'
-  - 'nolintlint'
-  - 'nosprintfhostport'
-  - 'paralleltest'
-  - 'prealloc'
-  - 'predeclared'
-  - 'revive'
-  - 'rowserrcheck'
-  - 'sqlclosecheck'
-  - 'staticcheck'
-  - 'stylecheck'
-  - 'tenv'
-  - 'thelper'
-  - 'typecheck'
-  - 'unconvert'
-  - 'unused'
-  - 'whitespace'
-  - 'wrapcheck'
+    - 'asasalint'
+    - 'asciicheck'
+    - 'bidichk'
+    - 'bodyclose'
+    - 'containedctx'
+    - 'depguard'
+    - 'dupword'
+    - 'durationcheck'
+    - 'errcheck'
+    - 'errchkjson'
+    - 'errname'
+    - 'errorlint'
+    - 'execinquery'
+    - 'exhaustive'
+    - 'exportloopref'
+    - 'forcetypeassert'
+    - 'gocheckcompilerdirectives'
+    - 'godot'
+    - 'gofmt'
+    - 'gofumpt'
+    - 'goheader'
+    - 'goimports'
+    - 'goprintffuncname'
+    - 'gosec'
+    - 'gosimple'
+    - 'govet'
+    - 'importas'
+    - 'ineffassign'
+    # - 'ireturn' # does not handle generics yet: https://github.com/butuzov/ireturn/issues/37
+    - 'loggercheck'
+    - 'makezero'
+    - 'misspell'
+    - 'noctx'
+    - 'nolintlint'
+    - 'nosprintfhostport'
+    - 'paralleltest'
+    - 'prealloc'
+    - 'predeclared'
+    - 'revive'
+    - 'rowserrcheck'
+    - 'sqlclosecheck'
+    - 'staticcheck'
+    - 'stylecheck'
+    - 'tenv'
+    - 'thelper'
+    - 'typecheck'
+    - 'unconvert'
+    - 'unused'
+    - 'wastedassign'
+    - 'whitespace'
+    - 'wrapcheck'
 
 issues:
   # default: []
   exclude:
-  - '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
+    - '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
 
   # default: []
   exclude-rules:
@@ -105,6 +107,16 @@ issues:
   max-same-issues: 0
 
 linters-settings:
+  depguard:
+    list-type: 'denylist'
+    packages-with-error-message:
+      - 'github.com/auth0/go-jwt-middleware': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+      - 'github.com/gin-contrib/*': 'third-party web frameworks are not approved, use net/http'
+      - 'github.com/gin-gonic/contrib': 'third-party web frameworks are not approved, use net/http'
+      - 'github.com/gin-gonic/gin': 'third-party web frameworks are not approved, use net/http'
+      - 'github.com/golang-jwt/jwe': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+      - 'github.com/golang-jwt/jwt': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+
   gofumpt:
     # default: false
     extra-rules: true
@@ -138,4 +150,4 @@ linters-settings:
 
 severity:
   # default: ''
-  default-severity: error
+  default-severity: 'error'
