@@ -42,17 +42,17 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
+      # secrets cannot be used for conditional `if` for steps, default to github.token (https://github.com/actions/runner/issues/520)
       - name: 'Set Git Credentials'
-        if: ${{ secrets.workflow_github_token }}
         shell: 'bash'
         run: |-
-          git config --global url."https://terraform-lint:${{ secrets.workflow_github_token }}@github.com".insteadOf "https://github.com"
+          git config --global url."https://terraform-lint:${{ secrets.workflow_github_token || github.token }}@github.com".insteadOf "https://github.com"
 
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         env:
-          GITHUB_TOKEN: '${{ secrets.workflow_github_token }}'
+          GITHUB_TOKEN: '${{ secrets.workflow_github_token || github.token }}'
         run: |-
           TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
 
