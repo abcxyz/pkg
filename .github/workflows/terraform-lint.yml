@@ -42,6 +42,12 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
+      - name: 'Set Git Credentials'
+        if: ${{ secrets.workflow_github_token }}
+        shell: 'bash'
+        run: |-
+          git config --global url."https://terraform-lint:${{ secrets.workflow_github_token }}@github.com".insteadOf "https://github.com"
+
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
