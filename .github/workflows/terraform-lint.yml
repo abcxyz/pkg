@@ -11,9 +11,9 @@ on:
         description: 'The directory upon which to lint Terraform configurations.'
         type: 'string'
         required: true
-    secrets:
       workflow_github_token:
         description: 'A GitHub token to use for accessing private repositories.'
+        type: 'string'
         required: false
 
 env:
@@ -46,13 +46,14 @@ jobs:
       - name: 'Set Git Credentials'
         shell: 'bash'
         run: |-
-          git config --global url."https://terraform-lint:${{ secrets.workflow_github_token || github.token }}@github.com".insteadOf "https://github.com"
+          GH_TOKEN='${{ inputs.workflow_github_token }}'
+          git config --global url."https://terraform-lint:${{ inputs.workflow_github_token || github.token }}@github.com".insteadOf "https://github.com"
 
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         env:
-          GITHUB_TOKEN: '${{ secrets.workflow_github_token || github.token }}'
+          GITHUB_TOKEN: '${{ inputs.workflow_github_token || github.token }}'
         run: |-
           TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
 
