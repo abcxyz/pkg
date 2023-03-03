@@ -16,6 +16,7 @@ package renderer
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -27,48 +28,36 @@ func TestAssetIncludeTag(t *testing.T) {
 
 	ctx := context.Background()
 
-	sys := fstest.MapFS{
-		"static/css/index.css": &fstest.MapFile{
-			Data: []byte(`
-				body {
-					background: '#000';
-				}
-			`),
-		},
-		"static/js/index.js": &fstest.MapFile{
-			Data: []byte(`
-				alert('hi');
-			`),
-		},
-		"template.html": &fstest.MapFile{
-			Data: []byte(`
-				{{ define "template" }}
-					{{ cssIncludeTag }}
-					{{ jsIncludeTag }}
-				{{ end }}
-			`),
-		},
-	}
-
-	r, err := New(ctx, sys, WithDebug(true))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	cases := []struct {
 		name string
 		tmpl string
 		exp  string
 	}{
 		{
-			name: "css",
-			tmpl: "template",
-			exp:  `<link rel="stylesheet" href="/static/css/index.css" integrity="sha512-CZ/ju4L53fGRLdwSN7Cl0QyO336hYAIgXyASelQXWHb354JD9u+MBMEgFtCjKuFzQ84MYzBHcOzPEqK/roRvYA" crossorigin="anonymous" referrerpolicy="no-referrer" />`,
+			name: "css_single",
+			tmpl: `{{ cssIncludeTag "css/one.css" }}`,
+			exp:  `<link rel="stylesheet" href="/css/one.css" integrity="sha512-HO667IerAcsnrUiKG3h8BrdLoCQVIJ7wTVKR0hyiKb0rrJDIbq25rEHg0QvcrQN+Qwc7LRs9+YxypwqlsHnQTw" crossorigin="anonymous" referrerpolicy="no-referrer" />`,
 		},
 		{
-			name: "js",
-			tmpl: "template",
-			exp:  `<script defer src="/static/js/index.js" integrity="sha512-DFr7R1UkHXJDzmXpnOEq+oYqK4oj/4aCo4zeWnWXo5DkAV2TNwNlrGM4J8nEYwTCFcXwwshSgaSqN8UFv6wZ6w" crossorigin="anonymous" referrerpolicy="no-referrer"></script>`,
+			name: "css_multi",
+			tmpl: `{{ cssIncludeTag "css/*.css" }}`,
+			exp: `
+<link rel="stylesheet" href="/css/one.css" integrity="sha512-HO667IerAcsnrUiKG3h8BrdLoCQVIJ7wTVKR0hyiKb0rrJDIbq25rEHg0QvcrQN+Qwc7LRs9+YxypwqlsHnQTw" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="/css/two.css" integrity="sha512-CZ/ju4L53fGRLdwSN7Cl0QyO336hYAIgXyASelQXWHb354JD9u+MBMEgFtCjKuFzQ84MYzBHcOzPEqK/roRvYA" crossorigin="anonymous" referrerpolicy="no-referrer" />
+		`,
+		},
+		{
+			name: "js_single",
+			tmpl: `{{ jsIncludeTag "js/one.js" }}`,
+			exp:  `<script defer src="/js/one.js" integrity="sha512-YPaegQoTqkvUCdGwIwEOxL91PyfbGEQEBYz0m+em4XCjDWc6W55nu8xl9/iVZfJchfNPdlOBsbNKi9oN6n4a7Q" crossorigin="anonymous" referrerpolicy="no-referrer"></script>`,
+		},
+		{
+			name: "js_multi",
+			tmpl: `{{ jsIncludeTag "js/*.js" }}`,
+			exp: `
+<script defer src="/js/one.js" integrity="sha512-YPaegQoTqkvUCdGwIwEOxL91PyfbGEQEBYz0m+em4XCjDWc6W55nu8xl9/iVZfJchfNPdlOBsbNKi9oN6n4a7Q" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="/js/two.js" integrity="sha512-6OtiBKWBCzIySzWxzqVGnB5SzK5N58jRo8UDLw53i3EY5nDRYITiU+VerGa7ZkNdUp5y86mg5/Hmf+lUEQ2Ulg" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		`,
 		},
 	}
 
@@ -78,12 +67,49 @@ func TestAssetIncludeTag(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			sys := fstest.MapFS{
+				"css/one.css": &fstest.MapFile{
+					Data: []byte(`
+				html {
+					background: '#000';
+				}
+			`),
+				},
+				"css/two.css": &fstest.MapFile{
+					Data: []byte(`
+				body {
+					background: '#000';
+				}
+			`),
+				},
+				"js/one.js": &fstest.MapFile{
+					Data: []byte(`
+				alert('hello');
+			`),
+				},
+				"js/two.js": &fstest.MapFile{
+					Data: []byte(`
+				alert('world');
+			`),
+				},
+				"template.html": &fstest.MapFile{
+					Data: []byte(fmt.Sprintf(`
+						{{ define "template" }}%s{{ end }}
+					`, tc.tmpl)),
+				},
+			}
+
+			r, err := New(ctx, sys, WithDebug(true))
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			w := httptest.NewRecorder()
 
-			r.RenderHTMLStatus(w, 200, tc.tmpl, nil)
+			r.RenderHTMLStatus(w, 200, "template", nil)
 			w.Flush()
 
-			if got, want := w.Body.String(), tc.exp; !strings.Contains(got, want) {
+			if got, want := strings.TrimSpace(w.Body.String()), strings.TrimSpace(tc.exp); !strings.Contains(got, want) {
 				t.Errorf("expected\n\n%s\n\nto contain %q", got, want)
 			}
 		})
