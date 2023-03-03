@@ -26,7 +26,7 @@
 //
 //	func AssetsFS() fs.FS {
 //	  // In dev, just read directly from disk
-//	  if v, _ := strconv.ParseBool(os.Getenv("DEV_NODE")); v {
+//	  if v, _ := strconv.ParseBool(os.Getenv("DEV_MODE")); v {
 //	    return os.DirFS("./assets")
 //	  }
 //
@@ -71,9 +71,8 @@ type Renderer struct {
 	// prevent partial responses being sent to clients.
 	rendererPool *sync.Pool
 
-	// templates is the actually collection of templates. templatesLoader is a
-	// function for (re)loading templates. templatesLock is a mutex to prevent
-	// concurrent modification of the templates field.
+	// templates is the actual collection of templates. templatesLock is a mutex
+	// to prevent concurrent modification of the templates field.
 	templates     *template.Template
 	templatesLock sync.RWMutex
 
@@ -115,7 +114,7 @@ func WithOnError(fn func(err error)) Option {
 }
 
 // WithTemplateFuncs registers additional template functions. The renderer
-// includes many helpful functions, but some applications may which to
+// includes many helpful functions, but some applications may wish to
 // inject/define their own template helpers. Functions in this map take
 // precedence over the built-in list.
 func WithTemplateFuncs(fns template.FuncMap) Option {
