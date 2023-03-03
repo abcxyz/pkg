@@ -47,8 +47,8 @@
 // To render the include tags in a template:
 //
 //	{{ define "home" }}
-//	  {{ cssIncludeTag }}
-//	  {{ jsIncludeTag }}
+//	  {{ cssIncludeTag "css/*.css" }}
+//	  {{ jsIncludeTag "js/index.js" }}
 //	{{ end }}
 package renderer
 
@@ -160,8 +160,8 @@ func New(ctx context.Context, fsys fs.FS, opts ...Option) (*Renderer, error) {
 
 	// Compile template functions.
 	fns := builtinFuncs()
-	fns["cssIncludeTag"] = assetIncludeTag(r.fs, "static/css", cssIncludeTmpl, &cssIncludeTagCache, r.debug)
-	fns["jsIncludeTag"] = assetIncludeTag(r.fs, "static/js", jsIncludeTmpl, &jsIncludeTagCache, r.debug)
+	fns["cssIncludeTag"] = assetIncludeTag(r.fs, cssIncludeTmpl, &cssIncludeTagCache, r.debug)
+	fns["jsIncludeTag"] = assetIncludeTag(r.fs, jsIncludeTmpl, &jsIncludeTagCache, r.debug)
 	for k, v := range r.templateFuncs {
 		fns[k] = v
 	}

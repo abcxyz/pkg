@@ -22,7 +22,6 @@ import (
 	htmltemplate "html/template"
 	"io"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"sync"
 	texttemplate "text/template"
@@ -61,10 +60,10 @@ type asset struct {
 // assetIncludeTag searches the fs for all assets of the given search type and
 // renders the template. In non-dev mode, the results are cached on the first
 // invocation.
-func assetIncludeTag(fsys fs.FS, search string, tmpl *texttemplate.Template, cache *htmltemplate.HTML, devMode bool) func() (htmltemplate.HTML, error) {
+func assetIncludeTag(fsys fs.FS, tmpl *texttemplate.Template, cache *htmltemplate.HTML, devMode bool) func(string) (htmltemplate.HTML, error) {
 	var mu sync.Mutex
 
-	return func() (htmltemplate.HTML, error) {
+	return func(search string) (htmltemplate.HTML, error) {
 		if !devMode {
 			mu.Lock()
 			defer mu.Unlock()
@@ -72,18 +71,15 @@ func assetIncludeTag(fsys fs.FS, search string, tmpl *texttemplate.Template, cac
 				return *cache, nil
 			}
 		}
-
-		entries, err := fs.ReadDir(fsys, search)
+		// Check if this is a single file first.
+		entries, err := fs.Glob(fsys, search)
 		if err != nil {
-			return "", fmt.Errorf("failed to read entries: %w", err)
+			return "", fmt.Errorf("failed to search entries: %w", err)
 		}
 
 		list := make([]*asset, 0, len(entries))
-		for _, entry := range entries {
-			name := entry.Name()
-			pth := filepath.Join(search, name)
-
-			f, err := fsys.Open(pth)
+		for _, name := range entries {
+			f, err := fsys.Open(name)
 			if err != nil {
 				return "", fmt.Errorf("failed to open %s: %w", name, err)
 			}
@@ -94,7 +90,7 @@ func assetIncludeTag(fsys fs.FS, search string, tmpl *texttemplate.Template, cac
 			}
 
 			list = append(list, &asset{
-				Path: pth,
+				Path: name,
 				SRI:  integrity,
 			})
 		}
