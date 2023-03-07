@@ -66,6 +66,7 @@ const (
 	attrProviderFolderID       = "foler_id"
 	attrProviderOrganization   = "organization"
 	attrProviderOrganizationID = "organization_id"
+	attrProviderOrgID          = "org_id"
 	attrDependsOn              = "depends_on"
 	attrLifecycle              = "lifecycle"
 )
@@ -82,6 +83,7 @@ var positionMap = map[string]tokenPosition{
 	attrProviderFolderID:       Provider,
 	attrProviderOrganization:   Provider,
 	attrProviderOrganizationID: Provider,
+	attrProviderOrgID:          Provider,
 	attrDependsOn:              Trailing,
 	attrLifecycle:              Trailing,
 }
@@ -308,6 +310,8 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 		case attrProviderOrganization:
 			fallthrough
 		case attrProviderOrganizationID:
+			fallthrough
+		case attrProviderOrgID:
 			if lastAttr.tokenPos > Provider {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
