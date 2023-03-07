@@ -1,0 +1,35 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'terraform-linter action'
+description: 'Lint terraform against the abcxyz style guide.'
+inputs:
+  directory:
+    description: 'Directory with terraform files to lint'
+    default: '.'
+runs:
+  using: 'composite'
+  steps:
+    - id: 'checkout pkg repo'
+      uses: 'actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c' # ratchet:actions/checkout@v3
+      with:
+        repository: 'abcxyz/pkg'
+        path: 'pkg'
+    - id: 'setup-go'
+      uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
+      with:
+        go-version: '1.20'
+    - id: 'run-linter'
+      shell: 'bash'
+      run: 'cd pkg && go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
