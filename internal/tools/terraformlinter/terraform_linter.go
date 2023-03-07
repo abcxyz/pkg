@@ -314,7 +314,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: errorMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
-		// Check for training newlines where required
+		// Check for trailing newlines where required
 		default:
 			if lastAttr.tokenPos == Provider && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: errorProviderNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
