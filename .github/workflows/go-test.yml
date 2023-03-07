@@ -54,16 +54,6 @@ jobs:
         with:
           go-version: '${{ inputs.go_version }}'
 
-      - name: 'Cache dependencies'
-        uses: 'actions/cache@9b0c1fce7a93df8e3bb8926b0d6e9d89e92f20a7' # ratchet:actions/cache@v3
-        with:
-          path: |-
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-test-${{ hashFiles('**/go.sum') }}
-          restore-keys: |-
-            ${{ runner.os }}-go-
-            ${{ runner.os }}-go-test-
-
       - name: 'Test'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
