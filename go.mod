@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/google/go-cmp v0.5.9
+	github.com/hashicorp/hcl/v2 v2.16.1
 	github.com/lestrrat-go/jwx/v2 v2.0.8
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/sethvargo/go-envconfig v0.9.0
@@ -35,7 +36,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/hashicorp/hcl/v2 v2.16.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
