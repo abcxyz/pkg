@@ -119,7 +119,7 @@ func RunLinter(ctx context.Context, paths []string) error {
 		// Output as errorformat "%f:%l: %m" (file:line: message)
 		fmt.Printf("%s:%d: %s\n", instance.Path, instance.Line, instance.ViolationType)
 	}
-	if len(violations) != 0 {
+	if len(violations) > 0 {
 		return fmt.Errorf("found %d violation(s)", len(violations))
 	}
 
