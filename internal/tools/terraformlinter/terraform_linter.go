@@ -35,7 +35,6 @@ const (
 
 // List of valid extensions that can be linted.
 var terraformSelectors = []string{".tf", ".tf.json"}
-var unused string
 
 // Enum of positional locations in order.
 type tokenPosition int32
