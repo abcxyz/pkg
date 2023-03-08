@@ -35,6 +35,7 @@ const (
 
 // List of valid extensions that can be linted.
 var terraformSelectors = []string{".tf", ".tf.json"}
+var unused string
 
 // Enum of positional locations in order.
 type tokenPosition int32
@@ -116,7 +117,8 @@ func RunLinter(ctx context.Context, paths []string) error {
 		violations = append(violations, instances...)
 	}
 	for _, instance := range violations {
-		fmt.Printf("%q detected at [%s:%d]\n", instance.ViolationType, instance.Path, instance.Line)
+		// Output as errorformat "%f:%l: %m" (file:line: message)
+		fmt.Printf("%s:%d: %s\n", instance.Path, instance.Line, instance.ViolationType)
 	}
 	if len(violations) != 0 {
 		return fmt.Errorf("found %d violation(s)", len(violations))
