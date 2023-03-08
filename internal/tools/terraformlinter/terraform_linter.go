@@ -279,19 +279,13 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// All provider specific entries follow the same logic. Should be below the metadata segment and above everything else
-		case attrProviderProject:
-			fallthrough
-		case attrProviderProjectID:
-			fallthrough
-		case attrProviderFolder:
-			fallthrough
-		case attrProviderFolderID:
-			fallthrough
-		case attrProviderOrganization:
-			fallthrough
-		case attrProviderOrganizationID:
-			fallthrough
-		case attrProviderOrgID:
+		case attrProviderProject,
+			attrProviderProjectID,
+			attrProviderFolder,
+			attrProviderFolderID,
+			attrProviderOrganization,
+			attrProviderOrganizationID,
+			attrProviderOrgID:
 			if lastAttr.tokenPos > Provider {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
