@@ -34,17 +34,17 @@ FLAGS
 `
 
 func main() {
-	if err := realMain(); err != nil {
+	ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer done()
+
+	if err := realMain(ctx); err != nil {
+		done()
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
 
-func realMain() error {
-	ctx, done := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM)
-	defer done()
-
+func realMain(ctx context.Context) error {
 	f := flag.NewFlagSet("", flag.ExitOnError)
 	f.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\n", strings.TrimSpace(lintCommandHelp))

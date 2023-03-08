@@ -24,253 +24,6 @@ import (
 func TestTerraformLinter_FindViolations(t *testing.T) {
 	t.Parallel()
 
-	testNoSpecialAttributes := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyForEachCorrect := `
-	resource "google_project_service" "run_api" {  
-		for_each = toset(["name"])
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyForEachMissingNewLine := `
-	resource "google_project_service" "run_api" {  
-		for_each = toset(["name"])
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyForEachMid := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		for_each = toset(["name"])
-		disable_on_destroy = true
-	}
-	`
-	testOnlyForEachEnd := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		for_each = toset(["name"])
-	}
-	`
-	testOnlyCountCorrect := `
-	resource "google_project_service" "run_api" {  
-		count = 3
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyCountMissingNewLine := `
-	resource "google_project_service" "run_api" {  
-		count = 3
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyCountMid := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		count = 3
-		disable_on_destroy = true
-	}
-	`
-	testOnlyCountEnd := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		count = 3
-	}
-	`
-	testOnlyProviderCorrect := `
-	resource "google_project_service" "run_api" {  
-		provider = "some_provider"
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyProviderMissingNewLine := `
-	resource "google_project_service" "run_api" {  
-		provider = "some_provider"
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testOnlyProviderMid := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		provider = "some_provider"
-		disable_on_destroy = true
-	}
-	`
-	testOnlyProviderEnd := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		provider = "some_provider"
-	}
-	`
-	testProjectCorrectNoMeta := `
-	resource "google_project_service" "run_api" {  
-		project = "some_project_id"
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testProjectCorrectMeta := `
-	resource "google_project_service" "run_api" {  
-		for_each = toset(["name"]) 
-
-		project = "some_project_id"
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testProjectMissingNewLine := `
-	resource "google_project_service" "run_api" {  
-		project = "some_project_id"
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testProjectOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		project = "some_project_id"
-		disable_on_destroy = true
-	}
-	`
-	testDependsOnCorrect := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		depends_on = [
-			"something"
-		]
-	}
-	`
-	testDependsOnOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		depends_on = [
-			"something"
-		]
-		disable_on_destroy = true
-	}
-	`
-	testLifecycleCorrect := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		lifecycle = {
-			prevent_destroy = true
-		}
-	}
-	`
-	testLifecycleOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		lifecycle = {
-			prevent_destroy = true
-		}
-		disable_on_destroy = true
-	}
-	`
-	testTrailingMixCorrect := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		depends_on = [
-			"something"
-		]
-		lifecycle = {
-			prevent_destroy = true
-		}
-	}
-	`
-	testTrailingMixOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-		lifecycle = {
-			prevent_destroy = true
-		}
-		depends_on = [
-			"something"
-		]
-	}
-	`
-	testSourceCorrect := `
-	resource "google_project_service" "run_api" {  
-		source = "http://somerepo"
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testSourceMissingNewLine := `
-	resource "google_project_service" "run_api" {  
-		source = "http://somerepo"
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-	}
-	`
-	testSourceOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		service = "run.googleapis.com"  
-		source = "http://somerepo"
-		disable_on_destroy = true
-	}
-	`
-	testAllCorrect := `
-	resource "google_project_service" "run_api" {  
-		for_each = toset(["name"])
-		provider = "someprovider"
-
-		project = "pid"
-		project_id = "pid"
-		folder = "fid"
-		organization = "abcxyz"
-
-		service = "run.googleapis.com"  
-		disable_on_destroy = true
-
-		depends_on = [
-			"something"
-		]
-		lifecycle = {
-			prevent_destroy = true
-		}
-	}
-	`
-	testMixedOutOfOrder := `
-	resource "google_project_service" "run_api" {  
-		folder = "fid"
-		provider = "someprovider"
-		project = "pid"
-		for_each = toset(["name"])
-		project_id = "pid"
-		service = "run.googleapis.com"  
-		lifecycle = {
-			prevent_destroy = true
-		}
-		organization = "abcxyz"
-		disable_on_destroy = true
-		depends_on = [
-			"something"
-		]
-	}
-	`
-
 	cases := []struct {
 		name      string
 		content   string
@@ -279,26 +32,44 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		wantError bool
 	}{
 		{
-			name:      "No special attributes",
-			content:   testNoSpecialAttributes,
+			name: "no_special_attributes",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:      "Test only for_each - correct",
-			content:   testOnlyForEachCorrect,
+			name: "for_each_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					for_each = toset(["name"])
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:     "Test only for_each - missing newline",
-			content:  testOnlyForEachMissingNewLine,
+			name: "for_each_missing_newline",
+			content: `
+				resource "google_project_service" "run_api" {  
+					for_each = toset(["name"])
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
@@ -306,17 +77,23 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test for_each mid - violation",
-			content:  testOnlyForEachMid,
+			name: "for_each_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					for_each = toset(["name"])
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrForEach),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrForEach),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
@@ -324,32 +101,32 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test for_each end - violation",
-			content:  testOnlyForEachEnd,
-			filename: "/test/test.tf",
-			expect: []*ViolationInstance{
-				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrForEach),
-					Path:          "/test/test.tf",
-					Line:          5,
-				},
-			},
-			wantError: false,
-		},
-		{
-			name:      "Test only count - correct",
-			content:   testOnlyCountCorrect,
+			name: "count_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					count = 3
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:     "Test only count - missing newline",
-			content:  testOnlyCountMissingNewLine,
+			name: "count_missing_newline",
+			content: `
+				resource "google_project_service" "run_api" {  
+					count = 3
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
@@ -357,17 +134,23 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test count mid - violation",
-			content:  testOnlyCountMid,
+			name: "count_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					count = 3
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrCount),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrCount),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
@@ -375,32 +158,32 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test count end - violation",
-			content:  testOnlyCountEnd,
-			filename: "/test/test.tf",
-			expect: []*ViolationInstance{
-				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrCount),
-					Path:          "/test/test.tf",
-					Line:          5,
-				},
-			},
-			wantError: false,
-		},
-		{
-			name:      "Test only provider - correct",
-			content:   testOnlyProviderCorrect,
+			name: "provider_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					provider = "some_provider"
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:     "Test only provider - missing newline",
-			content:  testOnlyProviderMissingNewLine,
+			name: "provider_missing_newline",
+			content: `
+				resource "google_project_service" "run_api" {  
+					provider = "some_provider"
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
@@ -409,17 +192,23 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		},
 
 		{
-			name:     "Test provider mid - violation",
-			content:  testOnlyProviderMid,
+			name: "provider_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					provider = "some_provider"
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrProvider),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
@@ -427,12 +216,72 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test provider end - violation",
-			content:  testOnlyProviderEnd,
+			name: "project_correct_no_meta_block",
+			content: `
+				resource "google_project_service" "run_api" {  
+					project = "some_project_id"
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
+			filename:  "/test/test.tf",
+			expect:    nil,
+			wantError: false,
+		},
+		{
+			name: "project_correct_meta_block",
+			content: `
+				resource "google_project_service" "run_api" {  
+					for_each = toset(["name"]) 
+
+					project = "some_project_id"
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
+			filename:  "/test/test.tf",
+			expect:    nil,
+			wantError: false,
+		},
+		{
+			name: "project_missing_newline",
+			content: `
+				resource "google_project_service" "run_api" {  
+					project = "some_project_id"
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrProvider),
+					ViolationType: violationProviderNewline,
+					Path:          "/test/test.tf",
+					Line:          4,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "project_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					project = "some_project_id"
+					disable_on_destroy = true
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderProject),
+					Path:          "/test/test.tf",
+					Line:          4,
+				},
+				{
+					ViolationType: violationProviderNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
@@ -440,26 +289,35 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:      "Test project correct no meta block",
-			content:   testProjectCorrectNoMeta,
+			name: "depends_on_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+					depends_on = [
+						"something"
+					]
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:      "Test project correct meta block",
-			content:   testProjectCorrectMeta,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
-		},
-		{
-			name:     "Test project missing newline",
-			content:  testProjectMissingNewLine,
+			name: "depends_on_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					depends_on = [
+						"something"
+					]
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: errorProviderNewline,
+					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
@@ -467,82 +325,82 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test project out of order",
-			content:  testProjectOutOfOrder,
+			name: "lifecycle_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+					lifecycle = {
+						prevent_destroy = true
+					}
+				}
+				`,
+			filename:  "/test/test.tf",
+			expect:    nil,
+			wantError: false,
+		},
+		{
+			name: "lifecycle_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					lifecycle = {
+						prevent_destroy = true
+					}
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorProviderAttributes, attrProviderProject),
+					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
+			},
+			wantError: false,
+		},
+		{
+			name: "trailing_mix_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+					depends_on = [
+						"something"
+					]
+					lifecycle = {
+						prevent_destroy = true
+					}
+				}
+				`,
+			filename:  "/test/test.tf",
+			expect:    nil,
+			wantError: false,
+		},
+		{
+			name: "trailing_mix_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+					lifecycle = {
+						prevent_destroy = true
+					}
+					depends_on = [
+						"something"
+					]
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
 				{
-					ViolationType: errorProviderNewline,
+					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
-			},
-			wantError: false,
-		},
-		{
-			name:      "Test depends_on correct",
-			content:   testDependsOnCorrect,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
-		},
-		{
-			name:     "Test depends_on out of order",
-			content:  testDependsOnOutOfOrder,
-			filename: "/test/test.tf",
-			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrDependsOn),
-					Path:          "/test/test.tf",
-					Line:          4,
-				},
-			},
-			wantError: false,
-		},
-		{
-			name:      "Test lifecycle correct",
-			content:   testLifecycleCorrect,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
-		},
-		{
-			name:     "Test lifecycle out of order",
-			content:  testLifecycleOutOfOrder,
-			filename: "/test/test.tf",
-			expect: []*ViolationInstance{
-				{
-					ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrLifecycle),
-					Path:          "/test/test.tf",
-					Line:          4,
-				},
-			},
-			wantError: false,
-		},
-		{
-			name:      "Test trailing mix correct",
-			content:   testTrailingMixCorrect,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
-		},
-		{
-			name:     "Test trailing mix out of order",
-			content:  testTrailingMixOutOfOrder,
-			filename: "/test/test.tf",
-			expect: []*ViolationInstance{
-				{
-					ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrLifecycle),
-					Path:          "/test/test.tf",
-					Line:          5,
-				},
-				{
-					ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrDependsOn),
+					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn),
 					Path:          "/test/test.tf",
 					Line:          8,
 				},
@@ -550,19 +408,32 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:      "Test source correct",
-			content:   testSourceCorrect,
+			name: "source_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					source = "http://somerepo"
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:     "Test source missing newline",
-			content:  testSourceMissingNewLine,
+			name: "source_missing_newline",
+			content: `
+				resource "google_project_service" "run_api" {  
+					source = "http://somerepo"
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
@@ -570,17 +441,23 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:     "Test source out of order",
-			content:  testSourceOutOfOrder,
+			name: "source_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					service = "run.googleapis.com"  
+					source = "http://somerepo"
+					disable_on_destroy = true
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrSource),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrSource),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
@@ -588,54 +465,91 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:      "Test all correct",
-			content:   testAllCorrect,
+			name: "all_correct",
+			content: `
+				resource "google_project_service" "run_api" {  
+					for_each = toset(["name"])
+					provider = "someprovider"
+
+					project = "pid"
+					project_id = "pid"
+					folder = "fid"
+					organization = "abcxyz"
+
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+
+					depends_on = [
+						"something"
+					]
+					lifecycle = {
+						prevent_destroy = true
+					}
+				}
+				`,
 			filename:  "/test/test.tf",
 			expect:    nil,
 			wantError: false,
 		},
 		{
-			name:     "Test mixed out of order",
-			content:  testMixedOutOfOrder,
+			name: "mixed_out_of_order",
+			content: `
+				resource "google_project_service" "run_api" {  
+					folder = "fid"
+					provider = "someprovider"
+					project = "pid"
+					for_each = toset(["name"])
+					project_id = "pid"
+					service = "run.googleapis.com"  
+					lifecycle = {
+						prevent_destroy = true
+					}
+					organization = "abcxyz"
+					disable_on_destroy = true
+					depends_on = [
+						"something"
+					]
+				}
+				`,
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrProvider),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider),
 					Path:          "/test/test.tf",
 					Line:          4,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          5,
 				},
 				{
-					ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrForEach),
+					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrForEach),
 					Path:          "/test/test.tf",
 					Line:          6,
 				},
 				{
-					ViolationType: errorMetaBlockNewline,
+					ViolationType: violationMetaBlockNewline,
 					Path:          "/test/test.tf",
 					Line:          7,
 				},
 				{
-					ViolationType: errorProviderNewline,
+					ViolationType: violationProviderNewline,
 					Path:          "/test/test.tf",
 					Line:          8,
 				},
 				{
-					ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrLifecycle),
+					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
 					Path:          "/test/test.tf",
 					Line:          9,
 				},
 				{
-					ViolationType: fmt.Sprintf(errorProviderAttributes, attrProviderOrganization),
+					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderOrganization),
 					Path:          "/test/test.tf",
 					Line:          12,
 				},
 				{
-					ViolationType: errorProviderNewline,
+					ViolationType: violationProviderNewline,
 					Path:          "/test/test.tf",
 					Line:          13,
 				},

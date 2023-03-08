@@ -63,7 +63,7 @@ const (
 	attrProviderProject        = "project"
 	attrProviderProjectID      = "project_id"
 	attrProviderFolder         = "folder"
-	attrProviderFolderID       = "foler_id"
+	attrProviderFolderID       = "folder_id"
 	attrProviderOrganization   = "organization"
 	attrProviderOrganizationID = "organization_id"
 	attrProviderOrgID          = "org_id"
@@ -89,11 +89,11 @@ var positionMap = map[string]tokenPosition{
 }
 
 const (
-	errorLeadingMetaBlockAttribute  = "The attribute %q must be in the meta block at the top of the definition."
-	errorMetaBlockNewline           = "The meta block must have an additional new line separating it from the next section."
-	errorProviderAttributes         = "The attribute %q must me below any meta attributes (for_each, count, etc.) but above all other attributes."
-	errorProviderNewline            = "The provider specific attributes must have an additional new line separating it from the next section."
-	errorTrailingMetaBlockAttribute = `The attribute %q must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`
+	violationLeadingMetaBlockAttribute  = "The attribute %q must be in the meta block at the top of the definition."
+	violationMetaBlockNewline           = "The meta block must have an additional new line separating it from the next section."
+	violationProviderAttributes         = "The attribute %q must me below any meta attributes (for_each, count, etc.) but above all other attributes."
+	violationProviderNewline            = "The provider specific attributes must have an additional new line separating it from the next section."
+	violationTrailingMetaBlockAttribute = `The attribute %q must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`
 )
 
 // ViolationInstance is an object that contains a reference to a location
@@ -111,7 +111,7 @@ func RunLinter(ctx context.Context, paths []string) error {
 	for _, path := range paths {
 		instances, err := lint(path)
 		if err != nil {
-			return fmt.Errorf("error linting files: %w", err)
+			return fmt.Errorf("error linting files at %q: %w", path, err)
 		}
 		violations = append(violations, instances...)
 	}
@@ -129,50 +129,29 @@ func RunLinter(ctx context.Context, paths []string) error {
 // When it finds a file it reads it and checks it for violations.
 // When it finds a directory it calls itself recursively.
 func lint(path string) ([]*ViolationInstance, error) {
-	isDir, err := isDirectory(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file at path %q: %w", path, err)
-	}
 	instances := []*ViolationInstance{}
-	if isDir {
-		files, err := os.ReadDir(path)
+	if err := filepath.WalkDir(path, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil, fmt.Errorf("error reading directory at path %q: %w", path, err)
+			return err
 		}
-		for _, file := range files {
-			next := filepath.Join(path, file.Name())
-			results, err := lint(next)
-			if err != nil {
-				return nil, err
-			}
-			if results != nil {
-				instances = append(instances, results...)
-			}
-		}
-	} else {
 		for _, sel := range terraformSelectors {
 			if strings.HasSuffix(path, sel) {
 				content, err := os.ReadFile(path)
 				if err != nil {
-					return nil, fmt.Errorf("error reading file: %w", err)
+					return fmt.Errorf("error reading file %q: %w", path, err)
 				}
 				results, err := findViolations(content, path)
 				if err != nil {
-					return nil, fmt.Errorf("error searching for violations %w", err)
+					return fmt.Errorf("error linting file %q: %w", path, err)
 				}
 				instances = append(instances, results...)
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("error walking path %q: %w", path, err)
 	}
 	return instances, nil
-}
-
-func isDirectory(path string) (bool, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return false, fmt.Errorf("error reading file information %w", err)
-	}
-	return fileInfo.IsDir(), err
 }
 
 // findViolations inspects a set of bytes that represent hcl from a terraform configuration file
@@ -272,31 +251,31 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			fallthrough
 		case attrCount:
 			if pos != 0 {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// provider is at the top but below for_each or count if they exist
 		case attrProvider:
 			if pos > 0 && lastAttr.tokenPos != Leading {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrProvider), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// source should be the top attribute in a module
 		case attrSource:
 			if pos != 0 {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorLeadingMetaBlockAttribute, attrSource), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrSource), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		case attrDependsOn:
 			// depends_on somewhere above where it should be
 			if pos < len(idents)-1 && idents[len(idents)-1].tokenPos != Trailing {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrDependsOn), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 			// depends_on after lifecycle
 			if pos == len(idents)-1 && lastAttr.tokenPos == Trailing {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrDependsOn), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		case attrLifecycle:
 			// lifecycle should be last
 			if pos != len(idents)-1 {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorTrailingMetaBlockAttribute, attrLifecycle), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// All provider specific entries follow the same logic. Should be below the metadata segment and above everything else
 		case attrProviderProject:
@@ -313,18 +292,18 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			fallthrough
 		case attrProviderOrgID:
 			if lastAttr.tokenPos > Provider {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(errorProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
-				instances = append(instances, &ViolationInstance{ViolationType: errorMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// Check for trailing newlines where required
 		default:
 			if lastAttr.tokenPos == Provider && !lastAttr.trailingNewline {
-				instances = append(instances, &ViolationInstance{ViolationType: errorProviderNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: violationProviderNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
-				instances = append(instances, &ViolationInstance{ViolationType: errorMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		}
 
