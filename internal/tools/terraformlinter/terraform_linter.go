@@ -214,7 +214,8 @@ func validateBlock(tokens hclsyntax.Tokens) []*ViolationInstance {
 			var t hclsyntax.Token
 			skipping := true
 			depth := 0
-			for skipping {
+			// while there are tokens to skip and we haven't exceeded the length of the slice
+			for skipping && len(tokens) > 1 {
 				t, tokens = tokens[0], tokens[1:]
 				if t.Type == hclsyntax.TokenOBrace || t.Type == hclsyntax.TokenOBrack {
 					depth = depth + 1
@@ -222,7 +223,7 @@ func validateBlock(tokens hclsyntax.Tokens) []*ViolationInstance {
 				if t.Type == hclsyntax.TokenCBrace || t.Type == hclsyntax.TokenCBrack {
 					depth = depth - 1
 				}
-				if depth == 0 && t.Type == hclsyntax.TokenNewline {
+				if depth == 0 && (t.Type == hclsyntax.TokenNewline || t.Type == hclsyntax.TokenComment) {
 					// Check for an extra newline
 					trailingNewline := false
 					if len(tokens) > 0 && tokens[0].Type == hclsyntax.TokenNewline {
