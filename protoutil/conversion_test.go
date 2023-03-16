@@ -83,7 +83,7 @@ func TestToProtoStruct(t *testing.T) {
 	}
 }
 
-func TestYAMLToProto(t *testing.T) {
+func TestUnmarshalYAML(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -129,7 +129,7 @@ bool: true
 			name:          "invalid_yaml_error",
 			b:             []byte("foobar: {}{}"),
 			want:          &structpb.Struct{},
-			wantErrSubstr: "failed to convert yaml to json",
+			wantErrSubstr: "failed to unmarshal yaml",
 		},
 	}
 
@@ -140,7 +140,7 @@ bool: true
 			t.Parallel()
 
 			var msg structpb.Struct
-			err := YAMLToProto(tc.b, &msg)
+			err := UnmarshalYAML(tc.b, &msg)
 			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
 				t.Errorf("unexpected error: %s", diff)
 			}

@@ -22,8 +22,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-
-	ghodssyaml "github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 // ToProtoStruct converts v, which must marshal into a JSON object, into a proto
@@ -40,13 +39,18 @@ func ToProtoStruct(v any) (*structpb.Struct, error) {
 	return x, nil
 }
 
-// YAMLToProto converts YAML to Proto.
-func YAMLToProto(y []byte, m proto.Message) error {
-	j, err := ghodssyaml.YAMLToJSON(y)
-	if err != nil {
-		return fmt.Errorf("failed to convert yaml to json: %w", err)
+// UnmarshalYAML unmarshals the give YAML bytes to the given proto message.
+func UnmarshalYAML(b []byte, msg proto.Message) error {
+	tmp := map[string]any{}
+	if err := yaml.Unmarshal(b, tmp); err != nil {
+		return fmt.Errorf("failed to unmarshal yaml: %w", err)
 	}
-	if err := protojson.Unmarshal(j, m); err != nil {
+	jb, err := json.Marshal(tmp)
+	if err != nil {
+		return fmt.Errorf("failed to marshal json: %w", err)
+	}
+
+	if err := protojson.Unmarshal(jb, msg); err != nil {
 		return fmt.Errorf("failed to unmarshal proto: %w", err)
 	}
 	return nil
