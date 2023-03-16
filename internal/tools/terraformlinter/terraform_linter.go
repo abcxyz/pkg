@@ -235,6 +235,10 @@ func validateBlock(tokens hclsyntax.Tokens) []*ViolationInstance {
 					attrs = append(attrs, tokenAttr{tokenPos: position, token: token, trailingNewline: trailingNewline})
 					skipping = false
 				}
+				// Reached the end of the file
+				if len(tokens) < 2 {
+					skipping = false
+				}
 			}
 		}
 	}
