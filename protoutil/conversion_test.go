@@ -83,7 +83,7 @@ func TestToProtoStruct(t *testing.T) {
 	}
 }
 
-func TestUnmarshalYAML(t *testing.T) {
+func TestYAMLToProto(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -99,6 +99,9 @@ slice:
 - abc
 - xyz
 num: 1
+annotations:
+  labels:
+    env: dev
 bool: true
 `),
 			want: &structpb.Struct{
@@ -110,7 +113,14 @@ bool: true
 							structpb.NewStringValue("xyz"),
 						},
 					}),
-					"num":  structpb.NewNumberValue(1),
+					"num": structpb.NewNumberValue(1),
+					"annotations": structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{
+						"labels": structpb.NewStructValue(&structpb.Struct{
+							Fields: map[string]*structpb.Value{
+								"env": structpb.NewStringValue("dev"),
+							},
+						}),
+					}}),
 					"bool": structpb.NewBoolValue(true),
 				},
 			},
@@ -119,7 +129,7 @@ bool: true
 			name:          "invalid_yaml_error",
 			b:             []byte("foobar: {}{}"),
 			want:          &structpb.Struct{},
-			wantErrSubstr: "failed to unmarshal yaml",
+			wantErrSubstr: "failed to convert yaml to json",
 		},
 	}
 
@@ -130,7 +140,7 @@ bool: true
 			t.Parallel()
 
 			var msg structpb.Struct
-			err := UnmarshalYAML(tc.b, &msg)
+			err := YAMLToProto(tc.b, &msg)
 			if diff := testutil.DiffErrString(err, tc.wantErrSubstr); diff != "" {
 				t.Errorf("unexpected error: %s", diff)
 			}
