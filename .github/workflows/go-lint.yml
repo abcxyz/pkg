@@ -90,10 +90,12 @@ jobs:
         with:
           args: |-
             --config "${{ steps.load-default-config.outputs.output-file }}"
+          skip-cache: true
           working-directory: '${{ inputs.directory }}'
 
       - name: 'Lint (custom configuration)'
         if: ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
         uses: 'golangci/golangci-lint-action@07db5389c99593f11ad7b44463c2d4233066a9b1' # ratchet:golangci/golangci-lint-action@v3
         with:
+          skip-cache: true
           working-directory: '${{ inputs.directory }}'
