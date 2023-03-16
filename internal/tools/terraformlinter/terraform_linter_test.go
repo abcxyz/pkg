@@ -465,15 +465,6 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name: "repro_panic_on_comment_at_end_of_line",
-			content: `
-				resource "a" "b" {
-					c = d # e
-				}
-			`,
-			wantError: false,
-		},
-		{
 			name: "all_correct",
 			content: `
 				resource "google_project_service" "run_api" {  
@@ -563,6 +554,19 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					Line:          13,
 				},
 			},
+			wantError: false,
+		},
+		// Terraform AST treats comments on a line differently than any other token.
+		// Comments absorb the newline character instead of treating it as a separate token.
+		// This requires us to check for either a true newline token or a comment token
+		// that we can treat as the end of the line.
+		{
+			name: "repro_panic_on_comment_at_end_of_line",
+			content: `
+				resource "a" "b" {
+					c = var.d # e
+				}
+			`,
 			wantError: false,
 		},
 	}
