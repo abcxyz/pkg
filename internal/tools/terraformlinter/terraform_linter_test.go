@@ -465,6 +465,15 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name: "repro_panic_on_comment_at_end_of_line",
+			content: `
+				resource "a" "b" {
+					c = d # e
+				}
+			`,
+			wantError: false,
+		},
+		{
 			name: "all_correct",
 			content: `
 				resource "google_project_service" "run_api" {  
