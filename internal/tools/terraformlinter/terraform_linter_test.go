@@ -658,6 +658,23 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			},
 			wantError: false,
 		},
+		// Issue #87 - source and for_each are both valid at the top and shouldn't
+		// cause violations if both are present.
+		{
+			name: "for_each_and_source_both_present_repro",
+			content: `
+				module "some_module" {
+					source = "git://https://github.com/abc/def"
+					for_each = local.mylocal
+				}
+
+				module "some_module" {
+					for_each = local.mylocal
+					source = "git://https://github.com/abc/def"
+				}
+			`,
+			wantError: false,
+		},
 	}
 
 	for _, tc := range cases {
