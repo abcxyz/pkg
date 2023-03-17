@@ -39,7 +39,7 @@ jobs:
           terraform fmt -recursive -check -diff
 
       - name: 'lint terraform'
-        uses: 'github.com/abcxyz/pkg/.github/actions/terraform-linter@main' # ratchet:exclude
+        uses: 'abcxyz/pkg/.github/actions/terraform-linter@main' # ratchet:exclude
 
       - name: 'Initialize and validate'
         shell: 'bash'
