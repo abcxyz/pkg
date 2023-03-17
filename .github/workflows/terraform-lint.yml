@@ -38,6 +38,11 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
+      - name: 'lint terraform'
+        uses: 'abcxyz/pkg/.github/actions/terraform-linter@main' # ratchet:exclude
+        with:
+          directory: '${{ inputs.directory }}'
+
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
