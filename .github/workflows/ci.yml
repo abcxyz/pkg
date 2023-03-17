@@ -13,12 +13,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-go:
+  lint:
     uses: './.github/workflows/go-lint.yml'
     with:
       go_version: '1.20'
 
-  test-go:
+  test:
     uses: './.github/workflows/go-test.yml'
     with:
       go_version: '1.20'
