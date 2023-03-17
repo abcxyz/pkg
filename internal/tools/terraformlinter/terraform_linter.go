@@ -43,7 +43,8 @@ type tokenPosition int32
 
 const (
 	None tokenPosition = iota
-	Leading
+	LeadingStart
+	LeadingEnd
 	ProviderStart
 	ProviderCenter
 	ProviderEnd
@@ -77,10 +78,10 @@ const (
 
 // mapping of attributes to their expected position.
 var positionMap = map[string]tokenPosition{
-	attrForEach:                Leading,
-	attrCount:                  Leading,
-	attrProvider:               Leading,
-	attrSource:                 Leading,
+	attrForEach:                LeadingStart,
+	attrCount:                  LeadingStart,
+	attrSource:                 LeadingStart,
+	attrProvider:               LeadingEnd,
 	attrProviderProject:        ProviderEnd,
 	attrProviderProjectID:      ProviderEnd,
 	attrProviderFolder:         ProviderCenter,
@@ -268,20 +269,15 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 	for pos, token := range idents {
 		contents := string(token.token.Bytes)
 		switch contents {
-		// for_each and count should be at the top
-		case attrForEach, attrCount:
-			if pos != 0 {
+		// for_each, count and source should be at the top
+		case attrForEach, attrCount, attrSource:
+			if pos != 0 && lastAttr.tokenPos != LeadingStart {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// provider is at the top but below for_each or count if they exist
 		case attrProvider:
-			if pos > 0 && lastAttr.tokenPos != Leading {
+			if pos > 0 && lastAttr.tokenPos != LeadingStart {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
-			}
-		// source should be the top attribute in a module
-		case attrSource:
-			if pos != 0 {
-				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrSource), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		case attrDependsOn:
 			// depends_on somewhere above where it should be
@@ -308,7 +304,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			if lastAttr.tokenPos > ProviderStart {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
-			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+			if (lastAttr.tokenPos == LeadingStart || lastAttr.tokenPos == LeadingEnd) && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		case attrProviderFolder,
@@ -316,7 +312,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			if lastAttr.tokenPos > ProviderCenter {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
-			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+			if (lastAttr.tokenPos == LeadingStart || lastAttr.tokenPos == LeadingEnd) && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		case attrProviderProject,
@@ -324,7 +320,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			if lastAttr.tokenPos > ProviderEnd {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
-			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+			if (lastAttr.tokenPos == LeadingStart || lastAttr.tokenPos == LeadingEnd) && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// Check for trailing newlines where required
@@ -332,7 +328,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			if lastAttr.tokenPos == ProviderEnd && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationProviderNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
-			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+			if (lastAttr.tokenPos == LeadingStart || lastAttr.tokenPos == LeadingEnd) && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		}
