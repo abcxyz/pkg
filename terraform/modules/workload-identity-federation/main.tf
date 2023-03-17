@@ -13,17 +13,20 @@
 # limitations under the License.
 
 resource "google_project_service" "serviceusage" {
-  project            = var.project_id
+  project = var.project_id
+
   service            = "serviceusage.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "services" {
-  project = var.project_id
   for_each = toset([
     "cloudresourcemanager.googleapis.com",
     "iamcredentials.googleapis.com",
   ])
+
+  project = var.project_id
+
   service            = each.value
   disable_on_destroy = false
 
@@ -33,15 +36,19 @@ resource "google_project_service" "services" {
 }
 
 resource "google_iam_workload_identity_pool" "pool" {
-  provider                  = google-beta
-  project                   = var.project_id
+  provider = google-beta
+
+  project = var.project_id
+
   workload_identity_pool_id = "github-pool"
   description               = "GitHub pool"
 }
 
 resource "google_iam_workload_identity_pool_provider" "pool_provider" {
-  provider                           = google-beta
-  project                            = var.project_id
+  provider = google-beta
+
+  project = var.project_id
+
   workload_identity_pool_id          = google_iam_workload_identity_pool.pool.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "GitHub provider"
