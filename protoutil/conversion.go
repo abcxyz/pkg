@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ToProtoStruct converts v, which must marshal into a JSON object, into a proto
@@ -39,8 +39,8 @@ func ToProtoStruct(v any) (*structpb.Struct, error) {
 	return x, nil
 }
 
-// UnmarshalYAML unmarshals the give YAML bytes to the given proto message.
-func UnmarshalYAML(b []byte, msg proto.Message) error {
+// FromYAML converts YAML to Proto.
+func FromYAML(b []byte, msg proto.Message) error {
 	tmp := map[string]any{}
 	if err := yaml.Unmarshal(b, tmp); err != nil {
 		return fmt.Errorf("failed to unmarshal yaml: %w", err)
