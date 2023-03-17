@@ -38,21 +38,8 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
-      - id: 'checkout pkg repo'
-        uses: 'actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c' # ratchet:actions/checkout@v3
-        with:
-          repository: 'abcxyz/pkg'
-          path: '${{ runner.temp }}/abcxyz-pkg'
-
-      - id: 'setup-go'
-        uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
-        with:
-          go-version: '1.20'
-
-      - id: 'run-linter'
-        shell: 'bash'
-        working-directory: '${{ runner.temp}}/abcxyz-pkg'
-        run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}'
+      - name: 'lint terraform'
+        uses: 'github.com/abcxyz/pkg/.github/actions/terraform-linter@main' # ratchet:exclude
 
       - name: 'Initialize and validate'
         shell: 'bash'
