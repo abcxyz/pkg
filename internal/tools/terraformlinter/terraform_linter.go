@@ -31,6 +31,8 @@ import (
 const (
 	tokenTypeResource = "resource"
 	tokenTypeModule   = "module"
+	tokenTypeVariable = "variable"
+	tokenTypeOutput   = "output"
 )
 
 // List of valid extensions that can be linted.
@@ -42,7 +44,9 @@ type tokenPosition int32
 const (
 	None tokenPosition = iota
 	Leading
-	Provider
+	ProviderStart
+	ProviderCenter
+	ProviderEnd
 	Ignored
 	Trailing
 )
@@ -77,13 +81,13 @@ var positionMap = map[string]tokenPosition{
 	attrCount:                  Leading,
 	attrProvider:               Leading,
 	attrSource:                 Leading,
-	attrProviderProject:        Provider,
-	attrProviderProjectID:      Provider,
-	attrProviderFolder:         Provider,
-	attrProviderFolderID:       Provider,
-	attrProviderOrganization:   Provider,
-	attrProviderOrganizationID: Provider,
-	attrProviderOrgID:          Provider,
+	attrProviderProject:        ProviderEnd,
+	attrProviderProjectID:      ProviderEnd,
+	attrProviderFolder:         ProviderCenter,
+	attrProviderFolderID:       ProviderCenter,
+	attrProviderOrganization:   ProviderStart,
+	attrProviderOrganizationID: ProviderStart,
+	attrProviderOrgID:          ProviderStart,
 	attrDependsOn:              Trailing,
 	attrLifecycle:              Trailing,
 }
@@ -91,9 +95,10 @@ var positionMap = map[string]tokenPosition{
 const (
 	violationLeadingMetaBlockAttribute  = "The attribute %q must be in the meta block at the top of the definition."
 	violationMetaBlockNewline           = "The meta block must have an additional new line separating it from the next section."
-	violationProviderAttributes         = "The attribute %q must me below any meta attributes (for_each, count, etc.) but above all other attributes."
+	violationProviderAttributes         = "The attribute %q must me below any meta attributes (for_each, count, etc.) but above all other attributes. Attributes should be ordered organization > folder > project."
 	violationProviderNewline            = "The provider specific attributes must have an additional new line separating it from the next section."
 	violationTrailingMetaBlockAttribute = `The attribute %q must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`
+	violationHyphenInResouceName        = `The resource %q must not contain a "-" in its name`
 )
 
 // ViolationInstance is an object that contains a reference to a location
@@ -172,14 +177,25 @@ func findViolations(content []byte, path string) ([]*ViolationInstance, error) {
 		if token.Bytes == nil {
 			continue
 		}
-		// Each Ident token starts a new object, we are only looking for resource and module
-		if !inBlock && token.Type == hclsyntax.TokenIdent && (string(token.Bytes) == tokenTypeResource || string(token.Bytes) == tokenTypeModule) {
+		contents := string(token.Bytes)
+		// Each Ident token starts a new object, we are only looking for resource, module, output and variable types
+		if !inBlock && token.Type == hclsyntax.TokenIdent &&
+			(contents == tokenTypeResource ||
+				contents == tokenTypeModule ||
+				contents == tokenTypeOutput ||
+				contents == tokenTypeVariable) {
 			inBlock = true
 			start = idx
 			depth = 0
 		}
 		// If we are in a block, look for the closing braces to find the end
 		if inBlock {
+			// Before dropping into the block itself, look for names that have a hyphen
+			if depth == 0 && token.Type == hclsyntax.TokenQuotedLit {
+				if strings.Contains(contents, "-") {
+					instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationHyphenInResouceName, contents), Path: token.Range.Filename, Line: token.Range.Start.Line})
+				}
+			}
 			if token.Type == hclsyntax.TokenOBrace {
 				depth = depth + 1
 			}
@@ -253,9 +269,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 		contents := string(token.token.Bytes)
 		switch contents {
 		// for_each and count should be at the top
-		case attrForEach:
-			fallthrough
-		case attrCount:
+		case attrForEach, attrCount:
 			if pos != 0 {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
@@ -284,14 +298,30 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 		// All provider specific entries follow the same logic. Should be below the metadata segment and above everything else
-		case attrProviderProject,
-			attrProviderProjectID,
-			attrProviderFolder,
-			attrProviderFolderID,
-			attrProviderOrganization,
+		// Expect order
+		//   organization
+		//   folder
+		//   project
+		case attrProviderOrganization,
 			attrProviderOrganizationID,
 			attrProviderOrgID:
-			if lastAttr.tokenPos > Provider {
+			if lastAttr.tokenPos > ProviderStart {
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+			}
+			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+			}
+		case attrProviderFolder,
+			attrProviderFolderID:
+			if lastAttr.tokenPos > ProviderCenter {
+				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+			}
+			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
+				instances = append(instances, &ViolationInstance{ViolationType: violationMetaBlockNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
+			}
+		case attrProviderProject,
+			attrProviderProjectID:
+			if lastAttr.tokenPos > ProviderEnd {
 				instances = append(instances, &ViolationInstance{ViolationType: fmt.Sprintf(violationProviderAttributes, contents), Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {
@@ -299,7 +329,7 @@ func generateViolations(idents []tokenAttr) []*ViolationInstance {
 			}
 		// Check for trailing newlines where required
 		default:
-			if lastAttr.tokenPos == Provider && !lastAttr.trailingNewline {
+			if lastAttr.tokenPos == ProviderEnd && !lastAttr.trailingNewline {
 				instances = append(instances, &ViolationInstance{ViolationType: violationProviderNewline, Path: token.token.Range.Filename, Line: token.token.Range.Start.Line})
 			}
 			if lastAttr.tokenPos == Leading && !lastAttr.trailingNewline {

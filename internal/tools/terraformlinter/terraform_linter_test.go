@@ -471,10 +471,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					for_each = toset(["name"])
 					provider = "someprovider"
 
+					organization = "abcxyz"
+					folder = "fid"
 					project = "pid"
 					project_id = "pid"
-					folder = "fid"
-					organization = "abcxyz"
 
 					service = "run.googleapis.com"  
 					disable_on_destroy = true
@@ -548,18 +548,13 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					Path:          "/test/test.tf",
 					Line:          12,
 				},
-				{
-					ViolationType: violationProviderNewline,
-					Path:          "/test/test.tf",
-					Line:          13,
-				},
 			},
 			wantError: false,
 		},
 		// Terraform AST treats comments on a line differently than any other token.
 		// Comments absorb the newline character instead of treating it as a separate token.
 		// This requires us to check for either a true newline token or a comment token
-		// that we can treat as the end of the line.
+		// that we can treat as the end of the line. See issue #83.
 		{
 			name: "repro_panic_on_comment_at_end_of_line",
 			content: `
@@ -567,6 +562,100 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					c = var.d # e
 				}
 			`,
+			wantError: false,
+		},
+		{
+			name: "resource with hyphen in name",
+			content: `
+				resource "google_project_service" "run-api" {  
+					service = "run.googleapis.com"  
+					disable_on_destroy = true
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "run-api"),
+					Path:          "/test/test.tf",
+					Line:          2,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "module with hyphen in name",
+			content: `
+				module "my-cool-module" {  
+					x = "some value"  
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "my-cool-module"),
+					Path:          "/test/test.tf",
+					Line:          2,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "variable with hyphen in name",
+			content: `
+				variable "billing-account" {
+					description = "The ID of the billing account to associate projects with"
+					type        = string
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "billing-account"),
+					Path:          "/test/test.tf",
+					Line:          2,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "output with hyphen in name",
+			content: `
+				output "my-output" {
+					value       = module.my-output
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "my-output"),
+					Path:          "/test/test.tf",
+					Line:          2,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "provider_project_at_top",
+			content: `
+				resource "google_project_service" "run_api" {  
+					project = "pid"
+					folder = "fid"
+					organization = "abcxyz"
+				}
+				`,
+			filename: "/test/test.tf",
+			expect: []*ViolationInstance{
+				{
+					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderFolder),
+					Path:          "/test/test.tf",
+					Line:          4,
+				},
+				{
+					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderOrganization),
+					Path:          "/test/test.tf",
+					Line:          5,
+				},
+			},
 			wantError: false,
 		},
 	}
