@@ -38,6 +38,9 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
+      - name: 'run terraform linter'
+        uses: './github/actions/terraform-linter'
+
       - name: 'Initialize and validate'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
