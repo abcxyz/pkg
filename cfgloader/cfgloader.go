@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/sethvargo/go-envconfig"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Validatable is the interface to validate a config. In addition to validating
