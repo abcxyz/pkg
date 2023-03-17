@@ -34,8 +34,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "no_special_attributes",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -46,10 +46,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "for_each_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					for_each = toset(["name"])
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -60,9 +60,9 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "for_each_missing_newline",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					for_each = toset(["name"])
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -79,8 +79,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "for_each_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					for_each = toset(["name"])
 					disable_on_destroy = true
 				}
@@ -103,10 +103,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "count_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					count = 3
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -117,9 +117,9 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "count_missing_newline",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					count = 3
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -136,8 +136,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "count_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					count = 3
 					disable_on_destroy = true
 				}
@@ -160,10 +160,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "provider_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					provider = "some_provider"
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -174,9 +174,9 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "provider_missing_newline",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					provider = "some_provider"
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -194,8 +194,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "provider_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					provider = "some_provider"
 					disable_on_destroy = true
 				}
@@ -218,10 +218,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "project_correct_no_meta_block",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					project = "some_project_id"
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -232,12 +232,12 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "project_correct_meta_block",
 			content: `
-				resource "google_project_service" "run_api" {  
-					for_each = toset(["name"]) 
+				resource "google_project_service" "run_api" {
+					for_each = toset(["name"])
 
 					project = "some_project_id"
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -248,9 +248,9 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "project_missing_newline",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					project = "some_project_id"
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -267,8 +267,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "project_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					project = "some_project_id"
 					disable_on_destroy = true
 				}
@@ -291,8 +291,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "depends_on_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 					depends_on = [
 						"something"
@@ -306,8 +306,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "depends_on_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					depends_on = [
 						"something"
 					]
@@ -327,8 +327,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "lifecycle_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 					lifecycle = {
 						prevent_destroy = true
@@ -342,8 +342,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "lifecycle_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					lifecycle = {
 						prevent_destroy = true
 					}
@@ -363,8 +363,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "trailing_mix_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 					depends_on = [
 						"something"
@@ -381,8 +381,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "trailing_mix_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 					lifecycle = {
 						prevent_destroy = true
@@ -410,10 +410,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "source_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					source = "http://somerepo"
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -424,9 +424,9 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "source_missing_newline",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					source = "http://somerepo"
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -443,8 +443,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "source_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run_api" {
+					service = "run.googleapis.com"
 					source = "http://somerepo"
 					disable_on_destroy = true
 				}
@@ -467,7 +467,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "all_correct",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					for_each = toset(["name"])
 					provider = "someprovider"
 
@@ -476,7 +476,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					project = "pid"
 					project_id = "pid"
 
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 
 					depends_on = [
@@ -494,13 +494,13 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "mixed_out_of_order",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					folder = "fid"
 					provider = "someprovider"
 					project = "pid"
 					for_each = toset(["name"])
 					project_id = "pid"
-					service = "run.googleapis.com"  
+					service = "run.googleapis.com"
 					lifecycle = {
 						prevent_destroy = true
 					}
@@ -567,8 +567,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "resource with hyphen in name",
 			content: `
-				resource "google_project_service" "run-api" {  
-					service = "run.googleapis.com"  
+				resource "google_project_service" "run-api" {
+					service = "run.googleapis.com"
 					disable_on_destroy = true
 				}
 				`,
@@ -585,8 +585,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "module with hyphen in name",
 			content: `
-				module "my-cool-module" {  
-					x = "some value"  
+				module "my-cool-module" {
+					x = "some value"
 				}
 				`,
 			filename: "/test/test.tf",
@@ -637,7 +637,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 		{
 			name: "provider_project_at_top",
 			content: `
-				resource "google_project_service" "run_api" {  
+				resource "google_project_service" "run_api" {
 					project = "pid"
 					folder = "fid"
 					organization = "abcxyz"
@@ -672,6 +672,26 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					for_each = local.mylocal
 					source = "git://https://github.com/abc/def"
 				}
+			`,
+			wantError: false,
+		},
+		{
+			// linter is detecting the "module" ident token in the trimprefix call and starting a new
+			// block which throws all of the block selection logic into a broken state. This causes it
+			// to see the "for_each" in the following resource as being on the wrong line (not at the top)
+			// causing a false violation
+			name: "special_ident_tokens_in_locals",
+			content: `
+			  locals {
+				ingestion_backed_client_env_vars = {
+				  "AUDIT_CLIENT_BACKEND_REMOTE_ADDRESS" : "${trimprefix(module.server_service.audit_log_server_url, "https://")}:443",
+				  "AUDIT_CLIENT_CONDITION_REGEX_PRINCIPAL_INCLUDE" : ".*",
+				}
+			  }
+			  
+			  resource "google_cloud_run_service" "ingestion_backend_client_services" {
+				for_each = var.client_images
+			  }
 			`,
 			wantError: false,
 		},
