@@ -28,5 +28,5 @@ runs:
 
       - id: 'run-linter'
         shell: 'bash'
-        working-directory: '${{ github.action_path }}'
+        working-directory: '${{ github.action_path }}/../../'
         run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
