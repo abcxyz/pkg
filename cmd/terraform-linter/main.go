@@ -15,13 +15,10 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/abcxyz/pkg/internal/tools/terraformlinter"
 )
@@ -34,17 +31,13 @@ FLAGS
 `
 
 func main() {
-	ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer done()
-
-	if err := realMain(ctx); err != nil {
-		done()
+	if err := realMain(); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
 
-func realMain(ctx context.Context) error {
+func realMain() error {
 	f := flag.NewFlagSet("", flag.ExitOnError)
 	f.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s\n\n", strings.TrimSpace(lintCommandHelp))
