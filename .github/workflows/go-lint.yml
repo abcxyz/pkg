@@ -15,6 +15,10 @@ on:
         description: 'Directory in which Go files reside.'
         type: 'string'
         default: '.'
+      golangci_lint_version:
+        description: 'Version of golangci linter to use'
+        type: 'string'
+        default: 'v1.52'
 
 jobs:
   # modules checks if the go modules are all up-to-date. While rare with modern
@@ -90,6 +94,7 @@ jobs:
         with:
           args: |-
             --config "${{ steps.load-default-config.outputs.output-file }}"
+          version: '${{ inputs.golangci_lint_version }}'
           skip-cache: true
           working-directory: '${{ inputs.directory }}'
 
@@ -97,5 +102,6 @@ jobs:
         if: ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
         uses: 'golangci/golangci-lint-action@07db5389c99593f11ad7b44463c2d4233066a9b1' # ratchet:golangci/golangci-lint-action@v3
         with:
+          version: '${{ inputs.golangci_lint_version }}'
           skip-cache: true
           working-directory: '${{ inputs.directory }}'
