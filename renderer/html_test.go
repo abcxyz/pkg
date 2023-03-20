@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -24,8 +23,6 @@ import (
 
 func TestRenderHTMLStatus(t *testing.T) {
 	t.Parallel()
-
-	ctx := context.Background()
 
 	sys := fstest.MapFS{
 		"template.html": &fstest.MapFile{
@@ -38,7 +35,7 @@ func TestRenderHTMLStatus(t *testing.T) {
 		},
 	}
 
-	r, err := New(ctx, sys, WithDebug(true))
+	r, err := New(sys, WithDebug(true))
 	if err != nil {
 		t.Fatal(err)
 	}

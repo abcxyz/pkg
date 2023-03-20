@@ -15,7 +15,6 @@
 package renderer_test
 
 import (
-	"context"
 	"net/http"
 	"sort"
 	"testing/fstest"
@@ -29,7 +28,7 @@ type Server struct {
 	h  *renderer.Renderer
 }
 
-func NewServer(ctx context.Context) *Server {
+func NewServer() *Server {
 	// Normally this would come from the filesystem, but to make the test fit in a
 	// single file...
 	fsys := fstest.MapFS{
@@ -47,7 +46,7 @@ func NewServer(ctx context.Context) *Server {
 		},
 	}
 
-	h, err := renderer.New(ctx, fsys, renderer.WithDebug(true))
+	h, err := renderer.New(fsys, renderer.WithDebug(true))
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +86,7 @@ func (s *Server) users() []string {
 }
 
 func Example() {
-	s := NewServer(context.Background())
+	s := NewServer()
 
 	srv := &http.Server{
 		Addr:    ":8080",

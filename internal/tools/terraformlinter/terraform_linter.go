@@ -17,7 +17,7 @@
 package terraformlinter
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -112,7 +112,7 @@ type ViolationInstance struct {
 }
 
 // RunLinter executes the specified linter for a set of files.
-func RunLinter(ctx context.Context, paths []string) error {
+func RunLinter(paths []string) error {
 	var violations []*ViolationInstance
 	// Process each provided path looking for violations
 	for _, path := range paths {
@@ -167,8 +167,10 @@ func lint(path string) ([]*ViolationInstance, error) {
 func findViolations(content []byte, path string) ([]*ViolationInstance, error) {
 	tokens, diags := hclsyntax.LexConfig(content, path, hcl.Pos{Byte: 0, Line: 1, Column: 1})
 	if diags.HasErrors() {
-		//nolint
-		return nil, fmt.Errorf("error lexing hcl file contents: [%s]", diags.Error())
+		// diags.Error is just a string, but the golangci linter gets angry that we aren't using
+		// %w in the error message. Attempts to use the nolint tag also get flagged as not needed
+		// in newer versions so to appease the linter we wrap the string in an error.
+		return nil, fmt.Errorf("error lexing hcl file contents: [%w]", errors.New(diags.Error()))
 	}
 
 	inBlock := false
