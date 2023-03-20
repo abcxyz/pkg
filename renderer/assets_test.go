@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"strings"
@@ -25,8 +24,6 @@ import (
 
 func TestAssetIncludeTag(t *testing.T) {
 	t.Parallel()
-
-	ctx := context.Background()
 
 	cases := []struct {
 		name string
@@ -99,7 +96,7 @@ func TestAssetIncludeTag(t *testing.T) {
 				},
 			}
 
-			r, err := New(ctx, sys, WithDebug(true))
+			r, err := New(sys, WithDebug(true))
 			if err != nil {
 				t.Fatal(err)
 			}

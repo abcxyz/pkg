@@ -47,7 +47,7 @@ func NewServer(ctx context.Context) *Server {
 		},
 	}
 
-	h, err := renderer.New(ctx, fsys, renderer.WithDebug(true))
+	h, err := renderer.New(fsys, renderer.WithDebug(true))
 	if err != nil {
 		panic(err)
 	}

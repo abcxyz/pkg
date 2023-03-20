@@ -66,7 +66,7 @@ func realMain(ctx context.Context) error {
 		return fmt.Errorf("expected at least one argument, got %d", got)
 	}
 
-	if err := terraformlinter.RunLinter(ctx, args); err != nil {
+	if err := terraformlinter.RunLinter(args); err != nil {
 		return fmt.Errorf("error running linter %w", err)
 	}
 	return nil

@@ -54,7 +54,6 @@ package renderer
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -125,7 +124,7 @@ func WithTemplateFuncs(fns template.FuncMap) Option {
 }
 
 // New creates a new renderer with the given details.
-func New(ctx context.Context, fsys fs.FS, opts ...Option) (*Renderer, error) {
+func New(fsys fs.FS, opts ...Option) (*Renderer, error) {
 	r := &Renderer{
 		rendererPool: &sync.Pool{
 			New: func() interface{} {
