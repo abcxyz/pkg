@@ -15,6 +15,7 @@
 package renderer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http/httptest"
@@ -24,6 +25,8 @@ import (
 
 func TestRenderJSON(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	// cycled exists to force a JSON cycle to test error handling.
 	type cycled struct {
@@ -104,7 +107,7 @@ func TestRenderJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			r, err := New(nil, WithDebug(tc.debug))
+			r, err := New(ctx, nil, WithDebug(tc.debug))
 			if err != nil {
 				t.Fatal(err)
 			}
