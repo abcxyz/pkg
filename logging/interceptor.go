@@ -107,9 +107,9 @@ func HTTPInterceptor(inLogger *zap.SugaredLogger, projectID string) func(http.Ha
 			header := r.Header.Get(googleCloudTraceHeader)
 			if header != "" {
 				ctx = withTracedLogger(ctx, projectID, header)
-				r = r.Clone(ctx)
 			}
 
+			r = r.WithContext(ctx)
 			next.ServeHTTP(w, r)
 		})
 	}
