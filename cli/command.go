@@ -46,6 +46,10 @@ type Command interface {
 	// Run executes the command.
 	Run(ctx context.Context, args []string) error
 
+	// Prompt provides a mechanism for asking for user input. It reads from
+	// [Stdin]. If there's an input stream (e.g. a pipe), it will read the pipe.
+	// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
+	// no pipe and the terminal is not a tty.
 	Prompt(msg string) (string, error)
 
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
