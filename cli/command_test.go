@@ -238,6 +238,11 @@ func TestRootCommand_Run(t *testing.T) {
 			args:      []string{"child", "-h"},
 			expStderr: `Usage: test child COMMAND`,
 		},
+		{
+			name:      "child_help_flags",
+			args:      []string{"child", "default", "-h"},
+			expStderr: `-string="my-string"`,
+		},
 	}
 
 	for _, tc := range cases {
@@ -270,13 +275,40 @@ type TestCommand struct {
 	Hide   bool
 	Output string
 	Error  error
+
+	flagString string
 }
 
-func (c *TestCommand) Desc() string    { return "Test command" }
-func (c *TestCommand) Help() string    { return "Usage: {{ COMMAND }}" }
-func (c *TestCommand) Flags() *FlagSet { return NewFlagSet() }
-func (c *TestCommand) Hidden() bool    { return c.Hide }
+func (c *TestCommand) Desc() string {
+	return "Test command"
+}
+
+func (c *TestCommand) Help() string {
+	return "Usage: {{ COMMAND }}"
+}
+
+func (c *TestCommand) Flags() *FlagSet {
+	set := NewFlagSet()
+
+	f := set.NewSection("Options")
+
+	f.StringVar(&StringVar{
+		Name:    "string",
+		Example: "my-string",
+		Target:  &c.flagString,
+		Usage:   "A literal string.",
+	})
+
+	return set
+}
+
+func (c *TestCommand) Hidden() bool { return c.Hide }
+
 func (c *TestCommand) Run(ctx context.Context, args []string) error {
+	if err := c.Flags().Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
 	if err := c.Error; err != nil {
 		return err
 	}

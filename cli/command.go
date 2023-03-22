@@ -43,6 +43,9 @@ type Command interface {
 	// replaced with the actual subcommand structure.
 	Help() string
 
+	// Flags returns the list of flags that are defined on the command.
+	Flags() *FlagSet
+
 	// Hidden indicates whether the command is hidden from help output.
 	Hidden() bool
 
@@ -154,7 +157,7 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 
 	// Short-circuit top-level help.
 	if name == "" || name == "-h" || name == "-help" || name == "--help" {
-		fmt.Fprintln(r.Stderr(), formatHelp(r.Help(), r.Name))
+		fmt.Fprintln(r.Stderr(), formatHelp(r.Help(), r.Name, r.Flags()))
 		return nil
 	}
 
@@ -187,7 +190,7 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 	if err := instance.Run(ctx, args); err != nil {
 		// Special case requesting help.
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(instance.Stderr(), formatHelp(instance.Help(), r.Name+" "+name))
+			fmt.Fprintln(instance.Stderr(), formatHelp(instance.Help(), r.Name+" "+name, instance.Flags()))
 			return nil
 		}
 		//nolint:wrapcheck // We want to bubble this error exactly as-is.
@@ -210,8 +213,14 @@ func extractCommandAndArgs(args []string) (string, []string) {
 
 // formatHelp is a helper function that does variable replacement from the help
 // string.
-func formatHelp(help, name string) string {
-	return strings.ReplaceAll(help, "{{ COMMAND }}", name)
+func formatHelp(help, name string, flags *FlagSet) string {
+	h := strings.Trim(help, "\n")
+	if flags != nil {
+		if v := strings.TrimSpace(flags.Help()); v != "" {
+			h = h + "\n\n" + v
+		}
+	}
+	return strings.ReplaceAll(h, "{{ COMMAND }}", name)
 }
 
 // BaseCommand is the default command structure. All commands should embed this
@@ -219,6 +228,11 @@ func formatHelp(help, name string) string {
 type BaseCommand struct {
 	stdout, stderr io.Writer
 	stdin          io.Reader
+}
+
+// Flags returns the base command flags, which is always nil.
+func (c *BaseCommand) Flags() *FlagSet {
+	return nil
 }
 
 // Hidden indicates whether the command is hidden. The default is unhidden.

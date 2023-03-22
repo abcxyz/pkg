@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/abcxyz/pkg/cli"
 )
@@ -32,12 +31,11 @@ func (c *EatCommand) Desc() string {
 }
 
 func (c *EatCommand) Help() string {
-	return strings.Trim(`
+	return `
 Usage: {{ COMMAND }} [options]
 
   The eat command eats food.
-
-`+c.Flags().Help(), "\n")
+`
 }
 
 func (c *EatCommand) Flags() *cli.FlagSet {
@@ -62,12 +60,11 @@ func (c *DrinkCommand) Desc() string {
 }
 
 func (c *DrinkCommand) Help() string {
-	return strings.Trim(`
+	return `
 Usage: {{ COMMAND }} [options]
 
   The drink command drinks water.
-
-`+c.Flags().Help(), "\n")
+`
 }
 
 func (c *DrinkCommand) Flags() *cli.FlagSet {

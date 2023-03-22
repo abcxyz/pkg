@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/abcxyz/pkg/cli"
 )
@@ -35,7 +34,7 @@ func (c *CountCommand) Desc() string {
 }
 
 func (c *CountCommand) Help() string {
-	return strings.Trim(`
+	return `
 Usage: {{ COMMAND }} [options] MAX
 
   The count command prints out a list of numbers starting from 0 up to and
@@ -44,8 +43,7 @@ Usage: {{ COMMAND }} [options] MAX
       $ {{ COMMAND }} 50
 
   The value for MAX must be a positive integer.
-
-`+c.Flags().Help(), "\n")
+`
 }
 
 func (c *CountCommand) Flags() *cli.FlagSet {
