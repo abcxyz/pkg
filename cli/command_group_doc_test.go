@@ -68,11 +68,7 @@ func (c *DrinkCommand) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func Example() {
-	// Help output is written to stderr by default. Redirect to stdout so the
-	// "Output" assertion works.
-	os.Stderr = os.Stdout
-
+func Example_commandGroup() {
 	ctx := context.Background()
 
 	rootCmd := func() cli.Command {
@@ -90,7 +86,13 @@ func Example() {
 		}
 	}
 
-	if err := rootCmd().Run(ctx, []string{"-h"}); err != nil {
+	cmd := rootCmd()
+
+	// Help output is written to stderr by default. Redirect to stdout so the
+	// "Output" assertion works.
+	cmd.SetStderr(os.Stdout)
+
+	if err := cmd.Run(ctx, []string{"-h"}); err != nil {
 		// TODO: handle error
 		panic(err)
 	}
