@@ -206,7 +206,7 @@ func TestRootCommand_Run(t *testing.T) {
 		{
 			name: "unknown_command",
 			args: []string{"nope"},
-			err:  `unknown command "nope"`,
+			err:  `unknown command "nope": run "test -help" for a list of commands`,
 		},
 		{
 			name:      "runs_parent_command",

@@ -163,7 +163,8 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 
 	cmd, ok := r.Commands[name]
 	if !ok {
-		return fmt.Errorf("unknown command %q", name)
+		return fmt.Errorf("unknown command %q: run \"%s -help\" for a list of "+
+			"commands", name, r.Name)
 	}
 	instance := cmd()
 
