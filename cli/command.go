@@ -38,6 +38,9 @@ type Command interface {
 
 	// Help is the long-form help output. It should include usage instructions and
 	// flag information.
+	//
+	// Callers can insert the literal string "{{ COMMAND }}" which will be
+	// replaced with the actual subcommand structure.
 	Help() string
 
 	// Hidden indicates whether the command is hidden from help output.
@@ -151,7 +154,7 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 
 	// Short-circuit top-level help.
 	if name == "" || name == "-h" || name == "-help" || name == "--help" {
-		fmt.Fprintln(r.Stderr(), r.Help())
+		fmt.Fprintln(r.Stderr(), formatHelp(r.Help(), r.Name))
 		return nil
 	}
 
@@ -184,7 +187,7 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 	if err := instance.Run(ctx, args); err != nil {
 		// Special case requesting help.
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(instance.Stderr(), instance.Help())
+			fmt.Fprintln(instance.Stderr(), formatHelp(instance.Help(), r.Name+" "+name))
 			return nil
 		}
 		//nolint:wrapcheck // We want to bubble this error exactly as-is.
@@ -203,6 +206,12 @@ func extractCommandAndArgs(args []string) (string, []string) {
 	default:
 		return args[0], args[1:]
 	}
+}
+
+// formatHelp is a helper function that does variable replacement from the help
+// string.
+func formatHelp(help, name string) string {
+	return strings.ReplaceAll(help, "{{ COMMAND }}", name)
 }
 
 // BaseCommand is the default command structure. All commands should embed this

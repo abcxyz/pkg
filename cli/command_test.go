@@ -273,7 +273,7 @@ type TestCommand struct {
 }
 
 func (c *TestCommand) Desc() string    { return "Test command" }
-func (c *TestCommand) Help() string    { return "Test command help" }
+func (c *TestCommand) Help() string    { return "Usage: {{ COMMAND }}" }
 func (c *TestCommand) Flags() *FlagSet { return NewFlagSet() }
 func (c *TestCommand) Hidden() bool    { return c.Hide }
 func (c *TestCommand) Run(ctx context.Context, args []string) error {

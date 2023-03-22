@@ -36,12 +36,12 @@ func (c *CountCommand) Desc() string {
 
 func (c *CountCommand) Help() string {
 	return strings.Trim(`
-Usage: my-tool count [options] MAX
+Usage: {{ COMMAND }} [options] MAX
 
   The count command prints out a list of numbers starting from 0 up to and
   including the provided MAX.
 
-      $ my-tool count 50
+      $ {{ COMMAND }} 50
 
   The value for MAX must be a positive integer.
 

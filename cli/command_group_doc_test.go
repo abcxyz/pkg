@@ -16,6 +16,7 @@ package cli_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -32,7 +33,10 @@ func (c *EatCommand) Desc() string {
 
 func (c *EatCommand) Help() string {
 	return strings.Trim(`
-The eat command eats food.
+Usage: {{ COMMAND }} [options]
+
+  The eat command eats food.
+
 `+c.Flags().Help(), "\n")
 }
 
@@ -41,6 +45,10 @@ func (c *EatCommand) Flags() *cli.FlagSet {
 }
 
 func (c *EatCommand) Run(ctx context.Context, args []string) error {
+	if err := c.Flags().Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
 	// TODO: implement
 	return nil
 }
@@ -55,7 +63,10 @@ func (c *DrinkCommand) Desc() string {
 
 func (c *DrinkCommand) Help() string {
 	return strings.Trim(`
-The drink command drinks water.
+Usage: {{ COMMAND }} [options]
+
+  The drink command drinks water.
+
 `+c.Flags().Help(), "\n")
 }
 
@@ -64,6 +75,10 @@ func (c *DrinkCommand) Flags() *cli.FlagSet {
 }
 
 func (c *DrinkCommand) Run(ctx context.Context, args []string) error {
+	if err := c.Flags().Parse(args); err != nil {
+		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
 	// TODO: implement
 	return nil
 }
@@ -92,14 +107,25 @@ func Example_commandGroup() {
 	// "Output" assertion works.
 	cmd.SetStderr(os.Stdout)
 
+	fmt.Fprintln(cmd.Stdout(), "\nTop-level help:")
 	if err := cmd.Run(ctx, []string{"-h"}); err != nil {
-		// TODO: handle error
+		panic(err)
+	}
+
+	fmt.Fprintln(cmd.Stdout(), "\nCommand-level help:")
+	if err := cmd.Run(ctx, []string{"eat", "-h"}); err != nil {
 		panic(err)
 	}
 
 	// Output:
+	// Top-level help:
 	// Usage: my-tool COMMAND
 	//
 	//   drink    Drink some water
 	//   eat      Eat some food
+	//
+	// Command-level help:
+	// Usage: my-tool eat [options]
+	//
+	//   The eat command eats food.
 }
