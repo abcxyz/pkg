@@ -7,7 +7,9 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/hcl/v2 v2.16.2
+	github.com/kr/text v0.1.0
 	github.com/lestrrat-go/jwx/v2 v2.0.8
+	github.com/mattn/go-isatty v0.0.17
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/sethvargo/go-envconfig v0.9.0
 	go.uber.org/zap v1.24.0
