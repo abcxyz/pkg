@@ -216,7 +216,7 @@ func extractCommandAndArgs(args []string) (string, []string) {
 func formatHelp(help, name string, flags *FlagSet) string {
 	h := strings.Trim(help, "\n")
 	if flags != nil {
-		if v := strings.TrimSpace(flags.Help()); v != "" {
+		if v := strings.Trim(flags.Help(), "\n"); v != "" {
 			h = h + "\n\n" + v
 		}
 	}
