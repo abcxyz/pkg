@@ -15,6 +15,7 @@
 package testutil
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"testing"
@@ -41,4 +42,22 @@ func SkipIfNotIntegration(tb testing.TB) {
 	if !IsIntegration(tb) {
 		tb.Skip("Not integration test, skipping")
 	}
+}
+
+// IsIntegrationMain checks env var TEST_INTEGRATION and consider that we're in
+// an integration test if it's set to true. This func should be used in
+// [TestMain] where [testing.TB] is not accessible. Otherwise, use
+// [IsIntegration] instead.
+//
+// [TestMain]: https://pkg.go.dev/testing#hdr-Main
+func IsIntegrationMain() bool {
+	integVal := os.Getenv("TEST_INTEGRATION")
+	if integVal == "" {
+		return false
+	}
+	isInteg, err := strconv.ParseBool(integVal)
+	if err != nil {
+		log.Fatalf("failed to parse TEST_INTEGRATION: %v", err)
+	}
+	return isInteg
 }

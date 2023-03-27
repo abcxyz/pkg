@@ -29,3 +29,15 @@ func TestIsIntegration(t *testing.T) {
 		t.Errorf("IsIntegration() got 'false' want 'true'")
 	}
 }
+
+//nolint:paralleltest // Can't be paralleled because of t.Setenv
+func TestIsIntegrationMain(t *testing.T) {
+	if IsIntegrationMain() {
+		t.Errorf("IsIntegrationMain() got 'true' want 'false'")
+	}
+
+	t.Setenv("TEST_INTEGRATION", "true")
+	if !IsIntegrationMain() {
+		t.Errorf("IsIntegrationMain() got 'false' want 'true'")
+	}
+}
