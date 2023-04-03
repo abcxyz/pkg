@@ -119,9 +119,13 @@ func (s *Server) StartHTTP(ctx context.Context, srv *http.Server) error {
 		}
 	}()
 
-	// Wait for the provided context to finish.
-	<-ctx.Done()
-	logger.Debugw("provided context is done")
+	// Wait for the provided context to finish or an error to occur.
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("failed to serve: %w", err)
+	case <-ctx.Done():
+		logger.Debugw("provided context is done")
+	}
 
 	// Shutdown the server.
 	shutdownCtx, done := context.WithTimeout(context.Background(), 10*time.Second)
@@ -186,9 +190,13 @@ func (s *Server) StartGRPC(ctx context.Context, srv *grpc.Server) error {
 		}
 	}()
 
-	// Wait for the provided context to finish.
-	<-ctx.Done()
-	logger.Debugw("provided context is done")
+	// Wait for the provided context to finish or an error to occur.
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("failed to serve: %w", err)
+	case <-ctx.Done():
+		logger.Debugw("provided context is done")
+	}
 
 	logger.Debugw("server is shutting down")
 	srv.GracefulStop()
