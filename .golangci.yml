@@ -146,6 +146,9 @@ linters-settings:
       - '.ErrorOrNil\('
       - 'retry\.RetryableError\('
       - 'status\.Error\('
+      - 'serving\.StartHTTP\('
+      - 'serving\.StartHTTPHandler\('
+      - 'serving\.StartGRPC\('
 
 severity:
   # default: ''
