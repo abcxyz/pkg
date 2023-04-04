@@ -11,6 +11,11 @@ on:
         description: 'The directory upon which to lint Terraform configurations.'
         type: 'string'
         required: true
+      walk_dirs:
+        description: 'Recursively iteratate the working directory to initialize and validate all child modules.'
+        type: 'boolean'
+        required: false
+        default: true
 
 env:
   TF_IN_AUTOMATION: 'true'
@@ -40,7 +45,7 @@ jobs:
 
       - id: 'checkout-pkg'
         uses: 'actions/checkout@v3'
-        with: 
+        with:
           repository: 'abcxyz/pkg'
           path: 'abcxyz-pkg'
 
@@ -54,7 +59,8 @@ jobs:
         working-directory: 'abcxyz-pkg'
         run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
 
-      - name: 'Initialize and validate'
+      - name: 'Initialize and validate sub directories'
+        if: ${{ inputs.walk_dirs }}
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
@@ -70,3 +76,11 @@ jobs:
 
             echo "::endgroup::"
           done
+
+      - name: 'Initialize and validate'
+        if: ${{ !inputs.walk_dirs }}
+        shell: 'bash'
+        working-directory: '${{ inputs.directory }}'
+        run: |-
+          terraform init -backend=false -input=false
+          terraform validate
