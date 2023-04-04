@@ -143,12 +143,12 @@ linters-settings:
 
   wrapcheck:
     ignoreSigRegexps:
-      - '.ErrorOrNil\('
+      - '\.ErrorOrNil\('
+      - '\.StartGRPC\('
+      - '\.StartHTTP\('
+      - '\.StartHTTPHandler\('
       - 'retry\.RetryableError\('
       - 'status\.Error\('
-      - 'serving\.StartHTTP\('
-      - 'serving\.StartHTTPHandler\('
-      - 'serving\.StartGRPC\('
 
 severity:
   # default: ''
