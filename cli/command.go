@@ -61,10 +61,14 @@ type Command interface {
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
 	Stdout() io.Writer
 	SetStdout(w io.Writer)
+	// Outf is a shortcut to write to [Command.Stdout].
+	Outf(format string, a ...any)
 
 	// Stderr returns the stderr stream. SetStderr sets the stderr stream.
 	Stderr() io.Writer
 	SetStderr(w io.Writer)
+	// Errf is a shortcut to write to [Command.Stderr].
+	Errf(format string, a ...any)
 
 	// Stdin returns the stdin stream. SetStdin sets the stdin stream.
 	Stdin() io.Reader
@@ -257,6 +261,11 @@ func (c *BaseCommand) Prompt(msg string) (string, error) {
 	return scanner.Text(), nil
 }
 
+// Outf is a shortcut to write to [BaseCommand.Stdout].
+func (c *BaseCommand) Outf(format string, a ...any) {
+	fmt.Fprintf(c.Stdout(), format, a...)
+}
+
 // Stdout returns the stdout stream.
 func (c *BaseCommand) Stdout() io.Writer {
 	if v := c.stdout; v != nil {
@@ -268,6 +277,11 @@ func (c *BaseCommand) Stdout() io.Writer {
 // SetStdout sets the standard out.
 func (c *BaseCommand) SetStdout(w io.Writer) {
 	c.stdout = w
+}
+
+// Errf is a shortcut to write to [BaseCommand.Stderr].
+func (c *BaseCommand) Errf(format string, a ...any) {
+	fmt.Fprintf(c.Stderr(), format, a...)
 }
 
 // Stderr returns the stderr stream.
