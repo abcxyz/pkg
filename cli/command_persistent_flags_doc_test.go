@@ -144,12 +144,12 @@ func Example_persistentFlags() {
 	// "Output" assertion works.
 	cmd.SetStderr(os.Stdout)
 
-	fmt.Fprintln(cmd.Stdout(), "\nTop-level help:")
+	cmd.Outf("\nTop-level help:")
 	if err := cmd.Run(ctx, []string{"-h"}); err != nil {
 		panic(err)
 	}
 
-	fmt.Fprintln(cmd.Stdout(), "\nCommand-level help:")
+	cmd.Outf("\nCommand-level help:")
 	if err := cmd.Run(ctx, []string{"download", "-h"}); err != nil {
 		panic(err)
 	}
