@@ -61,12 +61,14 @@ type Command interface {
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
 	Stdout() io.Writer
 	SetStdout(w io.Writer)
+
 	// Outf is a shortcut to write to [Command.Stdout].
 	Outf(format string, a ...any)
 
 	// Stderr returns the stderr stream. SetStderr sets the stderr stream.
 	Stderr() io.Writer
 	SetStderr(w io.Writer)
+
 	// Errf is a shortcut to write to [Command.Stderr].
 	Errf(format string, a ...any)
 
@@ -161,13 +163,13 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 
 	// Short-circuit top-level help.
 	if name == "" || name == "-h" || name == "-help" || name == "--help" {
-		fmt.Fprintln(r.Stderr(), formatHelp(r.Help(), r.Name, r.Flags()))
+		r.Errf(formatHelp(r.Help(), r.Name, r.Flags()))
 		return nil
 	}
 
 	// Short-circuit version.
 	if name == "-v" || name == "-version" || name == "--version" {
-		fmt.Fprintln(r.Stderr(), r.Version)
+		r.Errf(r.Version)
 		return nil
 	}
 
@@ -194,7 +196,7 @@ func (r *RootCommand) Run(ctx context.Context, args []string) error {
 	if err := instance.Run(ctx, args); err != nil {
 		// Special case requesting help.
 		if errors.Is(err, flag.ErrHelp) {
-			fmt.Fprintln(instance.Stderr(), formatHelp(instance.Help(), r.Name+" "+name, instance.Flags()))
+			instance.Errf(formatHelp(instance.Help(), r.Name+" "+name, instance.Flags()))
 			return nil
 		}
 		//nolint:wrapcheck // We want to bubble this error exactly as-is.
@@ -263,7 +265,7 @@ func (c *BaseCommand) Prompt(msg string) (string, error) {
 
 // Outf is a shortcut to write to [BaseCommand.Stdout].
 func (c *BaseCommand) Outf(format string, a ...any) {
-	fmt.Fprintf(c.Stdout(), format, a...)
+	fmt.Fprintf(c.Stdout(), format+"\n", a...)
 }
 
 // Stdout returns the stdout stream.
@@ -281,7 +283,7 @@ func (c *BaseCommand) SetStdout(w io.Writer) {
 
 // Errf is a shortcut to write to [BaseCommand.Stderr].
 func (c *BaseCommand) Errf(format string, a ...any) {
-	fmt.Fprintf(c.Stderr(), format, a...)
+	fmt.Fprintf(c.Stderr(), format+"\n", a...)
 }
 
 // Stderr returns the stderr stream.
