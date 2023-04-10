@@ -82,12 +82,14 @@ func WithLookuper(lookuper envconfig.Lookuper) Option {
 //
 // [env tag]: https://github.com/sethvargo/go-envconfig
 func Load(ctx context.Context, cfg any, opt ...Option) error {
-	opts := &options{
-		// Default to OS lookuper.
-		lookuper: envconfig.OsLookuper(),
-	}
+	opts := &options{}
 	for _, o := range opt {
 		opts = o(opts)
+	}
+
+	// Default to the environment lookuper.
+	if opts.lookuper == nil {
+		opts.lookuper = envconfig.OsLookuper()
 	}
 
 	// Load from yaml bytes first if provided.
