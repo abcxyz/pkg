@@ -81,7 +81,7 @@ func (c *CountCommand) Run(ctx context.Context, args []string) error {
 	}
 
 	for i := int64(0); i <= max; i += c.flagStep {
-		fmt.Fprintln(c.Stdout(), i)
+		c.Outf("%d", i)
 	}
 
 	return nil
@@ -109,12 +109,12 @@ func Example_commandWithFlags() {
 	// "Output" assertion works.
 	cmd.SetStderr(os.Stdout)
 
-	fmt.Fprintln(cmd.Stdout(), "\nUp to 3:")
+	cmd.Outf("\nUp to 3:")
 	if err := cmd.Run(ctx, []string{"count", "3"}); err != nil {
 		panic(err)
 	}
 
-	fmt.Fprintln(cmd.Stdout(), "\nUp to 10, stepping 2")
+	cmd.Outf("\nUp to 10, stepping 2")
 	if err := cmd.Run(ctx, []string{"count", "-step=2", "10"}); err != nil {
 		panic(err)
 	}

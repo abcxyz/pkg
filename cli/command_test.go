@@ -314,7 +314,7 @@ func (c *TestCommand) Run(ctx context.Context, args []string) error {
 	}
 
 	if v := c.Output; v != "" {
-		fmt.Fprint(c.Stdout(), v)
+		c.Outf(v)
 	}
 
 	return nil
