@@ -99,6 +99,17 @@ num_val: 2`))},
 			},
 			wantErr: "StrVal cannot be 'fail_me'",
 		},
+		{
+			name: "nil_lookuper",
+			opts: []Option{
+				WithLookuper(nil),
+			},
+			input: &fakeCfg{},
+			want: &fakeCfg{
+				StrVal: "foo",
+				NumVal: 1,
+			},
+		},
 	}
 
 	for _, tc := range tests {
