@@ -47,7 +47,8 @@ var (
 // Set envPrefix+"LOG_MODE" to overwrite log mode. Default log mode is production.
 func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 	level := os.Getenv(envPrefix + "LOG_LEVEL")
-	devMode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix+"LOG_MODE"))) == "development"
+	logMode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
+	devMode := strings.HasPrefix(logMode, "dev")
 	var cfg zap.Config
 	if devMode {
 		cfg = zap.NewDevelopmentConfig()
@@ -72,12 +73,11 @@ func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
-// Default creates a default logger.
-// To overwrite log level and mode, set AUDIT_CLIENT_LOG_LEVEL and AUDIT_CLIENT_LOG_MODE.
-// This is mostly used for audit client. The caller doesn't have to explicitly set up a logger.
+// Default creates a default logger. To overwrite log level and mode, set
+// LOG_LEVEL and LOG_MODE.
 func Default() *zap.SugaredLogger {
 	defaultLoggerOnce.Do(func() {
-		defaultLogger = NewFromEnv("AUDIT_CLIENT_")
+		defaultLogger = NewFromEnv("")
 	})
 	return defaultLogger
 }
