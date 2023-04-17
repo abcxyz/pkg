@@ -45,6 +45,7 @@ func makeDefaultMySQLConfig() *config {
 			Env:        []string{"MYSQL_ROOT_PASSWORD=" + password},
 		},
 		waitForPort:    mysqlPort,
+		startTester:    mysqlTester,
 		progressLogger: &stdlibLogger{},
 	}
 }
