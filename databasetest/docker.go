@@ -125,7 +125,7 @@ func waitUntilUp(conf *config, tester func(*config, func(string) string) error, 
 
 		if err := tester(conf, container.GetPort); err != nil {
 			conf.progressLogger.Printf("Database isn't ready yet: %v", err)
-			return fmt.Errorf("Database isn't ready yet: %w", err)
+			return fmt.Errorf("database isn't ready yet: %w", err)
 		}
 
 		conf.progressLogger.Printf("The database container is fully up and healthy")
