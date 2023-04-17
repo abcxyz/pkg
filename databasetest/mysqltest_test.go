@@ -73,8 +73,8 @@ func TestBuildConfig(t *testing.T) {
 	if conf.killAfterSec != 1 {
 		t.Errorf("got killAfterSec=%v, want 1", conf.killAfterSec)
 	}
-	if conf.mySQLVersion != "2" {
-		t.Errorf(`got mySQLVersion=%v", want "2"`, conf.mySQLVersion)
+	if conf.runOptions.Tag != "2" {
+		t.Errorf(`got tag=%v", want "2"`, conf.runOptions.Tag)
 	}
 	if _, ok := conf.progressLogger.(*testLogger); !ok {
 		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, logger)
