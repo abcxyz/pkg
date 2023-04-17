@@ -77,7 +77,7 @@ func startContainer(conf *config) (func(string) string, io.Closer, error) {
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
 		return nil, closer, fmt.Errorf("resource.Expire(): %w", err)
 	}
-	portMapper, err := waitUntilUp(conf, mysqlTester, pool, container)
+	portMapper, err := waitUntilUp(conf, pool, container)
 	if err != nil {
 		return nil, closer, err
 	}
@@ -111,7 +111,7 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 }
 
 // waitUntilUp waits for service to be reachable.
-func waitUntilUp(conf *config, tester func(*config, func(string) string) error, pool *dockertest.Pool, container *dockertest.Resource) (func(string) string, error) {
+func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (func(string) string, error) {
 	// To get the exported TCP port number for the server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
@@ -123,7 +123,7 @@ func waitUntilUp(conf *config, tester func(*config, func(string) string) error, 
 			}
 		}
 
-		if err := tester(conf, container.GetPort); err != nil {
+		if err := conf.startTester(conf.progressLogger, container.GetPort); err != nil {
 			conf.progressLogger.Printf("Database isn't ready yet: %v", err)
 			return fmt.Errorf("database isn't ready yet: %w", err)
 		}

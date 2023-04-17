@@ -56,12 +56,12 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	return ci, closer
 }
 
-func mysqlTester(conf *config, portMapper func(string) string) error {
+func mysqlTester(progressLogger Logger, portMapper func(string) string) error {
 	port := portMapper(mysqlPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("root:%s@tcp(localhost:%s)/mysql?tls=false", password, port)
 
-	conf.progressLogger.Printf(`Checking if MySQL is up yet on localhost at %s. It's normal to see "unexpected EOF" output while it's starting.`, port)
+	progressLogger.Printf(`Checking if MySQL is up yet on localhost at %s. It's normal to see "unexpected EOF" output while it's starting.`, port)
 	db, err := sql.Open("mysql", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)
@@ -71,6 +71,6 @@ func mysqlTester(conf *config, portMapper func(string) string) error {
 		return fmt.Errorf("db.Ping(): %w", err)
 	}
 
-	conf.progressLogger.Printf("MySQL is up on port %v", port)
+	progressLogger.Printf("MySQL is up on port %v", port)
 	return nil
 }

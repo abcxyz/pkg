@@ -23,8 +23,9 @@ import (
 // This file implements the "functional options" pattern.
 
 type config struct {
-	waitForPort    string // port to listen on to see if container has started. "" for no port
-	killAfterSec   int    // This is in integer seconds because that's what Docker takes.
+	waitForPort    string                                  // port to listen on to see if container has started. "" for no port
+	startTester    func(Logger, func(string) string) error // function which should return nil error if container has started properly
+	killAfterSec   int                                     // This is in integer seconds because that's what Docker takes.
 	runOptions     dockertest.RunOptions
 	progressLogger Logger
 }
