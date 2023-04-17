@@ -20,6 +20,8 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+
+	_ "github.com/go-sql-driver/mysql" // Force mysql driver to be included.
 )
 
 const (

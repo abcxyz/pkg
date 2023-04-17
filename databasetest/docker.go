@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql" // Force mysql driver to be included.
 	dockertest "github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 )
