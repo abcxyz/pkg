@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysqltest provides an ephemeral MySQL server for testing database integration. It's
+// Package databasetest provides an ephemeral database server for testing database integration. It's
 // designed to be used in code that needs to work inside and outside Google.
-package mysqltest
+package databasetest
 
 import (
 	"io"

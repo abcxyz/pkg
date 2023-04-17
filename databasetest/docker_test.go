@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mysqltest
+package databasetest
 
 // This file is only intended to be used outside of Google. Inside of Google, this file should be
 // replaced with the Google-internal version.

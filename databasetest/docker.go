@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mysqltest
+package databasetest
 
 // This file implements docker integration.
 //
@@ -42,15 +42,15 @@ const (
 
 var nopCloser = io.NopCloser(nil)
 
-// start starts a docker container running a MySQL server. A struct is returned describing how to
-// connect to MySQL, along with a cleanup function that should be called once all tests have
+// start starts a docker container running a DB server. A struct is returned describing how to
+// connect to container, along with a cleanup function that should be called once all tests have
 // finished.
 //
 // The returned Closer should be called in every case, even if this function returns an error. This
 // ensures that the Docker container will be cleaned up if the error occurred after the container
 // was created. The Closer will never be nil.
 //
-// Since the startup time for this MySQL container is about 20 seconds, we share the container among
+// Since the startup time for database containers can be as long as 20 seconds, we share the container among
 // every test. Each test should use a randomly-created database/schema name to avoid collisions
 // between tests.
 //
@@ -66,14 +66,12 @@ func start(conf *config) (ConnInfo, io.Closer, error) {
 	}
 
 	return ConnInfo{
-		Username: "root",
-		Password: password,
 		Hostname: "localhost",
 		Port:     port,
 	}, closer, nil
 }
 
-// Runs a MySQL docker container and returns its TCP port, along with a cleanup function that stops
+// Runs a docker container and returns its TCP port, along with a cleanup function that stops
 // the container.
 func startContainer(conf *config) (string, io.Closer, error) {
 	pool, err := dockertest.NewPool("")
@@ -88,21 +86,17 @@ func startContainer(conf *config) (string, io.Closer, error) {
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
 		return "", closer, fmt.Errorf("resource.Expire(): %w", err)
 	}
-	outPort, err := waitUntilUp(conf, pool, container)
+	outPort, err := waitUntilUp(conf, mysqlTester, pool, container)
 	if err != nil {
 		return "", closer, err
 	}
 	return outPort, closer, nil
 }
 
-// Starts the mysql container and returns a Resource that points to it.
+// Starts the container and returns a Resource that points to it.
 func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, error) {
 	// pulls an image, creates a container based on it and runs it
-	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "mysql",
-		Tag:        conf.mySQLVersion,
-		Env:        []string{"MYSQL_ROOT_PASSWORD=" + password},
-	}, func(config *docker.HostConfig) {
+	container, err := pool.RunWithOptions(&conf.runOptions, func(config *docker.HostConfig) {
 		config.AutoRemove = true // remove storage after container exits
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
@@ -118,31 +112,32 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 					1. Run "sudo adduser $USER docker" to add your user to the docker group
 					2. Reboot the machine to make the group membership effective`
 		case strings.Contains(err.Error(), "404"):
-			extraMsg = fmt.Sprintf(". Probably the requested version %q does not exist as a Docker image", conf.mySQLVersion)
+			extraMsg = fmt.Sprintf(". Probably the requested tag %q does not exist as a Docker image", conf.runOptions.Tag)
 		}
-		return nil, fmt.Errorf("pool.Run() failed starting mysql container: %w%s", err, extraMsg)
+		return nil, fmt.Errorf("pool.Run() failed starting container: %w%s", err, extraMsg)
 	}
 	return container, nil
 }
 
-// waitUntilUp waits for mysql to be reachable.
-func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (string, error) {
+// waitUntilUp waits for service to be reachable.
+func waitUntilUp(conf *config, tester func(*config, string) error, pool *dockertest.Pool, container *dockertest.Resource) (string, error) {
 	var outPort string
-	// To get the TCP port number for the mysql server, we have to wait for the docker container to
+	// To get the exported TCP port number for the server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
 	if err := pool.Retry(func() error {
-		port := container.GetPort("3306/tcp")
+		port := container.GetPort("3306/tcp") // todo: make configurable
 		if port == "" {
 			return fmt.Errorf("resource.GetPort() returned empty string, container isn't ready yet")
 		}
 
-		if err := tryLogin(conf, port); err != nil {
-			conf.progressLogger.Printf("MySQL isn't ready yet: %v", err)
-			return fmt.Errorf("MySQL isn't ready yet: %w", err)
+		if err := tester(conf, port); err != nil {
+			conf.progressLogger.Printf("Database isn't ready yet: %v", err)
+			return fmt.Errorf("Database isn't ready yet: %w", err)
 		}
 
 		outPort = port
+		conf.progressLogger.Printf("The database container is fully up and healthy on port %v", outPort)
 		return nil
 	}); err != nil {
 		return "", fmt.Errorf("failed to connect to database within timeout. The final attempt returned: %w", err)
@@ -150,7 +145,7 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 	return outPort, nil
 }
 
-func tryLogin(conf *config, port string) error {
+func mysqlTester(conf *config, port string) error {
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("root:%s@tcp(localhost:%s)/mysql?tls=false", password, port)
 
@@ -163,8 +158,6 @@ func tryLogin(conf *config, port string) error {
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("db.Ping(): %w", err)
 	}
-	conf.progressLogger.Printf("The MySQL container is fully up and healthy")
-
 	return nil
 }
 
@@ -187,7 +180,7 @@ func (p *containerCloser) Close() error {
 		err = p.pool.Purge(p.container)
 	})
 	if err != nil {
-		return fmt.Errorf("failed stopping MySQL docker container: %w", err)
+		return fmt.Errorf("failed stopping dabase docker container: %w", err)
 	}
 	return nil
 }

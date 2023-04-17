@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mysqltest
+package databasetest
 
-import "log"
+import (
+	"log"
+
+	"github.com/ory/dockertest/v3"
+)
 
 // This file implements the "functional options" pattern.
 
 type config struct {
 	killAfterSec   int // This is in integer seconds because that's what Docker takes.
-	mySQLVersion   string
+	runOptions     dockertest.RunOptions
 	progressLogger Logger
 }
 
@@ -30,16 +34,20 @@ type Logger interface {
 	Printf(fmtStr string, args ...any)
 }
 
-func makeDefaultConfig() *config {
+func makeDefaultMySQLConfig() *config {
 	return &config{
-		killAfterSec:   10 * 60,
-		mySQLVersion:   "5.7",
+		killAfterSec: 10 * 60,
+		runOptions: dockertest.RunOptions{
+			Repository: "mysql",
+			Tag:        "5.7",
+			Env:        []string{"MYSQL_ROOT_PASSWORD=" + password},
+		},
 		progressLogger: &stdlibLogger{},
 	}
 }
 
 func buildConfig(opts ...Option) *config {
-	config := makeDefaultConfig()
+	config := makeDefaultMySQLConfig()
 	for _, opt := range opts {
 		config = opt(config)
 	}
@@ -67,7 +75,7 @@ func WithKillAfterSeconds(seconds int) Option {
 // WithVersion chooses a MySQL server version. This overrides the default MySQL server version.
 func WithVersion(v string) Option {
 	return func(c *config) *config {
-		c.mySQLVersion = v
+		c.runOptions.Tag = v
 		return c
 	}
 }
