@@ -17,15 +17,27 @@
 package databasetest
 
 import (
+	"database/sql"
+	"fmt"
 	"io"
+)
+
+const (
+	// It's OK to hardcode the root password because only boilerplate test data is stored. Also,
+	// having a well-known password can help with human inspection for debugging. The value chosen for
+	// the password is arbitrary. It can be changed without breaking anything; it's not hardcoded into
+	// the docker image or anything like that.
+	password = "8mo5lfYKjy6ebTK" //nolint:gosec
+
+	mysqlPort = "3306/tcp"
 )
 
 // ConnInfo specifies how to connect to the MySQL server that is created by this package.
 type ConnInfo struct {
-	Username string
-	Password string
-	Hostname string
-	Port     string
+	Username   string
+	Password   string
+	Hostname   string
+	PortMapper func(string) string
 }
 
 // MustStart starts a MySQL server, or panics if there was an error.
@@ -38,6 +50,27 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 		_ = closer.Close()
 		panic(err)
 	}
+	ci.Username = "root"
+	ci.Password = password
 
 	return ci, closer
+}
+
+func mysqlTester(conf *config, portMapper func(string) string) error {
+	port := portMapper(mysqlPort)
+	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
+	addr := fmt.Sprintf("root:%s@tcp(localhost:%s)/mysql?tls=false", password, port)
+
+	conf.progressLogger.Printf(`Checking if MySQL is up yet on localhost at %s. It's normal to see "unexpected EOF" output while it's starting.`, port)
+	db, err := sql.Open("mysql", addr)
+	if err != nil {
+		return fmt.Errorf("sql.Open(): %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("db.Ping(): %w", err)
+	}
+
+	conf.progressLogger.Printf("MySQL is up on port %v", port)
+	return nil
 }

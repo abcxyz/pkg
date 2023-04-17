@@ -23,7 +23,8 @@ import (
 // This file implements the "functional options" pattern.
 
 type config struct {
-	killAfterSec   int // This is in integer seconds because that's what Docker takes.
+	waitForPort    string // port to listen on to see if container has started. "" for no port
+	killAfterSec   int    // This is in integer seconds because that's what Docker takes.
 	runOptions     dockertest.RunOptions
 	progressLogger Logger
 }
@@ -42,6 +43,7 @@ func makeDefaultMySQLConfig() *config {
 			Tag:        "5.7",
 			Env:        []string{"MYSQL_ROOT_PASSWORD=" + password},
 		},
+		waitForPort:    mysqlPort,
 		progressLogger: &stdlibLogger{},
 	}
 }

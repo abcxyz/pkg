@@ -39,6 +39,8 @@ func TestKillAfter(t *testing.T) {
 	)
 	conf := buildConfig(WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
 	ci, closer, err := start(conf)
+	ci.Username = "root"
+	ci.Password = password
 	defer func() {
 		_ = closer.Close()
 	}()
@@ -83,7 +85,7 @@ func connect(t *testing.T, ci ConnInfo) *sql.DB {
 	t.Helper()
 
 	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", ci.Username, ci.Password,
-		ci.Hostname, ci.Port, "")
+		ci.Hostname, ci.PortMapper(mysqlPort), "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)

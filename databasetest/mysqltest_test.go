@@ -35,7 +35,7 @@ func TestMustStart(t *testing.T) {
 	if ci.Hostname == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
 	}
-	if ci.Port == "" {
+	if ci.PortMapper(mysqlPort) == "" {
 		t.Errorf("got empty port, wanted a non-empty string")
 	}
 }
