@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package databasetest
+package containertest
 
 import (
 	"log"
@@ -22,26 +22,26 @@ import (
 
 type config struct {
 	killAfterSec   int // This is in integer seconds because that's what Docker takes.
-	driver         Driver
+	service        Service
 	progressLogger Logger
 }
 
 // Logger allows the caller to optionally provide a custom logger for printing status updates about
-// MySQL startup progress. The default is to use the go "log" package.
+// service startup progress. The default is to use the go "log" package.
 type Logger interface {
 	Printf(fmtStr string, args ...any)
 }
 
-func makeDefaultConfig(driver Driver) *config {
+func makeDefaultConfig(service Service) *config {
 	return &config{
 		killAfterSec:   10 * 60,
-		driver:         driver,
+		service:        service,
 		progressLogger: &stdlibLogger{},
 	}
 }
 
-func buildConfig(driver Driver, opts ...Option) *config {
-	config := makeDefaultConfig(driver)
+func buildConfig(service Service, opts ...Option) *config {
+	config := makeDefaultConfig(service)
 	for _, opt := range opts {
 		config = opt(config)
 	}
@@ -52,12 +52,12 @@ func buildConfig(driver Driver, opts ...Option) *config {
 // they should use one of the With* functions.
 type Option func(*config) *config
 
-// WithKillAfterSeconds is an option that overrides the default time period after which the mysql docker
+// WithKillAfterSeconds is an option that overrides the default time period after which the docker
 // container will kill itself.
 //
 // Containers might bypass the normal clean shutdown logic if the test terminates abnormally, such
 // as when ctrl-C is pressed during a test. Therefore we instruct the container to kill itself after
-// a while. The duration must be longer than longest test that uses MySQL. There's no harm in
+// a while. The duration must be longer than longest test that uses the container. There's no harm in
 // leaving lots of extra time.
 func WithKillAfterSeconds(seconds int) Option {
 	return func(c *config) *config {
@@ -66,7 +66,7 @@ func WithKillAfterSeconds(seconds int) Option {
 	}
 }
 
-// WithLogger overrides the default logger. This logger will receive messages about MySQL startup
+// WithLogger overrides the default logger. This logger will receive messages about service startup
 // progress. The default is to use the go "log" package.
 func WithLogger(l Logger) Option {
 	return func(c *config) *config {

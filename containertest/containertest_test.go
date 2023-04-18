@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package databasetest
+package containertest
 
 import (
 	"fmt"
@@ -67,8 +67,8 @@ func TestBuildConfig(t *testing.T) {
 	if conf.killAfterSec != 1 {
 		t.Errorf("got killAfterSec=%v, want 1", conf.killAfterSec)
 	}
-	if conf.driver.ImageTag() != "2" {
-		t.Errorf(`got tag=%v", want "2"`, conf.driver.ImageTag())
+	if conf.service.ImageTag() != "2" {
+		t.Errorf(`got tag=%v", want "2"`, conf.service.ImageTag())
 	}
 	if _, ok := conf.progressLogger.(*testLogger); !ok {
 		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, logger)

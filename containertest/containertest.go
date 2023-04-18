@@ -12,31 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package databasetest provides an ephemeral database server for integration testing.
+// Package containertest provides an ephemeral container (such as a database) for integration testing.
 // It's designed to be used in code that needs to work inside and outside google.
-package databasetest
+package containertest
 
 import "io"
 
-// ConnInfo specifies how to connect to the created container.
+// ConnInfo specifies how connect to the created container.
 type ConnInfo struct {
 	Hostname string
+
 	// PortMapper maps from container port to host port. Do not use after container is closed.
 	PortMapper func(string) string
 }
 
-type Driver interface {
+// Service provides information about what container image should be started and
+// how to know when it has finished stating up.
+type Service interface {
 	ImageRepository() string // Repository for docker image (ex: mysql)
 	ImageTag() string        // Tag for docker image (ex: 5.3)
-	Environment() []string
-	StartupPorts() []string                                               // Ports that must be exposed by container before TestConn is run
-	TestConn(progressLogger Logger, portMapper func(string) string) error // Function to test if database is up
-	// TODO is this needed? WaitForPort
+	Environment() []string   // Environment variables to be set in container.
+	StartupPorts() []string  // Ports that must be exposed by container before TestConn is run
+
+	// TestConn takes a logger and a mapper to show which ports are exposed, and returns nil if app has started.
+	TestConn(progressLogger Logger, portMapper func(string) string) error
 }
 
-// MustStart starts a DB, or panics if there was an error.
-func MustStart(driver Driver, opts ...Option) (ConnInfo, io.Closer) {
-	conf := buildConfig(driver, opts...)
+// MustStart starts a container, or panics if there was an error.
+func MustStart(service Service, opts ...Option) (ConnInfo, io.Closer) {
+	conf := buildConfig(service, opts...)
 	ci, closer, err := start(conf)
 	if err != nil {
 		// The Closer must be called even if there's an error, to clean up the docker container that may

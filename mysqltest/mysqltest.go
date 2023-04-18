@@ -18,7 +18,7 @@ package mysqltest
 import (
 	"io"
 
-	"github.com/abcxyz/pkg/databasetest"
+	"github.com/abcxyz/pkg/containertest"
 )
 
 // ConnInfo specifies how to connect to the MySQL server that is created by this package.
@@ -32,16 +32,16 @@ type ConnInfo struct {
 // MustStart starts a MySQL server, or panics if there was an error.
 func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	conf := buildConfig(opts...)
-	driver := (&databasetest.MySQL{}).WithVersion(conf.mySQLVersion)
-	realOpts := make([]databasetest.Option, 0, 2)
+	driver := (&containertest.MySQL{}).WithVersion(conf.mySQLVersion)
+	realOpts := make([]containertest.Option, 0, 2)
 	if conf.killAfterSec != 0 {
-		realOpts = append(realOpts, databasetest.WithKillAfterSeconds(conf.killAfterSec))
+		realOpts = append(realOpts, containertest.WithKillAfterSeconds(conf.killAfterSec))
 	}
 	if conf.progressLogger != nil {
-		realOpts = append(realOpts, databasetest.WithLogger(conf.progressLogger))
+		realOpts = append(realOpts, containertest.WithLogger(conf.progressLogger))
 	}
 
-	ci, closer := databasetest.MustStart(driver, realOpts...)
+	ci, closer := containertest.MustStart(driver, realOpts...)
 
 	return ConnInfo{
 		Username: driver.Username(),

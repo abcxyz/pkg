@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package databasetest
+package containertest
 
 // This file implements docker integration.
 //
@@ -32,17 +32,17 @@ import (
 
 var nopCloser = io.NopCloser(nil)
 
-// start starts a docker container running a DB server. A struct is returned describing how to
-// connect to container, along with a cleanup function that should be called once all tests have
+// start starts a docker container running a service. A struct is returned describing how to
+// connect to the container, along with a cleanup function that should be called once all tests have
 // finished.
 //
 // The returned Closer should be called in every case, even if this function returns an error. This
 // ensures that the Docker container will be cleaned up if the error occurred after the container
 // was created. The Closer will never be nil.
 //
-// Since the startup time for database containers can be as long as 20 seconds, we share the container among
-// every test. Each test should use a randomly-created database/schema name to avoid collisions
-// between tests.
+// (For databases): Since the startup time for database containers can be as long as 20 seconds,
+// we share the container among every test. Each test should use a randomly-created
+// database/schema name to avoid collisions between tests.
 //
 // This function installs a signal handler for SIGTERM, SIGKILL, and SIGINT that attempts to clean
 // up the Docker container, then runs os.Exit(1). Since the signal handler kills the process, any
@@ -87,9 +87,9 @@ func startContainer(conf *config) (func(string) string, io.Closer, error) {
 func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, error) {
 	// pulls an image, creates a container based on it and runs it
 	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: conf.driver.ImageRepository(),
-		Tag:        conf.driver.ImageTag(),
-		Env:        conf.driver.Environment(),
+		Repository: conf.service.ImageRepository(),
+		Tag:        conf.service.ImageTag(),
+		Env:        conf.service.Environment(),
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true // remove storage after container exits
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
@@ -106,7 +106,7 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 					1. Run "sudo adduser $USER docker" to add your user to the docker group
 					2. Reboot the machine to make the group membership effective`
 		case strings.Contains(err.Error(), "404"):
-			extraMsg = fmt.Sprintf(". Probably the requested tag %q does not exist as a Docker image", conf.driver.ImageTag())
+			extraMsg = fmt.Sprintf(". Probably the requested tag %q does not exist as a Docker image", conf.service.ImageTag())
 		}
 		return nil, fmt.Errorf("pool.Run() failed starting container: %w%s", err, extraMsg)
 	}
@@ -119,8 +119,8 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
 	if err := pool.Retry(func() error {
-		notReadyPorts := make([]string, 0, len(conf.driver.StartupPorts()))
-		for _, waitPort := range conf.driver.StartupPorts() {
+		notReadyPorts := make([]string, 0, len(conf.service.StartupPorts()))
+		for _, waitPort := range conf.service.StartupPorts() {
 			if waitPort != "" {
 				port := container.GetPort(waitPort)
 				if port == "" {
@@ -132,15 +132,15 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 			return fmt.Errorf("resource.GetPort() returned empty string for port(s) %+q, container isn't ready yet", notReadyPorts)
 		}
 
-		if err := conf.driver.TestConn(conf.progressLogger, container.GetPort); err != nil {
-			conf.progressLogger.Printf("Database isn't ready yet: %v", err)
-			return fmt.Errorf("database isn't ready yet: %w", err)
+		if err := conf.service.TestConn(conf.progressLogger, container.GetPort); err != nil {
+			conf.progressLogger.Printf("Container isn't ready yet: %v", err)
+			return fmt.Errorf("container isn't ready yet: %w", err)
 		}
 
-		conf.progressLogger.Printf("The database container is fully up and healthy")
+		conf.progressLogger.Printf("The container is fully up and healthy")
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("failed to connect to database within timeout. The final attempt returned: %w", err)
+		return nil, fmt.Errorf("failed to confirm container startup, final attempt returned: %w", err)
 	}
 	return container.GetPort, nil
 }
@@ -164,7 +164,7 @@ func (p *containerCloser) Close() error {
 		err = p.pool.Purge(p.container)
 	})
 	if err != nil {
-		return fmt.Errorf("failed stopping dabase docker container: %w", err)
+		return fmt.Errorf("failed stopping docker container: %w", err)
 	}
 	return nil
 }

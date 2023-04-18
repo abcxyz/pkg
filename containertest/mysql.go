@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package databasetest
+package containertest
 
 import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/go-sql-driver/mysql" // Force mysql driver to be included.
+	_ "github.com/go-sql-driver/mysql" // Force mysql service to be included.
 )
 
 const (
@@ -50,7 +50,7 @@ func (m *MySQL) ImageTag() string {
 func (m *MySQL) TestConn(progressLogger Logger, portMapper func(string) string) error {
 	port := portMapper(mysqlPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
-	addr := fmt.Sprintf("root:%s@tcp(localhost:%s)/mysql?tls=false", password, port)
+	addr := fmt.Sprintf("%s:%s@tcp(localhost:%s)/mysql?tls=false", m.Username(), m.Password(), port)
 
 	progressLogger.Printf(`Checking if MySQL is up yet on localhost at %s. It's normal to see "unexpected EOF" output while it's starting.`, port)
 	db, err := sql.Open("mysql", addr)
@@ -66,8 +66,12 @@ func (m *MySQL) TestConn(progressLogger Logger, portMapper func(string) string) 
 	return nil
 }
 
+func (m *MySQL) Port() string {
+	return mysqlPort
+}
+
 func (m *MySQL) StartupPorts() []string {
-	return []string{mysqlPort}
+	return []string{m.Port()}
 }
 
 func (m *MySQL) WithVersion(v string) *MySQL {
