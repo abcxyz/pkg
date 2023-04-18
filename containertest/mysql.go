@@ -82,6 +82,7 @@ func (m *MySQL) WithVersion(v string) *MySQL {
 func (m *MySQL) Username() string {
 	return "root"
 }
+
 func (m *MySQL) Password() string {
-	return password //nolint:gosec
+	return password
 }

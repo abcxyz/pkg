@@ -40,6 +40,7 @@ func (p *Postgres) ImageRepository() string {
 func (p *Postgres) ImageTag() string {
 	return p.imageTag
 }
+
 func (p *Postgres) TestConn(progressLogger Logger, portMapper func(string) string) error {
 	port := portMapper(postgresPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
@@ -75,6 +76,7 @@ func (p *Postgres) WithVersion(v string) *Postgres {
 func (p *Postgres) Username() string {
 	return "postgres"
 }
+
 func (p *Postgres) Password() string {
-	return password //nolint:gosec
+	return password
 }
