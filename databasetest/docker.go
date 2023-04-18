@@ -1,10 +1,10 @@
-// Copyright 2022 The Authors (see AUTHORS file)
+// Copyright 2023 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -86,7 +86,11 @@ func startContainer(conf *config) (func(string) string, io.Closer, error) {
 // Starts the container and returns a Resource that points to it.
 func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, error) {
 	// pulls an image, creates a container based on it and runs it
-	container, err := pool.RunWithOptions(&conf.runOptions, func(config *docker.HostConfig) {
+	container, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: conf.driver.ImageRepository(),
+		Tag:        conf.driver.ImageTag(),
+		Env:        conf.driver.Environment(),
+	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true // remove storage after container exits
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
 	})
@@ -102,7 +106,7 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 					1. Run "sudo adduser $USER docker" to add your user to the docker group
 					2. Reboot the machine to make the group membership effective`
 		case strings.Contains(err.Error(), "404"):
-			extraMsg = fmt.Sprintf(". Probably the requested tag %q does not exist as a Docker image", conf.runOptions.Tag)
+			extraMsg = fmt.Sprintf(". Probably the requested tag %q does not exist as a Docker image", conf.driver.ImageTag())
 		}
 		return nil, fmt.Errorf("pool.Run() failed starting container: %w%s", err, extraMsg)
 	}
@@ -115,14 +119,20 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
 	if err := pool.Retry(func() error {
-		if conf.waitForPort != "" {
-			port := container.GetPort(conf.waitForPort)
-			if port == "" {
-				return fmt.Errorf("resource.GetPort() returned empty string, container isn't ready yet")
+		notReadyPorts := make([]string, 0, len(conf.driver.StartupPorts()))
+		for _, waitPort := range conf.driver.StartupPorts() {
+			if waitPort != "" {
+				port := container.GetPort(waitPort)
+				if port == "" {
+					notReadyPorts = append(notReadyPorts, port)
+				}
 			}
 		}
+		if len(notReadyPorts) > 0 {
+			return fmt.Errorf("resource.GetPort() returned empty string for port(s) %+q, container isn't ready yet", notReadyPorts)
+		}
 
-		if err := conf.startTester(conf.progressLogger, container.GetPort); err != nil {
+		if err := conf.driver.TestConn(conf.progressLogger, container.GetPort); err != nil {
 			conf.progressLogger.Printf("Database isn't ready yet: %v", err)
 			return fmt.Errorf("database isn't ready yet: %w", err)
 		}

@@ -12,40 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package databasetest
-
-import (
-	"log"
-)
-
-// This file implements the "functional options" pattern.
-
-type config struct {
-	killAfterSec   int // This is in integer seconds because that's what Docker takes.
-	driver         Driver
-	progressLogger Logger
-}
+package mysqltest
 
 // Logger allows the caller to optionally provide a custom logger for printing status updates about
 // MySQL startup progress. The default is to use the go "log" package.
 type Logger interface {
 	Printf(fmtStr string, args ...any)
-}
-
-func makeDefaultConfig(driver Driver) *config {
-	return &config{
-		killAfterSec:   10 * 60,
-		driver:         driver,
-		progressLogger: &stdlibLogger{},
-	}
-}
-
-func buildConfig(driver Driver, opts ...Option) *config {
-	config := makeDefaultConfig(driver)
-	for _, opt := range opts {
-		config = opt(config)
-	}
-	return config
 }
 
 // Option sets a configuration option for this package. Users should not implement these functions,
@@ -66,6 +38,14 @@ func WithKillAfterSeconds(seconds int) Option {
 	}
 }
 
+// WithVersion chooses a MySQL server version. This overrides the default MySQL server version.
+func WithVersion(v string) Option {
+	return func(c *config) *config {
+		c.mySQLVersion = v
+		return c
+	}
+}
+
 // WithLogger overrides the default logger. This logger will receive messages about MySQL startup
 // progress. The default is to use the go "log" package.
 func WithLogger(l Logger) Option {
@@ -75,9 +55,16 @@ func WithLogger(l Logger) Option {
 	}
 }
 
-// stdlibLogger is the default implementation of the Logger interface that calls log.Printf.
-type stdlibLogger struct{}
+type config struct {
+	killAfterSec   int // This is in integer seconds because that's what Docker takes.
+	mySQLVersion   string
+	progressLogger Logger
+}
 
-func (s *stdlibLogger) Printf(fmtStr string, args ...any) {
-	log.Printf(fmtStr, args...)
+func buildConfig(opts ...Option) *config {
+	config := &config{}
+	for _, opt := range opts {
+		config = opt(config)
+	}
+	return config
 }

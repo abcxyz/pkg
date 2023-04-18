@@ -37,10 +37,8 @@ func TestKillAfter(t *testing.T) {
 		killAfter               = expectedStartupDuration + extraBuffer
 		killAfterSec            = int(killAfter / time.Second)
 	)
-	conf := buildConfig(WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
+	conf := buildConfig(&MySQL{}, WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
 	ci, closer, err := start(conf)
-	ci.Username = "root"
-	ci.Password = password
 	defer func() {
 		_ = closer.Close()
 	}()
@@ -84,7 +82,7 @@ func containsOneOf(haystack string, needles []string) bool {
 func connect(t *testing.T, ci ConnInfo) *sql.DB {
 	t.Helper()
 
-	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", ci.Username, ci.Password,
+	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", "root", password,
 		ci.Hostname, ci.PortMapper(mysqlPort), "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {

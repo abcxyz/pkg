@@ -1,4 +1,4 @@
-// Copyright 2022 The Authors (see AUTHORS file)
+// Copyright 2023 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,15 +23,9 @@ import (
 func TestMustStart(t *testing.T) {
 	t.Parallel()
 
-	ci, closer := MustStart(WithLogger(&testLogger{t}))
+	ci, closer := MustStart(&MySQL{}, WithLogger(&testLogger{t}))
 	defer closer.Close()
 
-	if ci.Username == "" {
-		t.Errorf("got empty username, wanted a non-empty string")
-	}
-	if ci.Password == "" {
-		t.Errorf("got empty password, wanted a non-empty string")
-	}
 	if ci.Hostname == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
 	}
@@ -58,7 +52,7 @@ func TestMustStart_NonexistentVersion(t *testing.T) {
 			t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
 		}
 	}()
-	MustStart(WithVersion(fakeVersion), WithLogger(&testLogger{t}))
+	MustStart((&MySQL{}).WithVersion(fakeVersion), WithLogger(&testLogger{t}))
 }
 
 func TestBuildConfig(t *testing.T) {
@@ -66,15 +60,15 @@ func TestBuildConfig(t *testing.T) {
 
 	logger := &testLogger{t}
 	conf := buildConfig(
+		(&MySQL{}).WithVersion("2"),
 		WithKillAfterSeconds(1),
-		WithVersion("2"),
 		WithLogger(logger),
 	)
 	if conf.killAfterSec != 1 {
 		t.Errorf("got killAfterSec=%v, want 1", conf.killAfterSec)
 	}
-	if conf.runOptions.Tag != "2" {
-		t.Errorf(`got tag=%v", want "2"`, conf.runOptions.Tag)
+	if conf.driver.ImageTag() != "2" {
+		t.Errorf(`got tag=%v", want "2"`, conf.driver.ImageTag())
 	}
 	if _, ok := conf.progressLogger.(*testLogger); !ok {
 		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, logger)
