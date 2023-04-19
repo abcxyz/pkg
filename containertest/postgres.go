@@ -26,7 +26,7 @@ const (
 	postgresPort = "5432/tcp"
 )
 
-// Postgres implements the Service interface, defining a Postgres server container
+// Postgres implements the Service interface, defining a Postgres server container.
 type Postgres struct {
 	imageTag string
 }

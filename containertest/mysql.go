@@ -32,7 +32,7 @@ const (
 	mysqlPort = "3306/tcp"
 )
 
-// MySQL implements the Service interface, defining a MySQL server container
+// MySQL implements the Service interface, defining a MySQL server container.
 type MySQL struct {
 	imageTag string
 }
