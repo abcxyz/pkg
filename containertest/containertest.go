@@ -29,10 +29,17 @@ type ConnInfo struct {
 // Service provides information about what container image should be started and
 // how to know when it has finished stating up.
 type Service interface {
-	ImageRepository() string // Repository for docker image (ex: mysql)
-	ImageTag() string        // Tag for docker image (ex: 5.3)
-	Environment() []string   // Environment variables to be set in container.
-	StartupPorts() []string  // Ports that must be exposed by container before TestConn is run
+	// ImageRepository returns the repository for docker image (ex: mysql).
+	ImageRepository() string
+
+	// ImageTag returns the tag for docker image (ex: 5.3).
+	ImageTag() string
+
+	// Environment returns variables to be set in container. Each element is in format of "KEY=VALUE".
+	Environment() []string
+
+	// StartupPorts is the list of ports that must be exposed by container before TestConn is run.
+	StartupPorts() []string
 
 	// TestConn takes a logger and a struct with connection info, and returns nil if app has started.
 	TestConn(progressLogger Logger, info ConnInfo) error

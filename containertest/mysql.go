@@ -32,22 +32,27 @@ const (
 	mysqlPort = "3306/tcp"
 )
 
+// MySQL implements the Service interface, defining a MySQL server container
 type MySQL struct {
 	imageTag string
 }
 
+// Environment implements the Service.Environment interface.
 func (m *MySQL) Environment() []string {
 	return []string{"MYSQL_ROOT_PASSWORD=" + password}
 }
 
+// ImageRepository implements the Service.ImageRepository interface.
 func (m *MySQL) ImageRepository() string {
 	return "mysql"
 }
 
+// ImageTag implements the Service.ImageTag interface.
 func (m *MySQL) ImageTag() string {
 	return m.imageTag
 }
 
+// TestConn implements the Service.TestConn interface.
 func (m *MySQL) TestConn(progressLogger Logger, connInfo ConnInfo) error {
 	port := connInfo.PortMapper(m.Port())
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
@@ -67,23 +72,28 @@ func (m *MySQL) TestConn(progressLogger Logger, connInfo ConnInfo) error {
 	return nil
 }
 
+// Port returns the internal port the MySQL container exposes.
 func (m *MySQL) Port() string {
 	return mysqlPort
 }
 
+// StartupPorts implements the Service.StartupPorts interface.
 func (m *MySQL) StartupPorts() []string {
 	return []string{m.Port()}
 }
 
+// WithVersion sets the ImageTag which corrosponds to the MySQL container version.
 func (m *MySQL) WithVersion(v string) *MySQL {
 	m.imageTag = v
 	return m
 }
 
+// Username returns the username for the MySQL database.
 func (m *MySQL) Username() string {
 	return "root"
 }
 
+// Password returns the password for the MySQL database.
 func (m *MySQL) Password() string {
 	return password
 }
