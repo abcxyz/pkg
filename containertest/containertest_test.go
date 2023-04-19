@@ -26,7 +26,7 @@ func TestMustStart(t *testing.T) {
 	ci, closer := MustStart(&MySQL{}, WithLogger(&testLogger{t}))
 	defer closer.Close()
 
-	if ci.Hostname == "" {
+	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
 	}
 	if ci.PortMapper(mysqlPort) == "" {

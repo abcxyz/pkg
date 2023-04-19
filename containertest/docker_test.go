@@ -20,6 +20,7 @@ package containertest
 import (
 	"database/sql"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -86,8 +87,8 @@ func containsOneOf(haystack string, needles []string) bool {
 func connectMySQL(t *testing.T, ci ConnInfo, m *MySQL) *sql.DB {
 	t.Helper()
 
-	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", m.Username(), m.Password(),
-		ci.Hostname, ci.PortMapper(m.Port()), "")
+	uri := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.Username(), m.Password(),
+		net.JoinHostPort(ci.Host, ci.PortMapper(m.Port())), "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)

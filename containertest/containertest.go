@@ -20,7 +20,7 @@ import "io"
 
 // ConnInfo specifies how connect to the created container.
 type ConnInfo struct {
-	Hostname string
+	Host string
 
 	// PortMapper maps from container port to host port. Do not use after container is closed.
 	PortMapper func(string) string
@@ -34,8 +34,8 @@ type Service interface {
 	Environment() []string   // Environment variables to be set in container.
 	StartupPorts() []string  // Ports that must be exposed by container before TestConn is run
 
-	// TestConn takes a logger and a mapper to show which ports are exposed, and returns nil if app has started.
-	TestConn(progressLogger Logger, portMapper func(string) string) error
+	// TestConn takes a logger and a struct with connection info, and returns nil if app has started.
+	TestConn(progressLogger Logger, info ConnInfo) error
 }
 
 // MustStart starts a container, or panics if there was an error.

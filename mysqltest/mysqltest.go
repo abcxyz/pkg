@@ -46,7 +46,7 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	return ConnInfo{
 		Username: driver.Username(),
 		Password: driver.Password(),
-		Hostname: ci.Hostname,
+		Hostname: ci.Host,
 		Port:     ci.PortMapper(driver.StartupPorts()[0]),
 	}, closer
 }

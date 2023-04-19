@@ -50,20 +50,17 @@ var nopCloser = io.NopCloser(nil)
 //
 // Docker must be installed on localhost for this to work. No environment vars are needed.
 func start(conf *config) (ConnInfo, io.Closer, error) {
-	portMapper, closer, err := startContainer(conf)
+	connInfo, closer, err := startContainer(conf)
 	if err != nil {
 		return ConnInfo{}, nopCloser, err
 	}
 
-	return ConnInfo{
-		Hostname:   "localhost",
-		PortMapper: portMapper,
-	}, closer, nil
+	return *connInfo, closer, nil
 }
 
 // Runs a docker container and returns a function to find where ports are mapped,
 // along with a cleanup function that stops the container.
-func startContainer(conf *config) (func(string) string, io.Closer, error) {
+func startContainer(conf *config) (*ConnInfo, io.Closer, error) {
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		return nil, nopCloser, fmt.Errorf("dockertest.NewPool(): %w", err)
@@ -76,11 +73,11 @@ func startContainer(conf *config) (func(string) string, io.Closer, error) {
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
 		return nil, closer, fmt.Errorf("resource.Expire(): %w", err)
 	}
-	portMapper, err := waitUntilUp(conf, pool, container)
+	connInfo, err := waitUntilUp(conf, pool, container)
 	if err != nil {
 		return nil, closer, err
 	}
-	return portMapper, closer, nil
+	return connInfo, closer, nil
 }
 
 // Starts the container and returns a Resource that points to it.
@@ -114,7 +111,8 @@ func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, er
 }
 
 // waitUntilUp waits for service to be reachable.
-func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (func(string) string, error) {
+func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Resource) (*ConnInfo, error) {
+	var connInfo *ConnInfo
 	// To get the exported TCP port number for the server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
 	pool.MaxWait = time.Minute
@@ -132,7 +130,12 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 			return fmt.Errorf("resource.GetPort() returned empty string for port(s) %+q, container isn't ready yet", notReadyPorts)
 		}
 
-		if err := conf.service.TestConn(conf.progressLogger, container.GetPort); err != nil {
+		connInfo = &ConnInfo{
+			Host:       "localhost",
+			PortMapper: container.GetPort,
+		}
+
+		if err := conf.service.TestConn(conf.progressLogger, *connInfo); err != nil {
 			conf.progressLogger.Printf("Container isn't ready yet: %v", err)
 			return fmt.Errorf("container isn't ready yet: %w", err)
 		}
@@ -142,7 +145,7 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 	}); err != nil {
 		return nil, fmt.Errorf("failed to confirm container startup, final attempt returned: %w", err)
 	}
-	return container.GetPort, nil
+	return connInfo, nil
 }
 
 type containerCloser struct {

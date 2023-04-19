@@ -17,6 +17,7 @@ package containertest
 import (
 	"database/sql"
 	"fmt"
+	"net"
 
 	_ "github.com/jackc/pgx/v4/stdlib" // Force postgres service to be included.
 )
@@ -41,12 +42,12 @@ func (p *Postgres) ImageTag() string {
 	return p.imageTag
 }
 
-func (p *Postgres) TestConn(progressLogger Logger, portMapper func(string) string) error {
-	port := portMapper(postgresPort)
+func (p *Postgres) TestConn(progressLogger Logger, connInfo ConnInfo) error {
+	port := connInfo.PortMapper(postgresPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
-	addr := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", p.Username(), p.Password(), port, p.Username())
+	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(connInfo.Host, port), p.Username())
 
-	progressLogger.Printf(`Checking if Postgres is up yet on localhost at %s. It's normal to see "dial error" output while it's starting.`, port)
+	progressLogger.Printf(`Checking if Postgres is up yet on %s. It's normal to see "dial error" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
 	db, err := sql.Open("pgx", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)

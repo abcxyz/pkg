@@ -17,6 +17,7 @@ package containertest
 import (
 	"database/sql"
 	"fmt"
+	"net"
 	"testing"
 )
 
@@ -27,7 +28,7 @@ func TestPostgres(t *testing.T) {
 	ci, closer := MustStart(p, WithLogger(&testLogger{t}))
 	defer closer.Close()
 
-	if ci.Hostname == "" {
+	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
 	}
 	if ci.PortMapper(p.Port()) == "" {
@@ -43,8 +44,7 @@ func TestPostgres(t *testing.T) {
 
 func connectPostgres(t *testing.T, ci ConnInfo, p *Postgres) *sql.DB {
 	t.Helper()
-
-	addr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", p.Username(), p.Password(), ci.Hostname, ci.PortMapper(p.Port()), p.Username())
+	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(ci.Host, ci.PortMapper(p.Port())), p.Username())
 	db, err := sql.Open("pgx", addr)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
