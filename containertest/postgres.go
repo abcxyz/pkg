@@ -76,7 +76,7 @@ func (p *Postgres) StartupPorts() []string {
 	return []string{p.Port()}
 }
 
-// WithVersion sets the ImageTag which corrosponds to the Postgres container version.
+// WithVersion sets the ImageTag which corresponds to the Postgres container version.
 func (p *Postgres) WithVersion(v string) *Postgres {
 	p.imageTag = v
 	return p

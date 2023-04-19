@@ -82,7 +82,7 @@ func (m *MySQL) StartupPorts() []string {
 	return []string{m.Port()}
 }
 
-// WithVersion sets the ImageTag which corrosponds to the MySQL container version.
+// WithVersion sets the ImageTag which corresponds to the MySQL container version.
 func (m *MySQL) WithVersion(v string) *MySQL {
 	m.imageTag = v
 	return m
