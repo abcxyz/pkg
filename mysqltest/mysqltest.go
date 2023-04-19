@@ -33,15 +33,15 @@ type ConnInfo struct {
 func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	conf := buildConfig(opts...)
 	driver := (&containertest.MySQL{}).WithVersion(conf.mySQLVersion)
-	realOpts := make([]containertest.Option, 0, 2)
+	translatedOpts := make([]containertest.Option, 0, 2)
 	if conf.killAfterSec != 0 {
-		realOpts = append(realOpts, containertest.WithKillAfterSeconds(conf.killAfterSec))
+		translatedOpts = append(translatedOpts, containertest.WithKillAfterSeconds(conf.killAfterSec))
 	}
 	if conf.progressLogger != nil {
-		realOpts = append(realOpts, containertest.WithLogger(conf.progressLogger))
+		translatedOpts = append(translatedOpts, containertest.WithLogger(conf.progressLogger))
 	}
 
-	ci, closer := containertest.MustStart(driver, realOpts...)
+	ci, closer := containertest.MustStart(driver, translatedOpts...)
 
 	return ConnInfo{
 		Username: driver.Username(),

@@ -2,21 +2,21 @@
 
 ## Introduction
 
-This is a Go library for starting an ephemeral Docker container. It is used to test
-integration between Go code and services such as PostgreSQL.
+[Deprecated for new use] This used to be its own package, but now
+is implemented as a wrapper around the more generic `pkg/containertest`. Please
+use that for any new projects.
+
+This is a Go library for starting an ephemeral MySQL Docker container. It is used to test
+integration between Go code and MySQL.
 
 ## How to use it
 
-For some containers such as DBs, startup can take a while. You may want to reuse
-the same container and `USE` separate databases/namespaces or separate tables to
+Since it takes about 15 seconds to start the MySQL Docker container, we recommend sharing a single
+MySQL instance between all of your tests. `USE` separate databases/namespaces or separate tables to
 isolate your tests from each other.
 
 Call `MustStart()` from your `TestMain()` function, If you're not familiar with Go's `TestMain()`
 mechanism for global test initialization, see the docs: https://pkg.go.dev/testing#hdr-Main.
-
-MySQL will be used as an example service, though any Service implementation could
-be used. Currently two implementations of `containertest.Service` exist in this
-repo, stored in `mysql.go` and `postgres.go`.
 
 ```go
 package mypackage
@@ -25,29 +25,24 @@ import (
     "database/sql"
     "fmt"
     "io"
-    "net"
     "os"
     "testing"
 
-    "github.com/abcxyz/pkg/containertest"
+    "github.com/abcxyz/pkg/mysqltest"
     _ "github.com/go-sql-driver/mysql" // Link with the Go MySQL driver
 )
 
-var ci containertest.ConnInfo
-var mySQLService *containertest.MySQL
+var ci mysqltest.ConnInfo
 
 // TestMain runs once at startup to do test initialization common to all tests.
 func TestMain(m *testing.M) {
     var closer io.Closer
-
-	mySQLService := (&MySQL{}).WithVersion("8.0")
-    ci, closer = containertest.MustStart(mySQLService) // Start the docker container. Can also pass options.
+    ci, closer = mysqltest.MustStart() // Start the docker container. Can also pass options.
     exitCode := m.Run() // Runs unit tests
 
     // Remove container. If tests panic, this won't run, but there's nothing we can do about that:
     // https://github.com/golang/go/issues/37206#issuecomment-590441512. In that case, then the
-    // container will eventually time out and be cleaned up. Defer isn't used because
-	// os.Exit() will prevent execution, and is needed for TestMain pattern.
+    // container will eventually time out and be cleaned up.
     closer.Close()
 
     os.Exit(exitCode)
@@ -55,12 +50,7 @@ func TestMain(m *testing.M) {
 
 func TestFoo(t *testing.T) {
     // One thing you might want to do is create an SQL driver:
-	
-	m := mySQLService
-	// Find the port docker exposed for your container
-	mySQLPort := ci.PortMapper(m.Port())
-	uri := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.Username(), m.Password(),
-		net.JoinHostPort(ci.Host, mySQLPort), "")
+    uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/", ci.Username, ci.Password, ci.Hostname, ci.Port)
     db, err := sql.Open("mysql", uri)
     if err != nil {
         t.Fatal(err)

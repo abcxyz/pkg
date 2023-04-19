@@ -22,14 +22,14 @@ import (
 
 func TestMustStart(t *testing.T) {
 	t.Parallel()
-
-	ci, closer := MustStart(&MySQL{}, WithLogger(&testLogger{t}))
+	service := (&MySQL{}).WithVersion("8.0")
+	ci, closer := MustStart(service, WithLogger(&testLogger{t}))
 	defer closer.Close()
 
 	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
 	}
-	if ci.PortMapper(mysqlPort) == "" {
+	if ci.PortMapper(service.Port()) == "" {
 		t.Errorf("got empty port, wanted a non-empty string")
 	}
 }
