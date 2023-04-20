@@ -25,8 +25,8 @@ func TestPostgres(t *testing.T) {
 	t.Parallel()
 
 	p := (&Postgres{}).WithVersion("15")
-	ci, closer := MustStart(p, WithLogger(&testLogger{t}))
-	defer closer.Close()
+	ci := MustStart(p, WithLogger(&testLogger{t}))
+	defer ci.Close()
 
 	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")

@@ -43,9 +43,9 @@ func TestKillAfter(t *testing.T) {
 
 	m := &MySQL{}
 	conf := buildConfig(m, WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
-	ci, closer, err := start(conf)
+	ci, err := start(conf)
 	defer func() {
-		_ = closer.Close()
+		_ = ci.Close()
 	}()
 	if err != nil {
 		t.Fatal(err)

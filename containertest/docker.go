@@ -36,9 +36,9 @@ var nopCloser = io.NopCloser(nil)
 // connect to the container, along with a cleanup function that should be called once all tests have
 // finished.
 //
-// The returned Closer should be called in every case, even if this function returns an error. This
+// The returned ConnInfo.Close() should be called in every case, even if this function returns an error. This
 // ensures that the Docker container will be cleaned up if the error occurred after the container
-// was created. The Closer will never be nil.
+// was created. The ConnInfo.Close() will never be nil.
 //
 // (For databases): Since the startup time for database containers can be as long as 20 seconds,
 // we share the container among every test. Each test should use a randomly-created
@@ -49,35 +49,37 @@ var nopCloser = io.NopCloser(nil)
 // other custom signal handlers that are installed may not get a chance to run.
 //
 // Docker must be installed on localhost for this to work. No environment vars are needed.
-func start(conf *config) (ConnInfo, io.Closer, error) {
-	connInfo, closer, err := startContainer(conf)
-	if err != nil {
-		return ConnInfo{}, nopCloser, err
-	}
+func start(conf *config) (ConnInfo, error) {
+	connInfo, err := startContainer(conf)
 
-	return *connInfo, closer, nil
+	// connInfo will have a closer in all cases.
+	return connInfo, err
 }
 
-// Runs a docker container and returns a function to find where ports are mapped,
-// along with a cleanup function that stops the container.
-func startContainer(conf *config) (*ConnInfo, io.Closer, error) {
+// Runs a docker container and returns a struct with information on exposed ports
+// and host, and implements io.Closer. ConnInfo.Close() should be called regardless
+// of value of error. A noop implementation is used if container hasn't started.
+func startContainer(conf *config) (ConnInfo, error) {
+	closerOnlyConnInfo := ConnInfo{closer: nopCloser}
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return nil, nopCloser, fmt.Errorf("dockertest.NewPool(): %w", err)
+		return closerOnlyConnInfo, fmt.Errorf("dockertest.NewPool(): %w", err)
 	}
 	container, err := runContainer(conf, pool)
 	if err != nil {
-		return nil, nopCloser, err
+		return closerOnlyConnInfo, err
 	}
-	closer := newContainerCloser(pool, container)
+
+	closerOnlyConnInfo.closer = newContainerCloser(pool, container)
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
-		return nil, closer, fmt.Errorf("resource.Expire(): %w", err)
+		return closerOnlyConnInfo, fmt.Errorf("resource.Expire(): %w", err)
 	}
-	connInfo, err := waitUntilUp(conf, pool, container)
+	fullConnInfo, err := waitUntilUp(conf, pool, container)
 	if err != nil {
-		return nil, closer, err
+		return closerOnlyConnInfo, err
 	}
-	return connInfo, closer, nil
+	fullConnInfo.closer = closerOnlyConnInfo.closer
+	return *fullConnInfo, nil
 }
 
 // Starts the container and returns a Resource that points to it.

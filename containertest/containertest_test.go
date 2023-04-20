@@ -23,8 +23,8 @@ import (
 func TestMustStart(t *testing.T) {
 	t.Parallel()
 	service := (&MySQL{}).WithVersion("8.0")
-	ci, closer := MustStart(service, WithLogger(&testLogger{t}))
-	defer closer.Close()
+	ci := MustStart(service, WithLogger(&testLogger{t}))
+	defer ci.Close()
 
 	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")

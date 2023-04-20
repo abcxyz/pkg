@@ -23,7 +23,16 @@ type ConnInfo struct {
 	Host string
 
 	// PortMapper maps from container port to host port. Do not use after container is closed.
-	PortMapper func(string) string
+	PortMapper func(containerPort string) (hostPort string)
+
+	// io.Closer for closing the connection. Should always be initialized, either
+	// with an actual closer or io.NoopCloser.
+	closer io.Closer
+}
+
+// Close implements io.Closer by passing to internal closer field.
+func (c ConnInfo) Close() error {
+	return c.closer.Close()
 }
 
 // Service provides information about what container image should be started and
@@ -46,15 +55,15 @@ type Service interface {
 }
 
 // MustStart starts a container, or panics if there was an error.
-func MustStart(service Service, opts ...Option) (ConnInfo, io.Closer) {
+func MustStart(service Service, opts ...Option) ConnInfo {
 	conf := buildConfig(service, opts...)
-	ci, closer, err := start(conf)
+	ci, err := start(conf)
 	if err != nil {
 		// The Closer must be called even if there's an error, to clean up the docker container that may
 		// exist.
-		_ = closer.Close()
+		_ = ci.Close()
 		panic(err)
 	}
 
-	return ci, closer
+	return ci
 }

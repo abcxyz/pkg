@@ -41,12 +41,12 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 		translatedOpts = append(translatedOpts, containertest.WithLogger(conf.progressLogger))
 	}
 
-	ci, closer := containertest.MustStart(driver, translatedOpts...)
+	ci := containertest.MustStart(driver, translatedOpts...)
 
 	return ConnInfo{
 		Username: driver.Username(),
 		Password: driver.Password(),
 		Hostname: ci.Host,
 		Port:     ci.PortMapper(driver.StartupPorts()[0]),
-	}, closer
+	}, ci
 }

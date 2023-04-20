@@ -38,37 +38,36 @@ var mySQLService *containertest.MySQL
 
 // TestMain runs once at startup to do test initialization common to all tests.
 func TestMain(m *testing.M) {
-    var closer io.Closer
+	// Runs unit tests
+	os.Exit(func() int {
+		var closer io.Closer
 
-	mySQLService := (&MySQL{}).WithVersion("8.0")
-    ci, closer = containertest.MustStart(mySQLService) // Start the docker container. Can also pass options.
-    exitCode := m.Run() // Runs unit tests
+		mySQLService := (&containertest.MySQL{}).WithVersion("8.0")
+		ci = containertest.MustStart(mySQLService) // Start the docker container. Can also pass options.
+		defer ci.Close()
 
-    // Remove container. If tests panic, this won't run, but there's nothing we can do about that:
-    // https://github.com/golang/go/issues/37206#issuecomment-590441512. In that case, then the
-    // container will eventually time out and be cleaned up. Defer isn't used because
-	// os.Exit() will prevent execution, and is needed for TestMain pattern.
-    closer.Close()
-
-    os.Exit(exitCode)
+		return m.Run()
+	}())
 }
 
 func TestFoo(t *testing.T) {
-    // One thing you might want to do is create an SQL driver:
-	
+	t.Parallel()
+	// One thing you might want to do is create an SQL driver:
+
 	m := mySQLService
 	// Find the port docker exposed for your container
 	mySQLPort := ci.PortMapper(m.Port())
 	uri := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.Username(), m.Password(),
 		net.JoinHostPort(ci.Host, mySQLPort), "")
-    db, err := sql.Open("mysql", uri)
-    if err != nil {
-        t.Fatal(err)
-    }
+	db, err := sql.Open("mysql", uri)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-    // application logic goes here
-    _ = db
+	// application logic goes here
+	_ = db
 }
+
 ```
 
 ## A note on leaked Docker containers and timeouts
