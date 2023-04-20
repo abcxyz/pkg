@@ -28,7 +28,8 @@ const (
 
 // Postgres implements the Service interface, defining a Postgres server container.
 type Postgres struct {
-	imageTag string
+	// Version is the ImageTag that will be returned by the Service interface.
+	Version string
 }
 
 // Environment implements the Service.Environment interface.
@@ -43,16 +44,16 @@ func (p *Postgres) ImageRepository() string {
 
 // ImageTag implements the Service.ImageTag interface.
 func (p *Postgres) ImageTag() string {
-	return p.imageTag
+	return p.Version
 }
 
 // TestConn implements the Service.TestConn interface.
-func (p *Postgres) TestConn(progressLogger Logger, connInfo ConnInfo) error {
+func (p *Postgres) TestConn(progressLogger TestLogger, connInfo ConnInfo) error {
 	port := connInfo.PortMapper(postgresPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(connInfo.Host, port), p.Username())
 
-	progressLogger.Printf(`Checking if Postgres is up yet on %s. It's normal to see "dial error" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
+	progressLogger.Logf(`Checking if Postgres is up yet on %s. It's normal to see "dial error" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
 	db, err := sql.Open("pgx", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)
@@ -62,7 +63,7 @@ func (p *Postgres) TestConn(progressLogger Logger, connInfo ConnInfo) error {
 		return fmt.Errorf("db.Ping(): %w", err)
 	}
 
-	progressLogger.Printf("Postgres is up on port %v", port)
+	progressLogger.Logf("Postgres is up on port %v", port)
 	return nil
 }
 
@@ -74,12 +75,6 @@ func (p *Postgres) Port() string {
 // StartupPorts implements the Service.StartupPorts interface.
 func (p *Postgres) StartupPorts() []string {
 	return []string{p.Port()}
-}
-
-// WithVersion sets the ImageTag which corresponds to the Postgres container version.
-func (p *Postgres) WithVersion(v string) *Postgres {
-	p.imageTag = v
-	return p
 }
 
 // Username returns the username for the Postgres database.

@@ -22,8 +22,8 @@ import (
 
 func TestMustStart(t *testing.T) {
 	t.Parallel()
-	service := (&MySQL{}).WithVersion("8.0")
-	ci := MustStart(service, WithLogger(&testLogger{t}))
+	service := &MySQL{Version: "8.0"}
+	ci := MustStart(service, WithLogger(t))
 	defer ci.Close()
 
 	if ci.Host == "" {
@@ -52,17 +52,16 @@ func TestMustStart_NonexistentVersion(t *testing.T) {
 			t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
 		}
 	}()
-	MustStart((&MySQL{}).WithVersion(fakeVersion), WithLogger(&testLogger{t}))
+	MustStart(&MySQL{Version: fakeVersion}, WithLogger(t))
 }
 
 func TestBuildConfig(t *testing.T) {
 	t.Parallel()
 
-	logger := &testLogger{t}
 	conf := buildConfig(
-		(&MySQL{}).WithVersion("2"),
+		&MySQL{Version: "2"},
 		WithKillAfterSeconds(1),
-		WithLogger(logger),
+		WithLogger(t),
 	)
 	if conf.killAfterSec != 1 {
 		t.Errorf("got killAfterSec=%v, want 1", conf.killAfterSec)
@@ -70,18 +69,7 @@ func TestBuildConfig(t *testing.T) {
 	if conf.service.ImageTag() != "2" {
 		t.Errorf(`got tag=%v", want "2"`, conf.service.ImageTag())
 	}
-	if _, ok := conf.progressLogger.(*testLogger); !ok {
-		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, logger)
+	if _, ok := conf.progressLogger.(*testing.T); !ok {
+		t.Errorf("got progressLogger type %T, want %T", conf.progressLogger, t)
 	}
-}
-
-// testLogger is a Logger implementation that passes through to t.Logf. This means that test logs
-// are printed for test failures and otherwise hidden, which is convenient.
-type testLogger struct {
-	tb testing.TB
-}
-
-func (tl *testLogger) Printf(fmtStr string, args ...any) {
-	tl.tb.Helper()
-	tl.tb.Logf(fmtStr, args...)
 }

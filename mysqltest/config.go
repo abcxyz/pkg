@@ -14,6 +14,10 @@
 
 package mysqltest
 
+import (
+	"fmt"
+)
+
 // Logger allows the caller to optionally provide a custom logger for printing status updates about
 // MySQL startup progress. The default is to use the go "log" package.
 type Logger interface {
@@ -53,6 +57,22 @@ func WithLogger(l Logger) Option {
 		c.progressLogger = l
 		return c
 	}
+}
+
+// LoggerBridge is a struct that satisfies the containertest.TestLogger interface
+// using the legacy mysqltest.Logger interface
+type LoggerBridge struct {
+	l Logger
+}
+
+// Log satisfies containertest.TestLogger.Log()
+func (lb LoggerBridge) Log(args ...any) {
+	lb.l.Printf("%s", fmt.Sprint(args...))
+}
+
+// Logf satisfies containertest.TestLogger.Logf()
+func (lb LoggerBridge) Logf(format string, args ...any) {
+	lb.l.Printf(format, args...)
 }
 
 type config struct {

@@ -34,7 +34,7 @@ const (
 
 // MySQL implements the Service interface, defining a MySQL server container.
 type MySQL struct {
-	imageTag string
+	Version string
 }
 
 // Environment implements the Service.Environment interface.
@@ -49,16 +49,17 @@ func (m *MySQL) ImageRepository() string {
 
 // ImageTag implements the Service.ImageTag interface.
 func (m *MySQL) ImageTag() string {
-	return m.imageTag
+	// Version is the ImageTag that will be returned by the Service interface.
+	return m.Version
 }
 
 // TestConn implements the Service.TestConn interface.
-func (m *MySQL) TestConn(progressLogger Logger, connInfo ConnInfo) error {
+func (m *MySQL) TestConn(progressLogger TestLogger, connInfo ConnInfo) error {
 	port := connInfo.PortMapper(m.Port())
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("%s:%s@tcp(%s)/mysql?tls=false", m.Username(), m.Password(), net.JoinHostPort(connInfo.Host, port))
 
-	progressLogger.Printf(`Checking if MySQL is up yet on %. It's normal to see "unexpected EOF" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
+	progressLogger.Logf(`Checking if MySQL is up yet on %s. It's normal to see "unexpected EOF" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
 	db, err := sql.Open("mysql", addr)
 	if err != nil {
 		return fmt.Errorf("sql.Open(): %w", err)
@@ -68,7 +69,7 @@ func (m *MySQL) TestConn(progressLogger Logger, connInfo ConnInfo) error {
 		return fmt.Errorf("db.Ping(): %w", err)
 	}
 
-	progressLogger.Printf("MySQL is up on port %v", port)
+	progressLogger.Logf("MySQL is up on port %v", port)
 	return nil
 }
 
@@ -80,12 +81,6 @@ func (m *MySQL) Port() string {
 // StartupPorts implements the Service.StartupPorts interface.
 func (m *MySQL) StartupPorts() []string {
 	return []string{m.Port()}
-}
-
-// WithVersion sets the ImageTag which corresponds to the MySQL container version.
-func (m *MySQL) WithVersion(v string) *MySQL {
-	m.imageTag = v
-	return m
 }
 
 // Username returns the username for the MySQL database.

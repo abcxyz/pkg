@@ -32,13 +32,13 @@ type ConnInfo struct {
 // MustStart starts a MySQL server, or panics if there was an error.
 func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	conf := buildConfig(opts...)
-	driver := (&containertest.MySQL{}).WithVersion(conf.mySQLVersion)
+	driver := &containertest.MySQL{Version: conf.mySQLVersion}
 	translatedOpts := make([]containertest.Option, 0, 2)
 	if conf.killAfterSec != 0 {
 		translatedOpts = append(translatedOpts, containertest.WithKillAfterSeconds(conf.killAfterSec))
 	}
 	if conf.progressLogger != nil {
-		translatedOpts = append(translatedOpts, containertest.WithLogger(conf.progressLogger))
+		translatedOpts = append(translatedOpts, containertest.WithLogger(LoggerBridge{conf.progressLogger}))
 	}
 
 	ci := containertest.MustStart(driver, translatedOpts...)

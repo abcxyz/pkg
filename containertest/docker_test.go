@@ -41,8 +41,8 @@ func TestKillAfter(t *testing.T) {
 		killAfterSec            = int(killAfter / time.Second)
 	)
 
-	m := &MySQL{}
-	conf := buildConfig(m, WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
+	m := &MySQL{"5.7"}
+	conf := buildConfig(m, WithKillAfterSeconds(killAfterSec), WithLogger(t))
 	ci, err := start(conf)
 	defer func() {
 		_ = ci.Close()

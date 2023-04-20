@@ -117,7 +117,7 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 	var connInfo *ConnInfo
 	// To get the exported TCP port number for the server, we have to wait for the docker container to
 	// actually start, then get the mapped port number.
-	pool.MaxWait = time.Minute
+	pool.MaxWait = time.Minute * 1
 	if err := pool.Retry(func() error {
 		notReadyPorts := make([]string, 0, len(conf.service.StartupPorts()))
 		for _, waitPort := range conf.service.StartupPorts() {
@@ -138,11 +138,11 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 		}
 
 		if err := conf.service.TestConn(conf.progressLogger, *connInfo); err != nil {
-			conf.progressLogger.Printf("Container isn't ready yet: %v", err)
+			conf.progressLogger.Logf("Container isn't ready yet: %v", err)
 			return fmt.Errorf("container isn't ready yet: %w", err)
 		}
 
-		conf.progressLogger.Printf("The container is fully up and healthy")
+		conf.progressLogger.Logf("The container is fully up and healthy")
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to confirm container startup, final attempt returned: %w", err)

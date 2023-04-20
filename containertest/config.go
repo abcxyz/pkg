@@ -23,13 +23,15 @@ import (
 type config struct {
 	killAfterSec   int // This is in integer seconds because that's what Docker takes.
 	service        Service
-	progressLogger Logger
+	progressLogger TestLogger
 }
 
-// Logger allows the caller to optionally provide a custom logger for printing status updates about
+// TestLogger allows the caller to optionally provide a custom logger for printing status updates about
 // service startup progress. The default is to use the go "log" package.
-type Logger interface {
-	Printf(fmtStr string, args ...any)
+// testing.TB satisfies TestLogger, and is usually what you want to put here.
+type TestLogger interface {
+	Log(args ...any)
+	Logf(format string, args ...any)
 }
 
 func makeDefaultConfig(service Service) *config {
@@ -68,16 +70,20 @@ func WithKillAfterSeconds(seconds int) Option {
 
 // WithLogger overrides the default logger. This logger will receive messages about service startup
 // progress. The default is to use the go "log" package.
-func WithLogger(l Logger) Option {
+func WithLogger(l TestLogger) Option {
 	return func(c *config) *config {
 		c.progressLogger = l
 		return c
 	}
 }
 
-// stdlibLogger is the default implementation of the Logger interface that calls log.Printf.
+// stdlibLogger is the default implementation of the TestLogger interface that calls log.Logf.
 type stdlibLogger struct{}
 
-func (s *stdlibLogger) Printf(fmtStr string, args ...any) {
+func (s *stdlibLogger) Logf(fmtStr string, args ...any) {
 	log.Printf(fmtStr, args...)
+}
+
+func (s *stdlibLogger) Log(args ...any) {
+	log.Print(args...)
 }

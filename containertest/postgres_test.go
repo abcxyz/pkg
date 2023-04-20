@@ -24,8 +24,8 @@ import (
 func TestPostgres(t *testing.T) {
 	t.Parallel()
 
-	p := (&Postgres{}).WithVersion("15")
-	ci := MustStart(p, WithLogger(&testLogger{t}))
+	p := &Postgres{Version: "15"}
+	ci := MustStart(p, WithLogger(t))
 	defer ci.Close()
 
 	if ci.Host == "" {

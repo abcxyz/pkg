@@ -51,7 +51,7 @@ type Service interface {
 	StartupPorts() []string
 
 	// TestConn takes a logger and a struct with connection info, and returns nil if app has started.
-	TestConn(progressLogger Logger, info ConnInfo) error
+	TestConn(progressLogger TestLogger, info ConnInfo) error
 }
 
 // MustStart starts a container, or panics if there was an error.
