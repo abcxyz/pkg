@@ -41,7 +41,11 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 		translatedOpts = append(translatedOpts, containertest.WithLogger(LoggerBridge{conf.progressLogger}))
 	}
 
-	ci := containertest.MustStart(driver, translatedOpts...)
+	ci, err := containertest.Start(driver, translatedOpts...)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return ConnInfo{
 		Username: driver.Username(),

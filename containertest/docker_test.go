@@ -84,7 +84,7 @@ func containsOneOf(haystack string, needles []string) bool {
 	return false
 }
 
-func connectMySQL(t *testing.T, ci ConnInfo, m *MySQL) *sql.DB {
+func connectMySQL(t *testing.T, ci *ConnInfo, m *MySQL) *sql.DB {
 	t.Helper()
 
 	uri := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.Username(), m.Password(),

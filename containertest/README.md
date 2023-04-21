@@ -11,11 +11,13 @@ For some containers such as DBs, startup can take a while. You may want to reuse
 the same container and `USE` separate databases/namespaces or separate tables to
 isolate your tests from each other.
 
-Call `MustStart()` from your `TestMain()` function, If you're not familiar with Go's `TestMain()`
+For expensive containers, `Start()` from your `TestMain()` function, If you're not familiar with Go's `TestMain()`
 mechanism for global test initialization, see the docs: https://pkg.go.dev/testing#hdr-Main.
 
+Cheaper containers which don't need to be shared can also be started within a test.
+
 MySQL will be used as an example service, though any Service implementation could
-be used. Currently two implementations of `containertest.Service` exist in this
+be used. Currently, two implementations of `containertest.Service` exist in this
 repo, stored in `mysql.go` and `postgres.go`.
 
 ```go
@@ -33,17 +35,19 @@ import (
     _ "github.com/go-sql-driver/mysql" // Link with the Go MySQL driver
 )
 
-var ci containertest.ConnInfo
+var ci *containertest.ConnInfo
 var mySQLService *containertest.MySQL
 
 // TestMain runs once at startup to do test initialization common to all tests.
 func TestMain(m *testing.M) {
 	// Runs unit tests
 	os.Exit(func() int {
-		var closer io.Closer
-
-		mySQLService := (&containertest.MySQL{}).WithVersion("8.0")
-		ci = containertest.MustStart(mySQLService) // Start the docker container. Can also pass options.
+		mySQLService = &containertest.MySQL{Version: "5.7"}
+        var err error // := assignment on next line would shadow ci global variable
+		ci, err = containertest.Start(mySQLService) // Start the docker container. Can also pass options.
+		if err != nil {
+			panic(fmt.Errorf("could not start mysql service: %w", err))
+        }
 		defer ci.Close()
 
 		return m.Run()

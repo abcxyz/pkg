@@ -48,7 +48,7 @@ func (p *Postgres) ImageTag() string {
 }
 
 // TestConn implements the Service.TestConn interface.
-func (p *Postgres) TestConn(progressLogger TestLogger, connInfo ConnInfo) error {
+func (p *Postgres) TestConn(progressLogger TestLogger, connInfo *ConnInfo) error {
 	port := connInfo.PortMapper(postgresPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(connInfo.Host, port), p.Username())

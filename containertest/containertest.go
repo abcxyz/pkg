@@ -51,19 +51,20 @@ type Service interface {
 	StartupPorts() []string
 
 	// TestConn takes a logger and a struct with connection info, and returns nil if app has started.
-	TestConn(progressLogger TestLogger, info ConnInfo) error
+	TestConn(progressLogger TestLogger, info *ConnInfo) error
 }
 
-// MustStart starts a container, or panics if there was an error.
-func MustStart(service Service, opts ...Option) ConnInfo {
+// Start starts a container, or returns an error. On err ConnInfo will be automatically
+// closed and nil will be returned.
+func Start(service Service, opts ...Option) (*ConnInfo, error) {
 	conf := buildConfig(service, opts...)
 	ci, err := start(conf)
 	if err != nil {
 		// The Closer must be called even if there's an error, to clean up the docker container that may
 		// exist.
 		_ = ci.Close()
-		panic(err)
+		return nil, err
 	}
 
-	return ci
+	return ci, nil
 }

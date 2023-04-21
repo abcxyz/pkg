@@ -32,7 +32,7 @@ import (
 
 var nopCloser = io.NopCloser(nil)
 
-// start starts a docker container running a service. A struct is returned describing how to
+// start starts a docker container running a service. A non-nil struct is returned describing how to
 // connect to the container, along with a cleanup function that should be called once all tests have
 // finished.
 //
@@ -49,37 +49,37 @@ var nopCloser = io.NopCloser(nil)
 // other custom signal handlers that are installed may not get a chance to run.
 //
 // Docker must be installed on localhost for this to work. No environment vars are needed.
-func start(conf *config) (ConnInfo, error) {
+func start(conf *config) (*ConnInfo, error) {
 	connInfo, err := startContainer(conf)
 
 	// connInfo will have a closer in all cases.
 	return connInfo, err
 }
 
-// Runs a docker container and returns a struct with information on exposed ports
+// Runs a docker container and returns a non-nil struct with information on exposed ports
 // and host, and implements io.Closer. ConnInfo.Close() should be called regardless
 // of value of error. A noop implementation is used if container hasn't started.
-func startContainer(conf *config) (ConnInfo, error) {
+func startContainer(conf *config) (*ConnInfo, error) {
 	closerOnlyConnInfo := ConnInfo{closer: nopCloser}
 	pool, err := dockertest.NewPool("")
 	if err != nil {
-		return closerOnlyConnInfo, fmt.Errorf("dockertest.NewPool(): %w", err)
+		return &closerOnlyConnInfo, fmt.Errorf("dockertest.NewPool(): %w", err)
 	}
 	container, err := runContainer(conf, pool)
 	if err != nil {
-		return closerOnlyConnInfo, err
+		return &closerOnlyConnInfo, err
 	}
 
 	closerOnlyConnInfo.closer = newContainerCloser(pool, container)
 	if err := container.Expire(uint(conf.killAfterSec)); err != nil {
-		return closerOnlyConnInfo, fmt.Errorf("resource.Expire(): %w", err)
+		return &closerOnlyConnInfo, fmt.Errorf("resource.Expire(): %w", err)
 	}
 	fullConnInfo, err := waitUntilUp(conf, pool, container)
 	if err != nil {
-		return closerOnlyConnInfo, err
+		return &closerOnlyConnInfo, err
 	}
 	fullConnInfo.closer = closerOnlyConnInfo.closer
-	return *fullConnInfo, nil
+	return fullConnInfo, nil
 }
 
 // Starts the container and returns a Resource that points to it.
@@ -137,7 +137,7 @@ func waitUntilUp(conf *config, pool *dockertest.Pool, container *dockertest.Reso
 			PortMapper: container.GetPort,
 		}
 
-		if err := conf.service.TestConn(conf.progressLogger, *connInfo); err != nil {
+		if err := conf.service.TestConn(conf.progressLogger, connInfo); err != nil {
 			conf.progressLogger.Logf("Container isn't ready yet: %v", err)
 			return fmt.Errorf("container isn't ready yet: %w", err)
 		}

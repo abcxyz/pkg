@@ -25,8 +25,10 @@ func TestPostgres(t *testing.T) {
 	t.Parallel()
 
 	p := &Postgres{Version: "15"}
-	ci := MustStart(p, WithLogger(t))
-	defer ci.Close()
+	ci, err := Start(p, WithLogger(t))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	if ci.Host == "" {
 		t.Errorf("got empty hostname, wanted a non-empty string")
@@ -42,7 +44,7 @@ func TestPostgres(t *testing.T) {
 	}
 }
 
-func connectPostgres(t *testing.T, ci ConnInfo, p *Postgres) *sql.DB {
+func connectPostgres(t *testing.T, ci *ConnInfo, p *Postgres) *sql.DB {
 	t.Helper()
 	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(ci.Host, ci.PortMapper(p.Port())), p.Username())
 	db, err := sql.Open("pgx", addr)

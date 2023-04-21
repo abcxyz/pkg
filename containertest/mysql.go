@@ -54,7 +54,7 @@ func (m *MySQL) ImageTag() string {
 }
 
 // TestConn implements the Service.TestConn interface.
-func (m *MySQL) TestConn(progressLogger TestLogger, connInfo ConnInfo) error {
+func (m *MySQL) TestConn(progressLogger TestLogger, connInfo *ConnInfo) error {
 	port := connInfo.PortMapper(m.Port())
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
 	addr := fmt.Sprintf("%s:%s@tcp(%s)/mysql?tls=false", m.Username(), m.Password(), net.JoinHostPort(connInfo.Host, port))

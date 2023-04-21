@@ -22,8 +22,11 @@ import (
 
 func TestMustStart(t *testing.T) {
 	t.Parallel()
-	service := &MySQL{Version: "8.0"}
-	ci := MustStart(service, WithLogger(t))
+	service := &MySQL{Version: "5.7"}
+	ci, err := Start(service, WithLogger(t))
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	defer ci.Close()
 
 	if ci.Host == "" {
@@ -38,21 +41,16 @@ func TestMustStart_NonexistentVersion(t *testing.T) {
 	t.Parallel()
 
 	fakeVersion := "nonexistent_for_test"
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Fatalf("got no panic, but expected a panic")
-		}
-		err, ok := r.(error)
-		if !ok {
-			t.Fatalf("got a %T, but wanted a type that implements the error interface", r)
-		}
-		wantStr := fmt.Sprintf("tag %q does not exist", fakeVersion)
-		if !strings.Contains(err.Error(), wantStr) {
-			t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
-		}
-	}()
-	MustStart(&MySQL{Version: fakeVersion}, WithLogger(t))
+
+	ci, err := Start(&MySQL{Version: fakeVersion}, WithLogger(t))
+	if ci != nil {
+		t.Errorf("got a *ConnInfo %v but wanted nil", *ci)
+	}
+
+	wantStr := fmt.Sprintf("tag %q does not exist", fakeVersion)
+	if !strings.Contains(err.Error(), wantStr) {
+		t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
+	}
 }
 
 func TestBuildConfig(t *testing.T) {
