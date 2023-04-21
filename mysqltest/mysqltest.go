@@ -42,7 +42,6 @@ func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	}
 
 	ci, err := containertest.Start(driver, translatedOpts...)
-
 	if err != nil {
 		panic(err)
 	}

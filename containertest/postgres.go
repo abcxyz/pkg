@@ -26,28 +26,28 @@ const (
 	postgresPort = "5432/tcp"
 )
 
-// Postgres implements the Service interface, defining a Postgres server container.
+// Postgres satisfies [Service], defining a Postgres server container.
 type Postgres struct {
 	// Version is the ImageTag that will be returned by the Service interface.
 	Version string
 }
 
-// Environment implements the Service.Environment interface.
+// Environment satisfies [Service.Environment].
 func (p *Postgres) Environment() []string {
 	return []string{"POSTGRES_PASSWORD=" + password}
 }
 
-// ImageRepository implements the Service.ImageRepository interface.
+// ImageRepository satisfies [Service.ImageRepository].
 func (p *Postgres) ImageRepository() string {
 	return "postgres"
 }
 
-// ImageTag implements the Service.ImageTag interface.
+// ImageTag satisfies [Service.ImageTag].
 func (p *Postgres) ImageTag() string {
 	return p.Version
 }
 
-// TestConn implements the Service.TestConn interface.
+// TestConn satisfies [Service.TestConn].
 func (p *Postgres) TestConn(progressLogger TestLogger, connInfo *ConnInfo) error {
 	port := connInfo.PortMapper(postgresPort)
 	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
@@ -72,7 +72,7 @@ func (p *Postgres) Port() string {
 	return postgresPort
 }
 
-// StartupPorts implements the Service.StartupPorts interface.
+// StartupPorts satisfies [Service.StartupPorts].
 func (p *Postgres) StartupPorts() []string {
 	return []string{p.Port()}
 }
