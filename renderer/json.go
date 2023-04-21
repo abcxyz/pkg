@@ -114,7 +114,7 @@ func escapeJSON(s string) string {
 }
 
 // jsonErrTmpl is the template to use when returning a JSON error. It is
-// rendered using Printf, not json.Encode, so values must be escaped by the
+// rendered using Logf, not json.Encode, so values must be escaped by the
 // caller.
 const jsonErrTmpl = `{"errors":["%s"]}`
 

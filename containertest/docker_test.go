@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mysqltest
+package containertest
 
 // This file is only intended to be used outside of Google. Inside of Google, this file should be
 // replaced with the Google-internal version.
@@ -20,11 +20,14 @@ package mysqltest
 import (
 	"database/sql"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"time"
 )
 
+// MySQL will be used as the default service for testing general behavior. Other
+// services should have their own tests written.
 func TestKillAfter(t *testing.T) {
 	t.Parallel()
 
@@ -37,15 +40,17 @@ func TestKillAfter(t *testing.T) {
 		killAfter               = expectedStartupDuration + extraBuffer
 		killAfterSec            = int(killAfter / time.Second)
 	)
-	conf := buildConfig(WithKillAfterSeconds(killAfterSec), WithLogger(&testLogger{t}))
-	ci, closer, err := start(conf)
+
+	m := &MySQL{"5.7"}
+	conf := buildConfig(m, WithKillAfterSeconds(killAfterSec), WithLogger(t))
+	ci, err := start(conf)
 	defer func() {
-		_ = closer.Close()
+		_ = ci.Close()
 	}()
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := connect(t, ci)
+	db := connectMySQL(t, ci, m)
 
 	if err := db.Ping(); err != nil {
 		t.Fatalf("db.Ping: %v", err)
@@ -79,11 +84,11 @@ func containsOneOf(haystack string, needles []string) bool {
 	return false
 }
 
-func connect(t *testing.T, ci ConnInfo) *sql.DB {
+func connectMySQL(t *testing.T, ci *ConnInfo, m *MySQL) *sql.DB {
 	t.Helper()
 
-	uri := fmt.Sprintf("%s:%s@tcp([%s]:%s)/%s", ci.Username, ci.Password,
-		ci.Hostname, ci.Port, "")
+	uri := fmt.Sprintf("%s:%s@tcp(%s)/%s", m.Username(), m.Password(),
+		net.JoinHostPort(ci.Host, ci.PortMapper(m.Port())), "")
 	db, err := sql.Open("mysql", uri)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)

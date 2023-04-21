@@ -1,4 +1,4 @@
-// Copyright 2022 The Authors (see AUTHORS file)
+// Copyright 2023 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysqltest provides an ephemeral MySQL server for testing database integration. It's
-// designed to be used in code that needs to work inside and outside Google.
+// Package mysqltest is a legacy compatibility layer for the more generic databasetest
 package mysqltest
 
 import (
 	"io"
+
+	"github.com/abcxyz/pkg/containertest"
 )
 
 // ConnInfo specifies how to connect to the MySQL server that is created by this package.
@@ -31,13 +32,24 @@ type ConnInfo struct {
 // MustStart starts a MySQL server, or panics if there was an error.
 func MustStart(opts ...Option) (ConnInfo, io.Closer) {
 	conf := buildConfig(opts...)
-	ci, closer, err := start(conf)
+	driver := &containertest.MySQL{Version: conf.mySQLVersion}
+	translatedOpts := make([]containertest.Option, 0, 2)
+	if conf.killAfterSec != 0 {
+		translatedOpts = append(translatedOpts, containertest.WithKillAfterSeconds(conf.killAfterSec))
+	}
+	if conf.progressLogger != nil {
+		translatedOpts = append(translatedOpts, containertest.WithLogger(LoggerBridge{conf.progressLogger}))
+	}
+
+	ci, err := containertest.Start(driver, translatedOpts...)
 	if err != nil {
-		// The Closer must be called even if there's an error, to clean up the docker container that may
-		// exist.
-		_ = closer.Close()
 		panic(err)
 	}
 
-	return ci, closer
+	return ConnInfo{
+		Username: driver.Username(),
+		Password: driver.Password(),
+		Hostname: ci.Host,
+		Port:     ci.PortMapper(driver.StartupPorts()[0]),
+	}, ci
 }

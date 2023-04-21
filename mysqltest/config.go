@@ -1,4 +1,4 @@
-// Copyright 2022 The Authors (see AUTHORS file)
+// Copyright 2023 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,36 +14,14 @@
 
 package mysqltest
 
-import "log"
-
-// This file implements the "functional options" pattern.
-
-type config struct {
-	killAfterSec   int // This is in integer seconds because that's what Docker takes.
-	mySQLVersion   string
-	progressLogger Logger
-}
+import (
+	"fmt"
+)
 
 // Logger allows the caller to optionally provide a custom logger for printing status updates about
 // MySQL startup progress. The default is to use the go "log" package.
 type Logger interface {
 	Printf(fmtStr string, args ...any)
-}
-
-func makeDefaultConfig() *config {
-	return &config{
-		killAfterSec:   10 * 60,
-		mySQLVersion:   "5.7",
-		progressLogger: &stdlibLogger{},
-	}
-}
-
-func buildConfig(opts ...Option) *config {
-	config := makeDefaultConfig()
-	for _, opt := range opts {
-		config = opt(config)
-	}
-	return config
 }
 
 // Option sets a configuration option for this package. Users should not implement these functions,
@@ -81,9 +59,32 @@ func WithLogger(l Logger) Option {
 	}
 }
 
-// stdlibLogger is the default implementation of the Logger interface that calls log.Printf.
-type stdlibLogger struct{}
+// LoggerBridge satisfies [containertest.TestLogger] using the
+// legacy [mysqltest.Logger] interface.
+type LoggerBridge struct {
+	l Logger
+}
 
-func (s *stdlibLogger) Printf(fmtStr string, args ...any) {
-	log.Printf(fmtStr, args...)
+// Log satisfies [containertest.TestLogger].
+func (lb LoggerBridge) Log(args ...any) {
+	lb.l.Printf("%s", fmt.Sprint(args...))
+}
+
+// Logf satisfies [containertest.TestLogger].
+func (lb LoggerBridge) Logf(format string, args ...any) {
+	lb.l.Printf(format, args...)
+}
+
+type config struct {
+	killAfterSec   int // This is in integer seconds because that's what Docker takes.
+	mySQLVersion   string
+	progressLogger Logger
+}
+
+func buildConfig(opts ...Option) *config {
+	config := &config{}
+	for _, opt := range opts {
+		config = opt(config)
+	}
+	return config
 }
