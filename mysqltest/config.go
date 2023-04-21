@@ -59,18 +59,18 @@ func WithLogger(l Logger) Option {
 	}
 }
 
-// LoggerBridge is a struct that satisfies the containertest.TestLogger interface
-// using the legacy mysqltest.Logger interface.
+// LoggerBridge satisfies [containertest.TestLogger] using the
+// legacy [mysqltest.Logger] interface.
 type LoggerBridge struct {
 	l Logger
 }
 
-// Log satisfies [containertest.TestLogger]
+// Log satisfies [containertest.TestLogger].
 func (lb LoggerBridge) Log(args ...any) {
 	lb.l.Printf("%s", fmt.Sprint(args...))
 }
 
-// Logf satisfies [containertest.TestLogger]
+// Logf satisfies [containertest.TestLogger].
 func (lb LoggerBridge) Logf(format string, args ...any) {
 	lb.l.Printf(format, args...)
 }

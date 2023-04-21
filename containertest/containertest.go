@@ -16,7 +16,10 @@
 // It's designed to be used in code that needs to work inside and outside google.
 package containertest
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // ConnInfo specifies how connect to the created container.
 type ConnInfo struct {
@@ -32,7 +35,7 @@ type ConnInfo struct {
 
 // Close implements io.Closer by passing to internal closer field.
 func (c ConnInfo) Close() error {
-	return c.closer.Close()
+	return fmt.Errorf("error closing container: %w", c.closer.Close())
 }
 
 // Service provides information about what container image should be started and
