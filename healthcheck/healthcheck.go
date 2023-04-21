@@ -16,8 +16,6 @@
 package healthcheck
 
 import (
-	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,9 +26,31 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-type HTTPResponse struct {
-	Message string
-}
+const (
+	htmlContentType = `text/html; charset=utf-8`
+	htmlResponse    = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Status: ok</title>
+  </head>
+  <body>
+    <p>ok</p>
+  </body>
+</html>
+`
+
+	jsonContentType = `application/json; charset=utf-8`
+	jsonResponse    = `{"status":"ok"}`
+
+	xmlContentType = `text/xml; charset=utf-8`
+	xmlResponse    = `<?xml version="1.0" encoding="UTF-8"?>
+<status>ok</status>
+`
+
+	genericContentType = `text/plain`
+	genericResponse    = `ok`
+)
 
 // HandleHTTPHealthCheck is a basic HTTP health check implementation.
 func HandleHTTPHealthCheck() http.Handler {
@@ -42,19 +62,24 @@ func HandleHTTPHealthCheck() http.Handler {
 			val = r.Header.Get("Content-Type")
 		}
 
-		w.Header().Set("Content-Type", val)
-
 		switch {
+		case strings.HasPrefix(val, "text/html"):
+			w.Header().Set("Content-Type", htmlContentType)
+			fmt.Fprint(w, htmlResponse)
+
 		case strings.HasPrefix(val, "application/json"):
-			if err := json.NewEncoder(w).Encode(&HTTPResponse{Message: "OK"}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-		case strings.HasPrefix(val, "application/xml"):
-			if err := xml.NewEncoder(w).Encode(&HTTPResponse{Message: "OK"}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
+			w.Header().Set("Content-Type", jsonContentType)
+			fmt.Fprint(w, jsonResponse)
+
+		case strings.HasPrefix(val, "text/xml"),
+			strings.HasPrefix(val, "application/xml"),
+			strings.HasPrefix(val, "application/xhtml+xml"):
+			w.Header().Set("Content-Type", xmlContentType)
+			fmt.Fprint(w, xmlResponse)
+
 		default:
-			fmt.Fprint(w, "OK")
+			w.Header().Set("Content-Type", genericContentType)
+			fmt.Fprint(w, genericResponse)
 		}
 	})
 }

@@ -19,7 +19,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -33,79 +32,89 @@ func TestHandleHTTPHealth(t *testing.T) {
 	ctx := context.Background()
 
 	cases := []struct {
-		name    string
-		code    int
-		headers http.Header
-		want    string
+		name   string
+		header string
+
+		expContentType string
+		expBody        string
 	}{
 		{
-			name:    "plain_text_accept_success",
-			headers: http.Header{"Accept": []string{"text/plain; charset=utf-8"}},
-			code:    200,
-			want:    "OK",
+			name:           "no_headers",
+			header:         "",
+			expContentType: genericContentType,
+			expBody:        genericResponse,
 		},
 		{
-			name:    "json_accept_success",
-			headers: http.Header{"Accept": []string{"application/json; charset=utf-8"}},
-			code:    200,
-			want:    `{"Message":"OK"}`,
+			name:           "html",
+			header:         "text/html; charset=utf-8",
+			expContentType: htmlContentType,
+			expBody:        htmlResponse,
 		},
 		{
-			name:    "xml_accept_success",
-			headers: http.Header{"Accept": []string{"application/xml; charset=utf-8"}},
-			code:    200,
-			want:    `<HTTPResponse><Message>OK</Message></HTTPResponse>`,
+			name:           "application_json",
+			header:         "application/json; charset=utf-8",
+			expContentType: jsonContentType,
+			expBody:        jsonResponse,
 		},
 		{
-			name:    "plain_text_content_type_success",
-			headers: http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
-			code:    200,
-			want:    "OK",
+			name:           "text_xml",
+			header:         "text/xml; charset=utf-8",
+			expContentType: xmlContentType,
+			expBody:        xmlResponse,
 		},
 		{
-			name:    "json_content_type_success",
-			headers: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
-			code:    200,
-			want:    `{"Message":"OK"}`,
+			name:           "application_xml",
+			header:         "application/xml; charset=utf-8",
+			expContentType: xmlContentType,
+			expBody:        xmlResponse,
 		},
 		{
-			name:    "xml_content_type_success",
-			headers: http.Header{"Content-Type": []string{"application/xml; charset=utf-8"}},
-			code:    200,
-			want:    `<HTTPResponse><Message>OK</Message></HTTPResponse>`,
+			name:           "application_xhtml",
+			header:         "application/xhtml+xml; charset=utf-8",
+			expContentType: xmlContentType,
+			expBody:        xmlResponse,
+		},
+		{
+			name:           "plain_text",
+			header:         "text/plain; charset=utf-8",
+			expContentType: genericContentType,
+			expBody:        genericResponse,
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+		for _, header := range []string{"accept", "content-type"} {
+			header := header
 
-			w := httptest.NewRecorder()
+			t.Run(tc.name+"_"+header, func(t *testing.T) {
+				t.Parallel()
 
-			r, err := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
-			if err != nil {
-				t.Fatalf("failed to create request: %v", err)
-			}
+				w := httptest.NewRecorder()
 
-			for key, values := range tc.headers {
-				for _, value := range values {
-					r.Header.Set(key, value)
+				r, err := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+				if err != nil {
+					t.Fatalf("failed to create request: %v", err)
 				}
-			}
+				r.Header.Set(header, tc.header)
 
-			handler := HandleHTTPHealthCheck()
-			handler.ServeHTTP(w, r)
+				handler := HandleHTTPHealthCheck()
+				handler.ServeHTTP(w, r)
 
-			if got, want := w.Code, tc.code; got != want {
-				t.Errorf("expected %d to be %d", got, want)
-			}
+				if got, want := w.Code, http.StatusOK; got != want {
+					t.Errorf("expected %d to be %d", got, want)
+				}
 
-			if got, want := strings.TrimSpace(w.Body.String()), tc.want; got != want {
-				t.Errorf("expected %q to be %q", got, want)
-			}
-		})
+				if got, want := w.Header().Get("Content-Type"), tc.expContentType; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+
+				if got, want := w.Body.String(), tc.expBody; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			})
+		}
 	}
 }
 
