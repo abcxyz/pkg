@@ -53,7 +53,7 @@ func TestMustStart_NonexistentVersion(t *testing.T) {
 		if !ok {
 			t.Fatalf("got a %T, but wanted a type that implements the error interface", r)
 		}
-		wantStr := fmt.Sprintf("version %q does not exist", fakeVersion)
+		wantStr := fmt.Sprintf("tag %q does not exist", fakeVersion)
 		if !strings.Contains(err.Error(), wantStr) {
 			t.Errorf("got an error %q, but wanted an error containing %q", err.Error(), wantStr)
 		}

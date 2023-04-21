@@ -84,7 +84,7 @@ func (r *Renderer) RenderHTMLStatus(w http.ResponseWriter, code int, tmpl string
 }
 
 // htmlErrTmpl is the template to use when returning an HTML error. It is
-// rendered using Printf, not html/template, so values must be escaped by the
+// rendered using Logf, not html/template, so values must be escaped by the
 // caller.
 const htmlErrTmpl = `
 <html>
