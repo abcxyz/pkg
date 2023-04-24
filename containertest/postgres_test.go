@@ -47,15 +47,15 @@ func TestPostgres(t *testing.T) {
 	}
 }
 
-func connectPostgres(ctx context.Context, t testing.TB, ci *ConnInfo, p *Postgres) *pgx.Conn {
-	t.Helper()
+func connectPostgres(ctx context.Context, tb testing.TB, ci *ConnInfo, p *Postgres) *pgx.Conn {
+	tb.Helper()
 	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(ci.Host, ci.PortMapper(p.Port())), p.Username())
 	db, err := pgx.Connect(ctx, addr)
 	if err != nil {
-		t.Fatalf("pgx.Connect(): %v", err)
+		tb.Fatalf("pgx.Connect(): %v", err)
 	}
 
-	t.Cleanup(func() {
+	tb.Cleanup(func() {
 		_ = db.Close(ctx)
 	})
 
