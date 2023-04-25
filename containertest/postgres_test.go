@@ -15,14 +15,17 @@
 package containertest
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"net"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func TestPostgres(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 
 	p := &Postgres{Version: "15"}
 	ci, err := Start(p, WithLogger(t))
@@ -37,19 +40,24 @@ func TestPostgres(t *testing.T) {
 		t.Errorf("got empty port, wanted a non-empty string")
 	}
 
-	db := connectPostgres(t, ci, p)
+	db := connectPostgres(ctx, t, ci, p)
 
-	if err := db.Ping(); err != nil {
+	if err := db.Ping(ctx); err != nil {
 		t.Fatalf("db.Ping: %v", err)
 	}
 }
 
-func connectPostgres(t *testing.T, ci *ConnInfo, p *Postgres) *sql.DB {
-	t.Helper()
+func connectPostgres(ctx context.Context, tb testing.TB, ci *ConnInfo, p *Postgres) *pgx.Conn {
+	tb.Helper()
 	addr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.Username(), p.Password(), net.JoinHostPort(ci.Host, ci.PortMapper(p.Port())), p.Username())
-	db, err := sql.Open("pgx", addr)
+	db, err := pgx.Connect(ctx, addr)
 	if err != nil {
-		t.Fatalf("sql.Open: %v", err)
+		tb.Fatalf("pgx.Connect(): %v", err)
 	}
+
+	tb.Cleanup(func() {
+		_ = db.Close(ctx)
+	})
+
 	return db
 }
