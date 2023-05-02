@@ -37,20 +37,21 @@ const defaultGitHubAccessTokenURLPattern = "https://api.github.com/app/installat
 
 const cacheKey = "github-app-jwt"
 
-// GitHubAppConfig contains all of the required configuration for operating as a GitHub App.
+// Config contains all of the required configuration for operating as a GitHub App.
 // This includes the three major components, the App ID, the Install ID and the Private Key.
-type GitHubAppConfig struct {
+type Config struct {
 	AppID                 string
 	InstallationID        string
 	PrivateKey            *rsa.PrivateKey
 	accessTokenURLPattern string
 	jwtTokenExpiration    time.Duration
 	jwtCacheDuration      time.Duration
+	client                *http.Client
 }
 
-// GitHubAppConfigOption is a function type that applies a mechanism to set optional
+// ConfigOption is a function type that applies a mechanism to set optional
 // configuration values.
-type GitHubAppConfigOption func(f *GitHubAppConfig)
+type ConfigOption func(f *Config)
 
 // WithAccessTokenURLPattern allows overriding of the GitHub api url that is
 // used when generating installation access tokens. The default is the primary
@@ -58,16 +59,16 @@ type GitHubAppConfigOption func(f *GitHubAppConfig)
 //
 // The `pattern` parameter expects a single `%s` that represents the installation
 // id that is provided with the rest of the configuration.
-func WithAccessTokenURLPattern(pattern string) GitHubAppConfigOption {
-	return func(f *GitHubAppConfig) {
+func WithAccessTokenURLPattern(pattern string) ConfigOption {
+	return func(f *Config) {
 		f.accessTokenURLPattern = pattern
 	}
 }
 
 // WithJWTTokenExpiration is an option that allows overriding the default expiration
 // date of the application JWTs.
-func WithJWTTokenExpiration(exp time.Duration) GitHubAppConfigOption {
-	return func(f *GitHubAppConfig) {
+func WithJWTTokenExpiration(exp time.Duration) ConfigOption {
+	return func(f *Config) {
 		f.jwtTokenExpiration = exp
 	}
 }
@@ -76,18 +77,26 @@ func WithJWTTokenExpiration(exp time.Duration) GitHubAppConfigOption {
 // JWT App tokens. The amount of time that the tokens are cached is based
 // on the provided `beforeExp` parameter + the configured token expiration.
 // This results in a cache expiration of <token expiration> - <beforeExp>.
-func WithJWTTokenCaching(beforeExp time.Duration) GitHubAppConfigOption {
-	return func(f *GitHubAppConfig) {
+func WithJWTTokenCaching(beforeExp time.Duration) ConfigOption {
+	return func(f *Config) {
 		exp := f.jwtTokenExpiration
 		f.jwtCacheDuration = exp - beforeExp
+	}
+}
+
+// WithHTTPClient is an option that allows a consumer to provider their own
+// http client implementation.
+func WithHTTPClient(client *http.Client) ConfigOption {
+	return func(f *Config) {
+		f.client = client
 	}
 }
 
 // NewConfig creates a new configuration object containing the three primary required
 // configuration values. Options allow for the customization of rarely used configuration
 // values. Options are evaluated in order from first to last.
-func NewConfig(appID, installationID string, privateKey *rsa.PrivateKey, opts ...GitHubAppConfigOption) *GitHubAppConfig {
-	config := GitHubAppConfig{
+func NewConfig(appID, installationID string, privateKey *rsa.PrivateKey, opts ...ConfigOption) *Config {
+	config := Config{
 		AppID:                 appID,
 		InstallationID:        installationID,
 		PrivateKey:            privateKey,
@@ -112,15 +121,22 @@ type TokenRequest struct {
 // GitHubApp is an object that can be used to generate application level JWTs
 // or to request an OIDC token on behalf of an installation.
 type GitHubApp struct {
-	config   *GitHubAppConfig
+	config   *Config
 	jwtCache *cache.Cache[[]byte]
+	client   *http.Client
 }
 
 // New creates a GitHubApp instance based on the provided
 // GitHubAppConfig object.
-func New(config *GitHubAppConfig) *GitHubApp {
+func New(config *Config) *GitHubApp {
 	app := GitHubApp{
 		config: config,
+	}
+	if config.client != nil {
+		app.client = config.client
+	}
+	if app.client == nil {
+		app.client = &http.Client{Timeout: 10 * time.Second}
 	}
 	if config.jwtCacheDuration != 0 {
 		app.jwtCache = cache.New[[]byte](config.jwtCacheDuration)
@@ -131,6 +147,7 @@ func New(config *GitHubAppConfig) *GitHubApp {
 // AppToken creates a signed JWT to authenticate a GitHub app
 // so that it can make API calls to GitHub.
 func (g *GitHubApp) AppToken() ([]byte, error) {
+	var token []byte
 	// If token caching is enabled, look first in the cache
 	if g.jwtCache != nil {
 		// Check for a valid JWT in the cache
@@ -143,14 +160,17 @@ func (g *GitHubApp) AppToken() ([]byte, error) {
 			}
 			g.jwtCache.Set(cacheKey, signedJwt)
 		}
-		return signedJwt, nil
+		token = signedJwt
 	}
-	// Create a JWT for reading instance information from GitHub
-	signedJwt, err := g.generateAppJWT()
-	if err != nil {
-		return nil, fmt.Errorf("error generating the JWT for GitHub app access: %w", err)
+	if token == nil {
+		// Create a JWT for reading instance information from GitHub
+		signedJwt, err := g.generateAppJWT()
+		if err != nil {
+			return nil, fmt.Errorf("error generating the JWT for GitHub app access: %w", err)
+		}
+		token = signedJwt
 	}
-	return signedJwt, nil
+	return token, nil
 }
 
 // generateAppJWT builds a signed JWT that can be used to
@@ -200,9 +220,7 @@ func (g *GitHubApp) AccessToken(ctx context.Context, request *TokenRequest) (str
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", appJWT))
 
-	client := http.Client{Timeout: 10 * time.Second}
-
-	res, err := client.Do(req)
+	res, err := g.client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("error making http request for GitHub installation access token %w", err)
 	}

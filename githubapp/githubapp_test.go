@@ -29,27 +29,28 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestGitHubAppConfig_NewConfig(t *testing.T) {
+func TestConfig_NewConfig(t *testing.T) {
 	t.Parallel()
 
 	rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
+	testClient := &http.Client{Timeout: 10 * time.Second}
 
 	cases := []struct {
 		name      string
 		appID     string
 		installID string
-		options   []GitHubAppConfigOption
-		want      *GitHubAppConfig
+		options   []ConfigOption
+		want      *Config
 	}{
 		{
 			name:      "basic_config",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{},
-			want: &GitHubAppConfig{
+			options:   []ConfigOption{},
+			want: &Config{
 				AppID:                 "test-app-id",
 				InstallationID:        "test-install-id",
 				PrivateKey:            rsaPrivateKey,
@@ -62,8 +63,8 @@ func TestGitHubAppConfig_NewConfig(t *testing.T) {
 			name:      "with_token_url_pattern",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{WithAccessTokenURLPattern("test/%s")},
-			want: &GitHubAppConfig{
+			options:   []ConfigOption{WithAccessTokenURLPattern("test/%s")},
+			want: &Config{
 				AppID:                 "test-app-id",
 				InstallationID:        "test-install-id",
 				PrivateKey:            rsaPrivateKey,
@@ -76,8 +77,8 @@ func TestGitHubAppConfig_NewConfig(t *testing.T) {
 			name:      "with_token_expiration",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{WithJWTTokenExpiration(3 * time.Minute)},
-			want: &GitHubAppConfig{
+			options:   []ConfigOption{WithJWTTokenExpiration(3 * time.Minute)},
+			want: &Config{
 				AppID:                 "test-app-id",
 				InstallationID:        "test-install-id",
 				PrivateKey:            rsaPrivateKey,
@@ -90,14 +91,29 @@ func TestGitHubAppConfig_NewConfig(t *testing.T) {
 			name:      "with_token_caching",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{WithJWTTokenCaching(1 * time.Minute)},
-			want: &GitHubAppConfig{
+			options:   []ConfigOption{WithJWTTokenCaching(1 * time.Minute)},
+			want: &Config{
 				AppID:                 "test-app-id",
 				InstallationID:        "test-install-id",
 				PrivateKey:            rsaPrivateKey,
 				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
 				jwtTokenExpiration:    9 * time.Minute,
 				jwtCacheDuration:      8 * time.Minute,
+			},
+		},
+		{
+			name:      "with_http_client",
+			appID:     "test-app-id",
+			installID: "test-install-id",
+			options:   []ConfigOption{WithHTTPClient(testClient)},
+			want: &Config{
+				AppID:                 "test-app-id",
+				InstallationID:        "test-install-id",
+				PrivateKey:            rsaPrivateKey,
+				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
+				jwtTokenExpiration:    9 * time.Minute,
+				jwtCacheDuration:      0 * time.Nanosecond,
+				client:                testClient,
 			},
 		},
 	}
@@ -110,14 +126,14 @@ func TestGitHubAppConfig_NewConfig(t *testing.T) {
 
 			got := NewConfig(tc.appID, tc.installID, rsaPrivateKey, tc.options...)
 			if diff := cmp.Diff(tc.want, got,
-				cmp.AllowUnexported(GitHubAppConfig{})); diff != "" {
+				cmp.AllowUnexported(Config{})); diff != "" {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)
 			}
 		})
 	}
 }
 
-func TestGitHubApp_GenerateInstallToken(t *testing.T) {
+func TestGitHubApp_AccessToken(t *testing.T) {
 	t.Parallel()
 
 	rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -129,7 +145,7 @@ func TestGitHubApp_GenerateInstallToken(t *testing.T) {
 		name        string
 		appID       string
 		installID   string
-		options     []GitHubAppConfigOption
+		options     []ConfigOption
 		want        string
 		expErr      string
 		handlerFunc http.HandlerFunc
@@ -138,7 +154,7 @@ func TestGitHubApp_GenerateInstallToken(t *testing.T) {
 			name:        "basic_request",
 			appID:       "test-app-id",
 			installID:   "test-install-id",
-			options:     []GitHubAppConfigOption{},
+			options:     []ConfigOption{},
 			want:        `{"token":"this-is-the-token-from-github"}`,
 			expErr:      "",
 			handlerFunc: nil,
@@ -147,7 +163,7 @@ func TestGitHubApp_GenerateInstallToken(t *testing.T) {
 			name:      "non_201_response",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{},
+			options:   []ConfigOption{},
 			expErr:    "failed to retrieve token from GitHub - Status: 500 Internal Server Error - Body: ",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(500)
@@ -157,7 +173,7 @@ func TestGitHubApp_GenerateInstallToken(t *testing.T) {
 			name:      "201_not_json",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{},
+			options:   []ConfigOption{},
 			expErr:    "invalid access token from GitHub - Body: not json",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
@@ -168,7 +184,7 @@ func TestGitHubApp_GenerateInstallToken(t *testing.T) {
 			name:      "201_no_body",
 			appID:     "test-app-id",
 			installID: "test-install-id",
-			options:   []GitHubAppConfigOption{},
+			options:   []ConfigOption{},
 			expErr:    "invalid access token from GitHub - Body:",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
