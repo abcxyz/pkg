@@ -29,6 +29,7 @@ import (
 	"github.com/abcxyz/pkg/cache"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
+	"golang.org/x/oauth2"
 )
 
 // URL used to retrieve access tokens. The pattern must contain a single '%s' which represents where in the url
@@ -244,4 +245,14 @@ func (g *GitHubApp) AccessToken(ctx context.Context, request *TokenRequest) (str
 		return "", fmt.Errorf("invalid access token from GitHub - Body: %s", string(b))
 	}
 	return string(b), nil
+}
+
+// Token adheres to the oauth2 TokenSource interface and returns a oauth2 token by
+// creating a JWT token.
+func (g *GitHubApp) Token() (*oauth2.Token, error) {
+	jwt, err := g.AppToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate app token: %w", err)
+	}
+	return &oauth2.Token{AccessToken: string(jwt)}, nil
 }
