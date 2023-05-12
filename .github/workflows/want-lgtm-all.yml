@@ -54,7 +54,7 @@ jobs:
           retries: 3
           script: |-
             // get all submitted reviews
-            const { data: submittedReviews } = await github.rest.pulls.listReviews({
+            const submittedReviews = await github.paginate(github.rest.pulls.listReviews, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
@@ -100,7 +100,7 @@ jobs:
               return;
             }
 
-            let { data: requestedReviewers } =
+            const { data: requestedReviewers } =
               await github.rest.pulls.listRequestedReviewers({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -144,7 +144,7 @@ jobs:
               .pop();
 
             // get the latest failed workflow runs for our file and this branch
-            let { data: workflows } = await github.rest.actions.listWorkflowRuns({
+            const workflows = await github.paginate(github.rest.actions.listWorkflowRuns, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: workflowFilename,
@@ -155,7 +155,7 @@ jobs:
             });
 
             // filter workflow runs only for this pull request number
-            let unsuccessfulRuns = workflows.workflow_runs
+            const unsuccessfulRuns = workflows
               .filter((w) =>
                 w.pull_requests.map((p) => p.number).includes(context.issue.number)
               )
