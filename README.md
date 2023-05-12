@@ -112,3 +112,39 @@ directory. Linting is done in two steps:
 
 1.  Run `terraform fmt` and check the git diff. This will will if the Terraform
     file is not formatted. On failure, the output will include the diff.
+
+#### want-lgtm-all.yml
+
+Use this workflow to require an approval from all requested reviewers:
+
+```yaml
+on:
+  pull_request:
+    types:
+      - 'opened'
+      - 'edited'
+      - 'reopened'
+      - 'synchronize'
+      - 'ready_for_review'
+      - 'review_requested'
+      - 'review_request_removed'
+  pull_request_review:
+    types:
+      - 'submitted'
+      - 'dismissed'
+      - 'edited'
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+permissions:
+  actions: 'write'
+  pull-requests: 'read'
+
+jobs:
+  want-lgtm-all:
+    uses: 'abcxyz/pkg/.github/workflows/want-lgtm-all.yml@main'
+```
+
+When creating a pull request, include the text `want_lgtm=all` in the body to require an approval from all requested reviewers.
