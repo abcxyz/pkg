@@ -1,0 +1,171 @@
+name: 'want-lgtm-all'
+
+on:
+  pull_request:
+    types:
+      - 'opened'
+      - 'edited'
+      - 'reopened'
+      - 'synchronize'
+      - 'ready_for_review'
+      - 'review_requested'
+      - 'review_request_removed'
+  pull_request_review:
+    types:
+      - 'submitted'
+      - 'dismissed'
+      - 'edited'
+  workflow_call:
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+permissions:
+  actions: 'write'
+  pull-requests: 'read'
+
+jobs:
+  want-lgtm-all:
+    if: ${{ contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name) }}
+    runs-on: 'ubuntu-latest'
+    steps:
+      - id: 'want-lgtm'
+        name: 'Validate PR Body'
+        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        with:
+          result-encoding: 'string'
+          script: |-
+            const body = context.payload.pull_request.body || "";
+
+            // if PR body does not contain want_lgtm_all, exit gracefully
+            if (!body.toLowerCase().includes("want_lgtm=all")) {
+              core.info("PR body does not contain want_lgtm=all");
+              return "false";
+            }
+
+            return "true";
+
+      - id: 'validate-reviews'
+        name: 'Validate Reviews'
+        if: ${{ steps.want-lgtm.outputs.result ==  'true' }}
+        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        with:
+          retries: 3
+          script: |-
+            // get all submitted reviews
+            const submittedReviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            // multiple users can submit multiple reviews with different statuses
+            // aggregate the status per login in chronological order to get latest status
+            const reviewStateByLogin = {};
+            submittedReviews
+              .filter((r) => r.user.login !== context.payload.pull_request.user.login)
+              .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
+              .forEach((r) => {
+                // add value if it doesnt not exist
+                if (!Object.hasOwn(reviewStateByLogin, r.user.login)) {
+                  reviewStateByLogin[r.user.login] = r.state;
+                  return;
+                }
+
+                // always update state if not approved
+                if (reviewStateByLogin[r.user.login] !== "APPROVED") {
+                  reviewStateByLogin[r.user.login] = r.state;
+                  return;
+                }
+
+                // do not update approved state for comment
+                if (
+                  reviewStateByLogin[r.user.login] === "APPROVED" &&
+                  r.state !== "COMMENTED"
+                ) {
+                  reviewStateByLogin[r.user.login] = r.state;
+                }
+              });
+
+            // get all reviews without an approved status
+            const unapprovedReviews = Object.entries(reviewStateByLogin)
+              .filter(([key, value]) => value.toUpperCase() !== "APPROVED")
+              .map(([key, value]) => key);
+
+            core.info("Unapproved review(s): " + JSON.stringify(unapprovedReviews));
+
+            if (unapprovedReviews.length > 0) {
+              core.setFailed("Unapproved review(s): " + unapprovedReviews.join(", "));
+              return;
+            }
+
+            const { data: requestedReviewers } =
+              await github.rest.pulls.listRequestedReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+              });
+
+            const pendingUserApprovals = requestedReviewers.users.map((u) => u.login);
+            const pendingTeamApprovals = requestedReviewers.teams.map((t) => t.slug);
+
+            const pendingApprovals = [...pendingUserApprovals, ...pendingTeamApprovals];
+
+            core.info("Pending approval(s): " + JSON.stringify(pendingApprovals));
+
+            if (pendingApprovals.length > 0) {
+              core.setFailed("Pending approval(s): " + pendingApprovals.join(", "));
+              return;
+            }
+
+            // sanity check, require at least one reviewer
+            if (submittedReviews.length === 0 && pendingApprovals.length === 0) {
+              core.setFailed(
+                "At least one reviewer is required when specifying want_lgtm_all. Please add a reviewer or remove want_lgtm_all from the PR body."
+              );
+              return;
+            }
+
+      # when a pull_request_review is submitted and all required reviewers have approved
+      # we need to re-trigger any previously failed pull_request event for our workflow
+      # this is because pull_request and pull_request_review are seen as two different
+      # status checks by github
+      - id: 'rerun-status-checks'
+        name: 'Re-run Status Checks'
+        if: ${{ steps.want-lgtm.outputs.result ==  'true' && github.event_name == 'pull_request_review' }}
+        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        with:
+          retries: 3
+          script: |-
+            // get the filename for this workflow
+            const workflowFilename = process.env.GITHUB_WORKFLOW_REF.split("@")[0]
+              .split("/")
+              .pop();
+
+            // get the latest failed workflow runs for our file and this branch
+            const workflows = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFilename,
+              branch: context.payload.pull_request.head.ref,
+              event: "pull_request",
+              status: "failure",
+              per_page: 100,
+            });
+
+            // filter workflow runs only for this pull request number
+            const unsuccessfulRuns = workflows
+              .filter((w) =>
+                w.pull_requests.map((p) => p.number).includes(context.issue.number)
+              )
+              .sort((x) => x.id);
+
+            // retrigger the latest run for our unsuccessful workflow run
+            if (unsuccessfulRuns.length > 0) {
+              await github.rest.actions.reRunWorkflow({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: unsuccessfulRuns[0].id,
+              });
+            }
