@@ -3,20 +3,19 @@ name: 'want-lgtm-all'
 on:
   pull_request:
     types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-      - ready_for_review
-      - review_requested
-      - review_request_removed
+      - 'opened'
+      - 'edited'
+      - 'reopened'
+      - 'synchronize'
+      - 'ready_for_review'
+      - 'review_requested'
+      - 'review_request_removed'
   pull_request_review:
     types:
-      - submitted
-      - dismissed
-      - edited
+      - 'submitted'
+      - 'dismissed'
+      - 'edited'
   workflow_call:
-  workflow_dispatch:
 
 concurrency:
   group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
@@ -27,22 +26,10 @@ permissions:
   pull-requests: 'read'
 
 jobs:
-  validate:
+  want-lgtm-all:
+    if: ${{ contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name) }}
     runs-on: 'ubuntu-latest'
     steps:
-      - id: 'validate-event'
-        name: 'Validate GitHub Event'
-        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
-        with:
-          script: |-
-            // validate required event names
-            if (!["pull_request", "pull_request_review"].includes(context.eventName)) {
-              core.setFailed(
-                "want-lgtm-all only supports the pull_request and pull_request_review event triggers. Please modify your workflow and try again."
-              );
-              return;
-            }
-
       - id: 'want-lgtm'
         name: 'Validate PR Body'
         uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
@@ -52,8 +39,8 @@ jobs:
             const body = context.payload.pull_request.body || "";
 
             // if PR body does not contain want_lgtm_all, exit gracefully
-            if (!body.match(/want_lgtm_all/gim)) {
-              core.info("PR body does not contain want_lgtm_all");
+            if (!body.toLowerCase().includes("want_lgtm=all")) {
+              core.info("PR body does not contain want_lgtm=all");
               return "false";
             }
 
@@ -77,9 +64,28 @@ jobs:
             // aggregate the status per login in chronological order to get latest status
             const reviewStateByLogin = {};
             submittedReviews
+              .filter((r) => r.user.login !== context.payload.pull_request.user.login)
               .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
               .forEach((r) => {
-                reviewStateByLogin[r.user.login] = r.state;
+                // add value if it doesnt not exist
+                if (!Object.hasOwn(reviewStateByLogin, r.user.login)) {
+                  reviewStateByLogin[r.user.login] = r.state;
+                  return;
+                }
+
+                // always update state if not approved
+                if (reviewStateByLogin[r.user.login] !== "APPROVED") {
+                  reviewStateByLogin[r.user.login] = r.state;
+                  return;
+                }
+
+                // do not update approved state for comment
+                if (
+                  reviewStateByLogin[r.user.login] === "APPROVED" &&
+                  r.state !== "COMMENTED"
+                ) {
+                  reviewStateByLogin[r.user.login] = r.state;
+                }
               });
 
             // get all reviews without an approved status
@@ -133,12 +139,12 @@ jobs:
           retries: 3
           script: |-
             // get the filename for this workflow
-            var workflowFilename = process.env.GITHUB_WORKFLOW_REF.split("@")[0]
+            const workflowFilename = process.env.GITHUB_WORKFLOW_REF.split("@")[0]
               .split("/")
               .pop();
 
             // get the latest failed workflow runs for our file and this branch
-            let workflows = await github.rest.actions.listWorkflowRuns({
+            let { data: workflows } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: workflowFilename,
@@ -149,7 +155,7 @@ jobs:
             });
 
             // filter workflow runs only for this pull request number
-            let unsuccessfulRuns = workflows.data.workflow_runs
+            let unsuccessfulRuns = workflows.workflow_runs
               .filter((w) =>
                 w.pull_requests.map((p) => p.number).includes(context.issue.number)
               )
