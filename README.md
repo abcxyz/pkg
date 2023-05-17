@@ -115,6 +115,8 @@ directory. Linting is done in two steps:
 
 #### want-lgtm-all.yml
 
+Update the README for Demo.
+
 Use this workflow to require an approval from all requested reviewers:
 
 ```yaml
