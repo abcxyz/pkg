@@ -91,6 +91,12 @@ type Renderer struct {
 	templateFuncs template.FuncMap
 }
 
+// TestingFatalf is an interface that is satisfied by [testing.TB]. It exists to
+// avoid depending on the testing package at runtime.
+type TestingFatalf interface {
+	Fatalf(format string, args ...any)
+}
+
 // Option is an interface for options to creating a renderer.
 type Option func(*Renderer) *Renderer
 
@@ -173,6 +179,23 @@ func New(ctx context.Context, fsys fs.FS, opts ...Option) (*Renderer, error) {
 	}
 
 	return r, nil
+}
+
+// NewTesting is a helper function to create a renderer suitable for injection
+// in tests. It calls t.Fatal if setup fails.
+func NewTesting(ctx context.Context, tb TestingFatalf, fsys fs.FS, opts ...Option) *Renderer {
+	opts = append([]Option{
+		WithDebug(true),
+		WithOnError(func(err error) {
+			tb.Fatalf("failed to render template: %s", err)
+		}),
+	}, opts...)
+
+	h, err := New(ctx, fsys, opts...)
+	if err != nil {
+		tb.Fatalf("failed to create renderer: %s", err)
+	}
+	return h
 }
 
 // executeTemplate executes a single HTML template with the provided data.
