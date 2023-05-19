@@ -36,7 +36,12 @@ jobs:
         with:
           result-encoding: 'string'
           script: |-
-            const body = context.payload.pull_request.body || "";
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const body = pullRequest.body || "";
 
             // if PR body does not contain want_lgtm_all, exit gracefully
             if (!body.toLowerCase().includes("want_lgtm=all")) {
