@@ -74,17 +74,17 @@ func RegisterFlags(fs *cli.FlagSet) {
 func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 	level := os.Getenv(envPrefix + "LOG_LEVEL")
 	mode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
-	return new(level, mode)
+	return newLogger(level, mode)
 }
 
 // NewFromFlags creates a new logger from flags registered via [RegisterFlags].
 // If the flags were not registered, the log level will default to warning and
 // the log mode will default to production.
 func NewFromFlags() *zap.SugaredLogger {
-	return new(flagLogLevel, flagLogMode)
+	return newLogger(flagLogLevel, flagLogMode)
 }
 
-func new(level, mode string) *zap.SugaredLogger {
+func newLogger(level, mode string) *zap.SugaredLogger {
 	devMode := strings.HasPrefix(mode, "dev")
 	var cfg zap.Config
 	if devMode {
