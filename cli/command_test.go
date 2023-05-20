@@ -20,7 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/testutil"
 )
 
@@ -120,7 +119,7 @@ Usage: test COMMAND
 func TestRootCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := context.Background()
 
 	rootCmd := func() Command {
 		return &RootCommand{

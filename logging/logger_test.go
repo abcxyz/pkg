@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/abcxyz/pkg/cli"
 	"go.uber.org/zap"
 )
 
@@ -41,5 +42,34 @@ func checkFromContext(ctx context.Context, tb testing.TB, want *zap.SugaredLogge
 
 	if got := FromContext(ctx); want != got {
 		tb.Errorf("unexpected logger in context. got: %v, want: %v", got, want)
+	}
+}
+
+func TestNewFromEnv(t *testing.T) { //nolint: paralleltest // Need to use t.Setenv
+	t.Setenv("TEST_NEWFROMENV_LOG_LEVEL", "debug")
+	logger := NewFromEnv("TEST_NEWFROMENV_")
+	if logger == nil {
+		t.Errorf("NewFromEnv got unexpected nil logger")
+	}
+	if got, want := zap.DebugLevel, logger.Level(); got != want {
+		t.Errorf("NewFromEnv logger level got=%v, want=%v", got, want)
+	}
+}
+
+func TestNewFromFlags(t *testing.T) {
+	t.Parallel()
+
+	fs := cli.NewFlagSet()
+	RegisterFlags(fs)
+	if err := fs.Parse([]string{"--log-level=debug"}); err != nil {
+		t.Fatalf("failed to parse flags: %v", err)
+	}
+
+	logger := NewFromFlags()
+	if logger == nil {
+		t.Errorf("NewFromEnv got unexpected nil logger")
+	}
+	if got, want := zap.DebugLevel, logger.Level(); got != want {
+		t.Errorf("NewFromEnv logger level got=%v, want=%v", got, want)
 	}
 }

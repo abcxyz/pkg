@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/abcxyz/pkg/cli"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
@@ -40,15 +41,51 @@ var (
 	// include upon calling DefaultLogger.
 	defaultLogger     *zap.SugaredLogger
 	defaultLoggerOnce sync.Once
+
+	flagLogLevel string
+	flagLogMode  string
 )
+
+// RegisterFlags register common logging flags to the given
+// [github.com/abcxyz/pkg/cli.FlagSet].
+func RegisterFlags(fs *cli.FlagSet) {
+	f := fs.NewSection("LOG OPTIONS")
+	f.StringVar(&cli.StringVar{
+		Name:    "log-level",
+		Example: "info",
+		Default: "warning",
+		EnvVar:  "LOG_LEVEL",
+		Target:  &flagLogLevel,
+		Usage:   "Log verbosity, one of debug|info|warning|error.",
+	})
+	f.StringVar(&cli.StringVar{
+		Name:    "log-mode",
+		Example: "production",
+		Default: "production",
+		EnvVar:  "LOG_MODE",
+		Target:  &flagLogMode,
+		Usage:   "Log mode, one of dev|production.",
+	})
+}
 
 // NewFromEnv creates a new logger from env vars.
 // Set envPrefix+"LOG_LEVEL" to overwrite log level. Default log level is warning.
 // Set envPrefix+"LOG_MODE" to overwrite log mode. Default log mode is production.
 func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 	level := os.Getenv(envPrefix + "LOG_LEVEL")
-	logMode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
-	devMode := strings.HasPrefix(logMode, "dev")
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
+	return new(level, mode)
+}
+
+// NewFromFlags creates a new logger from flags registered via [RegisterFlags].
+// If the flags were not registered, the log level will default to warning and
+// the log mode will default to production.
+func NewFromFlags() *zap.SugaredLogger {
+	return new(flagLogLevel, flagLogMode)
+}
+
+func new(level, mode string) *zap.SugaredLogger {
+	devMode := strings.HasPrefix(mode, "dev")
 	var cfg zap.Config
 	if devMode {
 		cfg = zap.NewDevelopmentConfig()
@@ -77,7 +114,13 @@ func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 // LOG_LEVEL and LOG_MODE.
 func Default() *zap.SugaredLogger {
 	defaultLoggerOnce.Do(func() {
-		defaultLogger = NewFromEnv("")
+		if flagLogLevel == "" && flagLogMode == "" {
+			// If the flags were not initialized, fall back env vars to create the
+			// logger.
+			defaultLogger = NewFromEnv("")
+		} else {
+			defaultLogger = NewFromFlags()
+		}
 	})
 	return defaultLogger
 }
