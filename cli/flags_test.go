@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/abcxyz/pkg/logging"
 )
 
 func TestNewFlagSet(t *testing.T) {
@@ -88,6 +90,51 @@ func TestFlagSet_Help(t *testing.T) {
 	}
 	if got, want := fs.Help(), "my-int"; strings.Contains(got, want) {
 		t.Errorf("expected\n\n%s\n\nto not include %q", got, want)
+	}
+}
+
+func TestFlagSection_LoggerVar(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		flag         string
+		wantLogLevel string
+	}{
+		{
+			name:         "default_logger",
+			wantLogLevel: logging.Default().Level().String(),
+		},
+		{
+			name:         "explicit_log_level",
+			flag:         "--log-level=debug",
+			wantLogLevel: "debug",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			fs := NewFlagSet()
+			var logger logging.Logger
+			f := fs.NewSection("LOG OPTIONS")
+			f.LoggerVar(&logger)
+
+			if err := fs.Parse([]string{tc.flag}); err != nil {
+				t.Fatalf("FlagSet.Parse got unexpected err: %v", err)
+			}
+
+			if logger == nil {
+				t.Fatalf("Got unexpected nil logger")
+			}
+
+			if got, want := logger.Level().String(), tc.wantLogLevel; got != want {
+				t.Errorf("Logger level got=%v, want=%v", got, want)
+			}
+		})
 	}
 }
 

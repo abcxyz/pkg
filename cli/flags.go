@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/timeutil"
 	"github.com/kr/text"
 )
@@ -680,6 +681,31 @@ func (f *FlagSection) Uint64Var(i *Uint64Var) {
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
 		Target:  i.Target,
+		Parser:  parser,
+		Printer: printer,
+	})
+}
+
+// LoggerVar is a special flag that binds to a [logging.Logger].
+func (f *FlagSection) LoggerVar(l *logging.Logger) {
+	parser := func(s string) (logging.Logger, error) {
+		return logging.NewLogger(s), nil
+	}
+
+	printer := func(v logging.Logger) string {
+		return v.Level().CapitalString()
+	}
+
+	Flag(f, &Var[logging.Logger]{
+		Name:    "log-level",
+		Example: "warn",
+		Usage: `Configure the logging level/mode in format "level:mode". E.g. ` +
+			`"debug:dev" will set the log level to "debug" and log in dev mode. ` +
+			`"info" will set the log level to "info" and log in the default mode. ` +
+			`By default, the logger will log in production mode.`,
+		Default: logging.Default(),
+		EnvVar:  "LOG_LEVEL",
+		Target:  l,
 		Parser:  parser,
 		Printer: printer,
 	})
