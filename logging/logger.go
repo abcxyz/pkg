@@ -42,15 +42,40 @@ var (
 	defaultLoggerOnce sync.Once
 )
 
+// type MyCommand struct {
+// 	lf *logging.Factory
+// }
+
+// // Run
+//
+//	func (c *MyCommand) Run() error {
+//		logger := c.lf.NewLogger()
+//	}
+type Factory struct {
+	Level string
+	Mode  string
+}
+
+func (f *Factory) NewLogger() *zap.SugaredLogger {
+	return newLogger(f.Level, f.Mode)
+}
+
 // NewFromEnv creates a new logger from env vars.
 // Set envPrefix+"LOG_LEVEL" to overwrite log level. Default log level is warning.
 // Set envPrefix+"LOG_MODE" to overwrite log mode. Default log mode is production.
 func NewFromEnv(envPrefix string) *zap.SugaredLogger {
 	level := os.Getenv(envPrefix + "LOG_LEVEL")
-	logMode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
-	devMode := strings.HasPrefix(logMode, "dev")
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
+	return newLogger(level, mode)
+}
+
+func newLogger(level, mode string) *zap.SugaredLogger {
+	if level == "" {
+		level = "warn"
+	}
+	isDevMode := strings.HasPrefix(mode, "dev")
 	var cfg zap.Config
-	if devMode {
+	if isDevMode {
 		cfg = zap.NewDevelopmentConfig()
 		cfg.EncoderConfig = developmentEncoderConfig
 	} else {
