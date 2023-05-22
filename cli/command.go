@@ -32,7 +32,10 @@ import (
 )
 
 // isCompletionRequest returns true if the invocation is a completion request,
-// or false otherwise.
+// or false otherwise. These are environment variables read by
+// posener/complete/v2:
+//
+//	https://github.com/posener/complete/blob/3f9152130d1c1e72ef5b0091380bfbeb7fafecf5/complete.go#L61-L65
 var isCompletionRequest = os.Getenv("COMP_LINE") != "" ||
 	os.Getenv("COMP_INSTALL") != "" ||
 	os.Getenv("COMP_UNINSTALL") != ""
