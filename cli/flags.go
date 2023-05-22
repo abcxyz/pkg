@@ -27,6 +27,8 @@ import (
 
 	"github.com/abcxyz/pkg/timeutil"
 	"github.com/kr/text"
+	"github.com/posener/complete/v2"
+	"github.com/posener/complete/v2/predict"
 )
 
 const maxLineLength = 80
@@ -211,6 +213,11 @@ type Value interface {
 
 	// IsBoolFlag returns true if the flag accepts no arguments, false otherwise.
 	IsBoolFlag() bool
+
+	// Predictor returns a completion predictor. All flags have a default
+	// predictor, but they can be further customized by the developer when
+	// instantiating the flag.
+	Predictor() complete.Predictor
 }
 
 // ParserFunc is a function that parses a value into T, or returns an error.
@@ -233,8 +240,16 @@ type Var[T any] struct {
 	EnvVar  string
 	Target  *T
 
+	// Parser and Printer are the generic functions for converting string values
+	// to/from the target value. These are populated by the individual flag
+	// helpers.
 	Parser  ParserFunc[T]
 	Printer PrinterFunc[T]
+
+	// Predict is the completion predictor. If no predictor is defined, it
+	// defaults to predicting "something" for all flags except boolean flags.
+	// Callers are encouraged to customize the predictions.
+	Predict complete.Predictor
 
 	// Setter defines the function that sets the variable into the target. If nil,
 	// it uses a default setter which overwrites the entire value of the Target.
@@ -261,6 +276,15 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 	printer := i.Printer
 	if printer == nil {
 		panic("missing printer func")
+	}
+
+	predictor := i.Predict
+	if predictor == nil {
+		if i.IsBool {
+			predictor = predict.Nothing
+		} else {
+			predictor = predict.Something
+		}
 	}
 
 	setter := i.Setter
@@ -297,14 +321,15 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 	}
 
 	fv := &flagValue[T]{
-		target:  i.Target,
-		hidden:  i.Hidden,
-		isBool:  i.IsBool,
-		example: example,
-		parser:  parser,
-		printer: printer,
-		setter:  setter,
-		aliases: i.Aliases,
+		target:    i.Target,
+		hidden:    i.Hidden,
+		isBool:    i.IsBool,
+		example:   example,
+		parser:    parser,
+		printer:   printer,
+		predictor: predictor,
+		setter:    setter,
+		aliases:   i.Aliases,
 	}
 	f.flagNames = append(f.flagNames, i.Name)
 	f.flagSet.Var(fv, i.Name, usage)
@@ -324,10 +349,11 @@ type flagValue[T any] struct {
 	isBool  bool
 	example string
 
-	parser  ParserFunc[T]
-	printer PrinterFunc[T]
-	setter  SetterFunc[T]
-	aliases []string
+	parser    ParserFunc[T]
+	printer   PrinterFunc[T]
+	setter    SetterFunc[T]
+	predictor complete.Predictor
+	aliases   []string
 }
 
 func (f *flagValue[T]) Set(s string) error {
@@ -339,12 +365,13 @@ func (f *flagValue[T]) Set(s string) error {
 	return nil
 }
 
-func (f *flagValue[T]) Get() any          { return *f.target }
-func (f *flagValue[T]) Aliases() []string { return f.aliases }
-func (f *flagValue[T]) String() string    { return f.printer(*f.target) }
-func (f *flagValue[T]) Example() string   { return f.example }
-func (f *flagValue[T]) Hidden() bool      { return f.hidden }
-func (f *flagValue[T]) IsBoolFlag() bool  { return f.isBool }
+func (f *flagValue[T]) Get() any                      { return *f.target }
+func (f *flagValue[T]) Aliases() []string             { return f.aliases }
+func (f *flagValue[T]) String() string                { return f.printer(*f.target) }
+func (f *flagValue[T]) Example() string               { return f.example }
+func (f *flagValue[T]) Hidden() bool                  { return f.hidden }
+func (f *flagValue[T]) IsBoolFlag() bool              { return f.isBool }
+func (f *flagValue[T]) Predictor() complete.Predictor { return f.predictor }
 
 type BoolVar struct {
 	Name    string
@@ -354,6 +381,7 @@ type BoolVar struct {
 	Default bool
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *bool
 }
 
@@ -367,6 +395,7 @@ func (f *FlagSection) BoolVar(i *BoolVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  strconv.ParseBool,
 		Printer: strconv.FormatBool,
@@ -381,6 +410,7 @@ type DurationVar struct {
 	Default time.Duration
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *time.Duration
 }
 
@@ -393,6 +423,7 @@ func (f *FlagSection) DurationVar(i *DurationVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  time.ParseDuration,
 		Printer: timeutil.HumanDuration,
@@ -407,6 +438,7 @@ type Float64Var struct {
 	Default float64
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *float64
 }
 
@@ -417,6 +449,7 @@ func (f *FlagSection) Float64Var(i *Float64Var) {
 	printer := func(v float64) string {
 		return strconv.FormatFloat(v, 'e', -1, 64)
 	}
+
 	Flag(f, &Var[float64]{
 		Name:    i.Name,
 		Aliases: i.Aliases,
@@ -425,6 +458,7 @@ func (f *FlagSection) Float64Var(i *Float64Var) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -439,6 +473,7 @@ type IntVar struct {
 	Default int
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *int
 }
 
@@ -457,6 +492,7 @@ func (f *FlagSection) IntVar(i *IntVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -471,6 +507,7 @@ type Int64Var struct {
 	Default int64
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *int64
 }
 
@@ -486,6 +523,7 @@ func (f *FlagSection) Int64Var(i *Int64Var) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -500,6 +538,7 @@ type StringVar struct {
 	Default string
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *string
 }
 
@@ -515,6 +554,7 @@ func (f *FlagSection) StringVar(i *StringVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -529,6 +569,7 @@ type StringMapVar struct {
 	Default map[string]string
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *map[string]string
 }
 
@@ -570,6 +611,7 @@ func (f *FlagSection) StringMapVar(i *StringMapVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -585,6 +627,7 @@ type StringSliceVar struct {
 	Default []string
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *[]string
 }
 
@@ -617,6 +660,7 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -632,6 +676,7 @@ type UintVar struct {
 	Default uint
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *uint
 }
 
@@ -650,6 +695,7 @@ func (f *FlagSection) UintVar(i *UintVar) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
@@ -664,6 +710,7 @@ type Uint64Var struct {
 	Default uint64
 	Hidden  bool
 	EnvVar  string
+	Predict complete.Predictor
 	Target  *uint64
 }
 
@@ -679,6 +726,7 @@ func (f *FlagSection) Uint64Var(i *Uint64Var) {
 		Default: i.Default,
 		Hidden:  i.Hidden,
 		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,

@@ -27,7 +27,15 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	"github.com/posener/complete/v2"
+	"github.com/posener/complete/v2/predict"
 )
+
+// isCompletionRequest returns true if the invocation is a completion request,
+// or false otherwise.
+var isCompletionRequest = os.Getenv("COMP_LINE") != "" ||
+	os.Getenv("COMP_INSTALL") != "" ||
+	os.Getenv("COMP_UNINSTALL") != ""
 
 // Command is the interface for a command or subcommand. Most of these functions
 // have default implementations on [BaseCommand].
@@ -80,6 +88,13 @@ type Command interface {
 	// command, and returns them. This is most useful for testing where callers
 	// want to simulate inputs or assert certain command outputs.
 	Pipe() (stdin, stdout, stderr *bytes.Buffer)
+}
+
+// ArgPredictor is an optional interface that [Command] can implement to declare
+// predictions for their arguments. By default, commands predict nothing for
+// arguments.
+type ArgPredictor interface {
+	PredictArgs() complete.Predictor
 }
 
 // CommandFactory returns a new instance of a command. This returns a function
@@ -159,6 +174,14 @@ func (r *RootCommand) Help() string {
 
 // Run executes the command and prints help output or delegates to a subcommand.
 func (r *RootCommand) Run(ctx context.Context, args []string) error {
+	// This can be a very expensive operation, since it requires instantiating all
+	// commands. Therefore we only do this when we are certain the user is tabbing
+	// for autocompletions.
+	if isCompletionRequest {
+		completer := buildCompleteCommands(r)
+		completer.Complete(r.Name)
+	}
+
 	name, args := extractCommandAndArgs(args)
 
 	// Short-circuit top-level help.
@@ -323,4 +346,63 @@ func (c *BaseCommand) Pipe() (stdin, stdout, stderr *bytes.Buffer) {
 	c.stdout = stdout
 	c.stderr = stderr
 	return
+}
+
+// buildCompleteCommands maps a [Command] to its flag and argument completion. If
+// the given command is a [RootCommand], it recursively builds the entire
+// complete tree.
+//
+// WARNING: This function is expensive as it requires instantiating the entire
+// command tree (including all subcommands), which is inherently a recursive
+// operation. The function makes no attempt to detect cycles.
+func buildCompleteCommands(cmd Command) *complete.Command {
+	completer := &complete.Command{
+		Sub:   make(map[string]*complete.Command),
+		Flags: make(map[string]complete.Predictor),
+		Args:  predict.Nothing,
+	}
+
+	if typ, ok := cmd.(ArgPredictor); ok {
+		completer.Args = typ.PredictArgs()
+	}
+
+	f := cmd.Flags()
+	if f != nil {
+		f.VisitAll(func(f *flag.Flag) {
+			typ, ok := f.Value.(Value)
+			if !ok {
+				panic(fmt.Sprintf("flag is incorrect type %T", f.Value))
+			}
+
+			// Do not process hidden flags.
+			if typ.Hidden() {
+				return
+			}
+
+			// Configure the predictor.
+			completer.Flags[f.Name] = typ.Predictor()
+
+			// Map any aliases to the flag predictor as well.
+			for _, v := range typ.Aliases() {
+				completer.Flags[v] = completer.Flags[f.Name]
+			}
+		})
+	}
+
+	// If this is a root command, recurse and build the child completions.
+	r, ok := cmd.(*RootCommand)
+	if ok {
+		for name, fn := range r.Commands {
+			instance := fn()
+
+			// Ignore hidden commands from completions.
+			if instance.Hidden() {
+				continue
+			}
+
+			completer.Sub[name] = buildCompleteCommands(instance)
+		}
+	}
+
+	return completer
 }
