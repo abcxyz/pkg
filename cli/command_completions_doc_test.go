@@ -61,7 +61,7 @@ func (c *SingCommand) Flags() *cli.FlagSet {
 		Example: "Itsy Bitsy Spider",
 		Target:  &c.flagSong,
 		Predict: predict.Set{"Happy Birthday", "Twinkly Twinkle Little Star"},
-		Usage:   "Numeric value by which to increment between each number.",
+		Usage:   "Name of the song to play.",
 	})
 
 	f.DurationVar(&cli.DurationVar{
@@ -81,7 +81,7 @@ func (c *SingCommand) Flags() *cli.FlagSet {
 		Predict: complete.PredictFunc(func(prefix string) []string {
 			return []string{strconv.FormatInt(time.Now().Unix(), 10)}
 		}),
-		Usage: "Duration to fade audio tracks.",
+		Usage: "Curring timestamp, in unix seconds.",
 	})
 
 	return set
@@ -107,7 +107,7 @@ func Example_completions() {
 	// This will automatically install shell completions. To uninstall
 	// completions, instruct users to run:
 	//
-	//     COMP_UNINSTALL=1 COMP_YES my-cli
+	//     COMP_UNINSTALL=1 COMP_YES=1 my-cli
 	//
 	// This will automatically uninstall the completions.
 	//

@@ -247,8 +247,9 @@ type Var[T any] struct {
 	Printer PrinterFunc[T]
 
 	// Predict is the completion predictor. If no predictor is defined, it
-	// defaults to predicting "something" for all flags except boolean flags.
-	// Callers are encouraged to customize the predictions.
+	// defaults to predicting something (waiting for a value) for all flags except
+	// boolean flags (which have no value). Callers are encouraged to customize
+	// the predictions.
 	Predict complete.Predictor
 
 	// Setter defines the function that sets the variable into the target. If nil,
