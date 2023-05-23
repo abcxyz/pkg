@@ -300,8 +300,8 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 		}
 	}
 
-	// Set a default value.
-	*i.Target = initial
+	// Use the setter to set the default value.
+	setter(i.Target, initial)
 
 	// Compute a sane default if one was not given.
 	example := i.Example
@@ -731,6 +731,48 @@ func (f *FlagSection) Uint64Var(i *Uint64Var) {
 		Target:  i.Target,
 		Parser:  parser,
 		Printer: printer,
+	})
+}
+
+// LoggerConfigurer is the interface to configure a logger.
+type LoggerConfigurer interface {
+	SetLevel(level string)
+	SetMode(mode string)
+}
+
+// LoggerVar binds common logging flags to a [LoggerConfigurer].
+func (f *FlagSection) LoggerVar(i LoggerConfigurer) {
+	parser := func(s string) (string, error) { return s, nil }
+	printer := func(v string) string { return v }
+	var dummy string
+
+	Flag(f, &Var[string]{
+		Name:    "log-level",
+		Usage:   "To specify the log level with one of debug|info|warn|error|fatal",
+		Example: "info",
+		Default: "warn",
+		EnvVar:  "LOG_LEVEL",
+		Predict: predict.Set{"debug", "info", "warn", "error", "fatal"},
+		Target:  &dummy,
+		Parser:  parser,
+		Printer: printer,
+		Setter: func(cur *string, val string) {
+			i.SetLevel(val)
+		},
+	})
+	Flag(f, &Var[string]{
+		Name:    "log-mode",
+		Usage:   "To specify the log mode with one of dev|production",
+		Example: "production",
+		Default: "production",
+		EnvVar:  "LOG_MODE",
+		Predict: predict.Set{"dev", "production"},
+		Target:  &dummy,
+		Parser:  parser,
+		Printer: printer,
+		Setter: func(cur *string, val string) {
+			i.SetMode(val)
+		},
 	})
 }
 

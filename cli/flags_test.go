@@ -20,6 +20,9 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/abcxyz/pkg/logging"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestNewFlagSet(t *testing.T) {
@@ -88,6 +91,51 @@ func TestFlagSet_Help(t *testing.T) {
 	}
 	if got, want := fs.Help(), "my-int"; strings.Contains(got, want) {
 		t.Errorf("expected\n\n%s\n\nto not include %q", got, want)
+	}
+}
+
+func TestLoggerVar(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		args        []string
+		wantFactory *logging.Factory
+	}{
+		{
+			name: "default",
+			wantFactory: &logging.Factory{
+				Level: "warn",
+				Mode:  "production",
+			},
+		},
+		{
+			name: "overwrite",
+			args: []string{"--log-level=debug", "--log-mode=dev"},
+			wantFactory: &logging.Factory{
+				Level: "debug",
+				Mode:  "dev",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotFactory := &logging.Factory{}
+			fs := NewFlagSet()
+			fs.NewSection("LOGGING OPTIONS").LoggerVar(gotFactory)
+			if err := fs.Parse(tc.args); err != nil {
+				t.Fatalf("FlagSet.Parse got unexpected error:  %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantFactory, gotFactory); diff != "" {
+				t.Errorf("Logger factory (-want,+got):\n%s", diff)
+			}
+		})
 	}
 }
 

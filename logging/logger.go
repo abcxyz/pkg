@@ -42,21 +42,23 @@ var (
 	defaultLoggerOnce sync.Once
 )
 
-// type MyCommand struct {
-// 	lf *logging.Factory
-// }
-
-// // Run
-//
-//	func (c *MyCommand) Run() error {
-//		logger := c.lf.NewLogger()
-//	}
+// Factory is a factory to create loggers.
 type Factory struct {
-	Level string
-	Mode  string
+	Level, Mode string
 }
 
-func (f *Factory) NewLogger() *zap.SugaredLogger {
+// SetLevel sets the level for the logger factory.
+func (f *Factory) SetLevel(level string) {
+	f.Level = level
+}
+
+// SetMode sets the mode for the logger factory.
+func (f *Factory) SetMode(mode string) {
+	f.Mode = mode
+}
+
+// New creates a new logger.
+func (f *Factory) New() *zap.SugaredLogger {
 	return newLogger(f.Level, f.Mode)
 }
 
@@ -74,6 +76,7 @@ func newLogger(level, mode string) *zap.SugaredLogger {
 		level = "warn"
 	}
 	isDevMode := strings.HasPrefix(mode, "dev")
+
 	var cfg zap.Config
 	if isDevMode {
 		cfg = zap.NewDevelopmentConfig()

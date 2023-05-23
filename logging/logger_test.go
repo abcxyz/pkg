@@ -43,3 +43,61 @@ func checkFromContext(ctx context.Context, tb testing.TB, want *zap.SugaredLogge
 		tb.Errorf("unexpected logger in context. got: %v, want: %v", got, want)
 	}
 }
+
+func TestDefault_Warn(t *testing.T) {
+	t.Parallel()
+
+	logger := Default()
+	if got, want := logger.Level().CapitalString(), "WARN"; got != want {
+		t.Errorf("Default log level got=%v, want=%v", got, want)
+	}
+}
+
+func TestNewFromEnv(t *testing.T) { //nolint: paralleltest // Need to use t.Setenv
+	t.Setenv("TEST_NEWFROMENV_LOG_LEVEL", "debug")
+	logger := NewFromEnv("TEST_NEWFROMENV_")
+	if logger == nil {
+		t.Errorf("NewFromEnv got unexpected nil logger")
+	}
+	if got, want := zap.DebugLevel, logger.Level(); got != want {
+		t.Errorf("NewFromEnv logger level got=%v, want=%v", got, want)
+	}
+}
+
+func TestFactory(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		level     string
+		wantLevel string
+	}{
+		{
+			name:      "default",
+			wantLevel: "warn",
+		},
+		{
+			name:      "overwrite_level",
+			level:     "debug",
+			wantLevel: "debug",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			f := &Factory{}
+			if tc.level != "" {
+				f.SetLevel(tc.level)
+			}
+
+			logger := f.New()
+			if got, want := logger.Level().String(), tc.wantLevel; got != want {
+				t.Errorf("logger level got=%v, want=%v", got, want)
+			}
+		})
+	}
+}
