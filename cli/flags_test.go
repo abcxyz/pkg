@@ -16,10 +16,13 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestNewFlagSet(t *testing.T) {
@@ -89,6 +92,68 @@ func TestFlagSet_Help(t *testing.T) {
 	if got, want := fs.Help(), "my-int"; strings.Contains(got, want) {
 		t.Errorf("expected\n\n%s\n\nto not include %q", got, want)
 	}
+}
+
+func TestFlagSet_Default(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no_setter", func(t *testing.T) {
+		t.Parallel()
+
+		var got []string
+		want := []string{"foo", "bar"}
+		fs := NewFlagSet()
+		sec := fs.NewSection("sec")
+		sec.StringSliceVar(&StringSliceVar{
+			Name:    "string-slice",
+			Usage:   "Give a string slice.",
+			Default: want,
+			Target:  &got,
+		})
+
+		if err := fs.Parse([]string{}); err != nil {
+			t.Fatalf("FlagSet.Parse got unexpected err: %v", err)
+		}
+
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("string slice value from default (-want,+got):\n%s", diff)
+		}
+	})
+
+	t.Run("with_setter", func(t *testing.T) {
+		t.Parallel()
+
+		got := []string{"abcxyz"}
+		want := []string{"abcxyz", "foo", "bar"}
+		fs := NewFlagSet()
+		sec := fs.NewSection("sec")
+
+		Flag(sec, &Var[[]string]{
+			Name:    "string-slice",
+			Usage:   "Give a string slice.",
+			Default: []string{"foo", "bar"},
+			Target:  &got,
+			Parser: func(s string) ([]string, error) {
+				return strings.Split(s, ","), nil
+			},
+			Printer: func(cur []string) string {
+				return fmt.Sprint(cur)
+			},
+			Setter: func(cur *[]string, val []string) {
+				// We *append* the default value to the target rather than *assign* so
+				// it's different from the default setter logic.
+				*cur = append(*cur, val...)
+			},
+		})
+
+		if err := fs.Parse([]string{}); err != nil {
+			t.Fatalf("FlagSet.Parse got unexpected err: %v", err)
+		}
+
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("string slice value from default (-want,+got):\n%s", diff)
+		}
+	})
 }
 
 func ptrTo[T any](v T) *T {
