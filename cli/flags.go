@@ -669,6 +669,41 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	})
 }
 
+type TimeVar struct {
+	Name    string
+	Aliases []string
+	Usage   string
+	Example string
+	Default time.Time
+	Hidden  bool
+	EnvVar  string
+	Predict complete.Predictor
+	Target  *time.Time
+}
+
+func (f *FlagSection) TimeVar(layout string, i *TimeVar) {
+	parser := func(s string) (time.Time, error) {
+		return time.Parse(layout, s)
+	}
+	printer := func(v time.Time) string {
+		return v.Format(layout)
+	}
+
+	Flag(f, &Var[time.Time]{
+		Name:    i.Name,
+		Aliases: i.Aliases,
+		Usage:   i.Usage,
+		Example: i.Example,
+		Default: i.Default,
+		Hidden:  i.Hidden,
+		EnvVar:  i.EnvVar,
+		Predict: i.Predict,
+		Target:  i.Target,
+		Parser:  parser,
+		Printer: printer,
+	})
+}
+
 type UintVar struct {
 	Name    string
 	Aliases []string
