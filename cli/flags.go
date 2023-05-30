@@ -301,7 +301,7 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 	}
 
 	// Set a default value.
-	*i.Target = initial
+	setter(i.Target, initial)
 
 	// Compute a sane default if one was not given.
 	example := i.Example
