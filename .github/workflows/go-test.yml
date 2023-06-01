@@ -42,7 +42,7 @@ jobs:
     runs-on: '${{ inputs.os }}'
     steps:
       - name: 'Configure environment variables'
-        if: ${{ inputs.env != '{}' }}
+        if: '${{ inputs.env != ''{}'' }}'
         run: |-
           jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> $GITHUB_ENV
 

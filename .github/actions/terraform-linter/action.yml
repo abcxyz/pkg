@@ -21,18 +21,18 @@ inputs:
 runs:
   using: 'composite'
   steps:
-      - id: 'checkout-pkg'
-        uses: 'actions/checkout@v3'
-        with: 
-          repository: 'abcxyz/pkg'
-          path: 'abcxyz-pkg'
+    - id: 'checkout-pkg'
+      uses: 'actions/checkout@v3'
+      with:
+        repository: 'abcxyz/pkg'
+        path: 'abcxyz-pkg'
 
-      - id: 'setup-go'
-        uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
-        with:
-          go-version: '1.20'
+    - id: 'setup-go'
+      uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
+      with:
+        go-version: '1.20'
 
-      - id: 'run-linter'
-        shell: 'bash'
-        working-directory: 'abcxyz-pkg'
-        run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
+    - id: 'run-linter'
+      shell: 'bash'
+      working-directory: 'abcxyz-pkg'
+      run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
