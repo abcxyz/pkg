@@ -62,8 +62,6 @@ rules:
 
   key-duplicates: {}
 
-  locale: 'en_US.UTF-8'
-
   new-line-at-end-of-file: {}
 
   new-lines:
