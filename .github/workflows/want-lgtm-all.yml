@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   want-lgtm-all:
-    if: ${{ contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name) }}
+    if: '${{ contains(fromJSON(''["pull_request", "pull_request_review"]''), github.event_name) }}'
     runs-on: 'ubuntu-latest'
     steps:
       - id: 'want-lgtm'
@@ -53,7 +53,7 @@ jobs:
 
       - id: 'validate-reviews'
         name: 'Validate Reviews'
-        if: ${{ steps.want-lgtm.outputs.result ==  'true' }}
+        if: '${{ steps.want-lgtm.outputs.result == ''true'' }}'
         uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
         with:
           retries: 3
@@ -138,7 +138,7 @@ jobs:
       # status checks by github
       - id: 'rerun-status-checks'
         name: 'Re-run Status Checks'
-        if: ${{ steps.want-lgtm.outputs.result ==  'true' && github.event_name == 'pull_request_review' }}
+        if: '${{ steps.want-lgtm.outputs.result == ''true'' && github.event_name == ''pull_request_review'' }}'
         uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
         with:
           retries: 3

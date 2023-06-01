@@ -60,7 +60,7 @@ jobs:
         run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
 
       - name: 'Initialize and validate sub directories'
-        if: ${{ inputs.walk_dirs }}
+        if: '${{ inputs.walk_dirs }}'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-
@@ -78,7 +78,7 @@ jobs:
           done
 
       - name: 'Initialize and validate'
-        if: ${{ !inputs.walk_dirs }}
+        if: '${{ !inputs.walk_dirs }}'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
         run: |-

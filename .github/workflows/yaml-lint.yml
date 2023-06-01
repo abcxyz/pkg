@@ -1,0 +1,61 @@
+name: 'yaml-lint'
+
+on:
+  workflow_call:
+    inputs:
+      yamllint_url:
+        description: 'The URL to a yamllint config file. This is only used if no file is found in the local directory.'
+        type: 'string'
+        default: 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml'
+      target:
+        description: 'File or directory containing YAML files to lint.'
+        type: 'string'
+        default: '.'
+
+jobs:
+  # yamllint runs yamllint. If a .yamllint.yml or .yamllint.yaml file exists at
+  # the root of the repository, it uses those custom settings. If no such file
+  # exists, it uses a selection of sane defaults.
+  #
+  # Do not change this job name. Job names are used as identifiers in status
+  # checks, and changing this name will cause status checks to fail.
+  yamllint:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Go'
+        uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
+        with:
+          go-version: '${{ inputs.go_version }}'
+
+      - name: 'Lint (download default configuration)'
+        id: 'load-default-config'
+        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
+        run: |-
+          # Create a unique output file outside of the checkout.
+          YAMLLINT_YAML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.yamllint.yml"
+
+          # Download the file, passing in authentication to get a higher rate
+          # limit: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#rate-limits-for-requests-from-github-actions
+          curl "${{ inputs.yamllint_url }}" \
+            --silent \
+            --fail \
+            --location \
+            --header "Authorization: Token ${{ github.token }}" \
+            --output "${YAMLLINT_YAML}"
+
+          # Save the result to an output.
+          echo "::notice::Wrote configuration file to ${YAMLLINT_YAML}"
+          echo "output-file=${YAMLLINT_YAML}" >> "${GITHUB_OUTPUT}"
+
+      - name: 'Lint (default configuration)'
+        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
+        run: |-
+          yamllint -c "${{ steps.load-default-config.outputs.output-file }}"
+
+      - name: 'Lint (custom configuration)'
+        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') != '''' }}'
+        run: |-
+          yamllint
