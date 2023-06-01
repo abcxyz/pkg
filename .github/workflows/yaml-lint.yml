@@ -48,9 +48,9 @@ jobs:
       - name: 'Lint (default configuration)'
         if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
         run: |-
-          yamllint -c "${{ steps.load-default-config.outputs.output-file }}"
+          yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
 
       - name: 'Lint (custom configuration)'
         if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') != '''' }}'
         run: |-
-          yamllint
+          yamllint ${{ inputs.target }}
