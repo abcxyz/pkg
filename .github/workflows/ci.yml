@@ -30,4 +30,4 @@ jobs:
       directory: 'terraform'
 
   lint-yaml:
-    uses: '.github/workflows/yaml-lint.yml'
+    uses: './.github/workflows/yaml-lint.yml'
