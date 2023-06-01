@@ -25,11 +25,6 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b' # ratchet:actions/checkout@v3
 
-      - name: 'Setup Go'
-        uses: 'actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568' # ratchet:actions/setup-go@v3
-        with:
-          go-version: '${{ inputs.go_version }}'
-
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
         if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
