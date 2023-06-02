@@ -7,6 +7,10 @@ on:
         description: 'The URL to a yamllint config file. This is only used if no file is found in the local directory.'
         type: 'string'
         default: 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml'
+      yamllint_version:
+        description: 'Version of yamllint linter to use'
+        type: 'string'
+        default: '1.32.0'
       target:
         description: 'File or directory containing YAML files to lint.'
         type: 'string'
@@ -24,6 +28,13 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b' # ratchet:actions/checkout@v3
+
+      - name: 'Setup Python'
+        uses: 'actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0' # ratchet:actions/setup-python@v4.6.1
+
+      - name: 'Install yamllint'
+        run: |-
+          pip install --user yamllint==${{ inputs.yamllint_version }}
 
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
@@ -48,9 +59,9 @@ jobs:
       - name: 'Lint (default configuration)'
         if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
         run: |-
-          yamllint -c "${{ steps.load-default-config.outputs.output-file }}"
+          yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
 
       - name: 'Lint (custom configuration)'
         if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') != '''' }}'
         run: |-
-          yamllint
+          yamllint ${{ inputs.target }}
