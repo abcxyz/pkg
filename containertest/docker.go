@@ -86,9 +86,10 @@ func startContainer(conf *config) (*ConnInfo, error) {
 func runContainer(conf *config, pool *dockertest.Pool) (*dockertest.Resource, error) {
 	// pulls an image, creates a container based on it and runs it
 	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: conf.service.ImageRepository(),
-		Tag:        conf.service.ImageTag(),
-		Env:        conf.service.Environment(),
+		Repository:   conf.service.ImageRepository(),
+		Tag:          conf.service.ImageTag(),
+		Env:          conf.service.Environment(),
+		ExposedPorts: conf.service.StartupPorts(),
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true // remove storage after container exits
 		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
