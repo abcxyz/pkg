@@ -39,7 +39,7 @@
 //
 //		client2 , err := newClient()
 //		if err != nil {
-//			return closer, err
+//			return closer, err // client1 will still be closed in this case.
 //		}
 //		closer.Append(client2.Close)
 //
