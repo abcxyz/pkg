@@ -38,7 +38,14 @@ type Closer struct {
 
 // Append adds the given closer functions. It handles void and error signatures.
 // Other signatures should use an anonymous function to match an expected
-// signature.
+// signature. This function will always return an instantiated [Closer], even if
+// the first argument is nil. Although not recommend, the following is valid for
+// constructing an empty [Closer]:
+//
+//	closer := append(nil, nil)
+//
+// The much like the built-in [append] function, the returned [Closer] is not
+// guaranteed to refer to the same memory as the provided [Closer] argument.
 func Append[T Func](c *Closer, fns ...T) *Closer {
 	if c == nil {
 		c = new(Closer)
