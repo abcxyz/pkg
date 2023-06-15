@@ -38,8 +38,8 @@ func DiffErrString(got error, want string) string {
 		out := fmt.Sprintf("got error %q but want an error containing %q", msg, want)
 
 		// For long strings that will be hard to visually diff, include a diff.
-		const diffLen = 20 // chosen arbitrarily
-		if len(want) >= diffLen && len(msg) >= diffLen || strings.Contains(want, "\n") && strings.Contains(msg, "\n") {
+		const msgLen = 20 // chosen arbitrarily
+		if len(want) >= msgLen && len(msg) >= msgLen || strings.Contains(want, "\n") && strings.Contains(msg, "\n") {
 			out += fmt.Sprintf("; diff was (-got,+want):\n%s", cmp.Diff(msg, want))
 		}
 		return out
