@@ -38,6 +38,11 @@ func DiffErrString(got error, want string) string {
 		out := fmt.Sprintf("got error %q but want an error containing %q", msg, want)
 
 		// For long strings that will be hard to visually diff, include a diff.
+		// Explanation of the &&'s and ||'s: if we're diffing a long error
+		// message against a short one, a detailed diff isn't needed. The
+		// difference will be obvious to the eye, and any extra message will
+		// just be clutter. So only show the extra diff if the messages are both
+		// long, or both multi-line.
 		const msgLen = 20 // chosen arbitrarily
 		if len(want) >= msgLen && len(msg) >= msgLen || strings.Contains(want, "\n") && strings.Contains(msg, "\n") {
 			out += fmt.Sprintf("; diff was (-got,+want):\n%s", cmp.Diff(msg, want))
