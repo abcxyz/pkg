@@ -44,7 +44,9 @@ func DiffErrString(got error, want string) string {
 		// just be clutter. So only show the extra diff if the messages are both
 		// long, or both multi-line.
 		const msgLen = 20 // chosen arbitrarily
-		if len(want) >= msgLen && len(msg) >= msgLen || strings.Contains(want, "\n") && strings.Contains(msg, "\n") {
+		bothAreLong := len(want) >= msgLen && len(msg) >= msgLen
+		bothAreMultiline := strings.Contains(want, "\n") && strings.Contains(msg, "\n")
+		if bothAreLong || bothAreMultiline {
 			out += fmt.Sprintf("; diff was (-got,+want):\n%s", cmp.Diff(msg, want))
 		}
 		return out
