@@ -18,6 +18,8 @@ package testutil
 import (
 	"fmt"
 	"strings"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // DiffErrString returns an empty diff string if the 'got' error message contains the 'want' string.
@@ -33,7 +35,21 @@ func DiffErrString(got error, want string) string {
 		return fmt.Sprintf("got error <nil> but want an error containing %q", want)
 	}
 	if msg := got.Error(); !strings.Contains(msg, want) {
-		return fmt.Sprintf("got error %q but want an error containing %q", msg, want)
+		out := fmt.Sprintf("got error %q but want an error containing %q", msg, want)
+
+		// For long strings that will be hard to visually diff, include a diff.
+		// Explanation of the &&'s and ||'s: if we're diffing a long error
+		// message against a short one, a detailed diff isn't needed. The
+		// difference will be obvious to the eye, and any extra message will
+		// just be clutter. So only show the extra diff if the messages are both
+		// long, or both multi-line.
+		const msgLen = 20 // chosen arbitrarily
+		bothAreLong := len(want) >= msgLen && len(msg) >= msgLen
+		bothAreMultiline := strings.Contains(want, "\n") && strings.Contains(msg, "\n")
+		if bothAreLong || bothAreMultiline {
+			out += fmt.Sprintf("; diff was (-got,+want):\n%s", cmp.Diff(msg, want))
+		}
+		return out
 	}
 	return ""
 }

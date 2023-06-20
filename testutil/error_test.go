@@ -16,6 +16,7 @@ package testutil
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,67 @@ func TestDiffErrString(t *testing.T) {
 			gotDiff := DiffErrString(tc.err, tc.msg)
 			if gotDiff != tc.wantDiff {
 				t.Errorf("DiffErrString(%v, %v) got=%q, want=%q", tc.err, tc.msg, gotDiff, tc.wantDiff)
+			}
+		})
+	}
+}
+
+func TestDiffErrString_LongDiff(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		msg      string
+		err      error
+		wantLong bool
+	}{
+		{
+			name:     "long_errors_with_newlines",
+			msg:      "this is a longish error message\nit has a few lines\nand will be hard to diff visually",
+			err:      fmt.Errorf("this is ALSO a longish error message\nit has a few lines\nand will be hard to diff visually"),
+			wantLong: true,
+		},
+		{
+			name:     "short_error_with_newlines",
+			msg:      "a\nb",
+			err:      fmt.Errorf("a\nc"),
+			wantLong: true,
+		},
+		{
+			name:     "long_error_without_newlines",
+			msg:      "one two three four five six",
+			err:      fmt.Errorf("one two three four five SSSIIIIXX"),
+			wantLong: true,
+		},
+		{
+			name:     "short_error",
+			msg:      "blue",
+			err:      fmt.Errorf("red"),
+			wantLong: false,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gotDiff := DiffErrString(tc.err, tc.msg)
+
+			// We don't try to assert the full output of cmp.Diff. It has
+			// weirdness like non-breaking spaces that aren't worth the trouble
+			// of writing a test for.
+			gotLong := strings.Contains(gotDiff, "; diff was (-got,+want)")
+
+			longnessStr := func(isLong bool) string {
+				if isLong {
+					return "long"
+				}
+				return "short"
+			}
+
+			if gotLong != tc.wantLong {
+				t.Errorf("got a %s diff but wanted a %s diff", longnessStr(gotLong), longnessStr(tc.wantLong))
 			}
 		})
 	}
