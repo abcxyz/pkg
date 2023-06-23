@@ -30,7 +30,7 @@ inputs:
     required: false
     default: 'false'
   enforced_directories:
-    description: 'only used when require_env=true; rather than looking for an env file in every immediate subdirectory, just require it in this set of directories.'
+    description: 'only used when require_env=true; rather than looking for an env file in all working-directories, just require it in working-directories belonging to this set of parent directories.'
     required: false
     default: ''
 
