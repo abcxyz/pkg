@@ -49,6 +49,12 @@ runs:
           # Filter out comment lines, empty lines, and lines with only whitespace.
           grep -v '^[[:space:]]*#\|^$\|^\s*$' $ENV_FILE >> ${GITHUB_ENV}
         elif [ "$REQUIRE_ENV" == true ]; then
+
+          if [ "$ENFORCED_DIRECTORIES" == "" ]; then
+            # Set to top-level dir of respository to enforce on all subdirectories.
+            ENFORCED_DIRECTORIES="$GITHUB_WORKSPACE"
+          fi
+
           # Replace , with space to make values iterable.
           for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
 
