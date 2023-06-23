@@ -45,16 +45,15 @@ runs:
         REQUIRE_ENV: '${{ inputs.require_env }}'
         ENFORCED_DIRECTORIES: '${{ inputs.enforced_directories }}'
       run: |-
-        echo $GITHUB_WORKSPACE
-        echo $PWD
         if [ -f "$ENV_FILE" ]; then
           # Filter out comment lines, empty lines, and lines with only whitespace.
           grep -v '^[[:space:]]*#\|^$\|^\s*$' $ENV_FILE >> ${GITHUB_ENV}
         elif [ "$REQUIRE_ENV" == true ]; then
           # Replace , with space to make values iterable.
           for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
-            echo $REQUIRED_DIR
-            if [[ "$REQUIRED_DIR"* == $PWD ]]; then
+
+            ENFORCED_PATH="${GITHUB_WORKSPACE}/${REQUIRED_DIR}"
+            if [[ "$ENFORCED_PATH" == $PWD ]]; then
               echo "::error::env file is missing in $PWD"
               exit 1
             fi
