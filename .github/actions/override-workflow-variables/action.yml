@@ -26,11 +26,11 @@ inputs:
     required: false
     default: '.env'
   require_env:
-    description: 'Require the use of an env file for overriding variables.'
+    description: 'fail if the env file isn't found; unless enforced_directories is set, every working_directory must have an .env file'
     required: false
     default: 'false'
   enforced_directories:
-    description: 'A CSV string of directories to require the use of an env file for overriding variables.'
+    description: 'only used when require_env=true; rather than looking for an env file in every immediate subdirectory, just require it in this set of directories.'
     required: false
     default: ''
 
@@ -51,7 +51,7 @@ runs:
         elif [ "$REQUIRE_ENV" == true ]; then
 
           if [ "$ENFORCED_DIRECTORIES" == "" ]; then
-            # Set to top-level dir of respository to enforce on all subdirectories.
+            # Set to top-level dir of respository to enforce on all working-directories.
             ENFORCED_DIRECTORIES="$GITHUB_WORKSPACE"
           fi
 
