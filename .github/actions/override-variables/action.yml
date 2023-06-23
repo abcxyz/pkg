@@ -50,9 +50,14 @@ runs:
           grep -v '^[[:space:]]*#\|^$\|^\s*$' $ENV_FILE >> ${GITHUB_ENV}
         elif [ "$REQUIRE_ENV" == true ]; then
           # Replace , with space to make values iterable.
+
+          echo $ENFORCED_DIRECTORIES
+          echo ${ENFORCED_DIRECTORIES//,/ }
           for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
 
             ENFORCED_PATH="${GITHUB_WORKSPACE}/${REQUIRED_DIR}"
+            echo $ENFORCED_PATH
+            echo $PWD
             if [[ "$ENFORCED_PATH" == $PWD ]]; then
               echo "::error::env file is missing in $PWD"
               exit 1
