@@ -30,7 +30,7 @@ inputs:
     required: false
     default: 'false'
   enforced_directories:
-    description: 'The directory to require the use of an env file for overriding variables.'
+    description: 'A CSV string of directories to require the use of an env file for overriding variables.'
     required: false
     default: ''
 
