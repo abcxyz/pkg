@@ -53,6 +53,7 @@ runs:
           for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
 
             ENFORCED_PATH="${GITHUB_WORKSPACE}/${REQUIRED_DIR}"
+            # Fail if the current directory is subdirectory of an enforced directory.
             if [[ "$PWD" = "$ENFORCED_PATH"* ]]; then
               echo "::error::env file is missing in $PWD"
               exit 1
