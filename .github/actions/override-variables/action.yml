@@ -57,6 +57,6 @@ runs:
             if [[ "$REQUIRED_DIR"* == $PWD ]]; then
               echo "::error::env file is missing in $PWD"
               exit 1
-            if
+            fi
           done
         fi
