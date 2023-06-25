@@ -23,8 +23,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete/v2"
@@ -66,8 +68,10 @@ type Command interface {
 	// Prompt provides a mechanism for asking for user input. It reads from
 	// [Stdin]. If there's an input stream (e.g. a pipe), it will read the pipe.
 	// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
-	// no pipe and the terminal is not a tty.
-	Prompt(msg string) (string, error)
+	// no pipe and the terminal is not a tty. If a default value is provided and the
+	// user entered an empty string, the default value will be used instead, otherwise
+	// it returns the empty string.
+	Prompt(ctx context.Context, msg string, defaultValue *string) (string, error)
 
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
 	Stdout() io.Writer
@@ -274,19 +278,41 @@ func (c *BaseCommand) Hidden() bool {
 
 // Prompt prompts the user for a value. If stdin is a tty, it prompts. Otherwise
 // it reads from the reader.
-func (c *BaseCommand) Prompt(msg string) (string, error) {
-	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
+func (c *BaseCommand) Prompt(ctx context.Context, msg string, defaultValue *string) (string, error) {
+	// guarantee Prompt is cancelable with SIGTERM and SIGINT
+	ctx, _ = signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 
-	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprint(c.Stdout(), msg)
+	resultChan := make(chan string)
+	errorChan := make(chan error)
+
+	go func() {
+		scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
+
+		if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
+			fmt.Fprint(c.Stdout(), msg)
+		}
+
+		scanner.Scan()
+
+		if err := scanner.Err(); err != nil {
+			errorChan <- fmt.Errorf("failed to read stdin: %w", err)
+		}
+
+		if defaultValue != nil && strings.TrimSpace(scanner.Text()) == "" {
+			resultChan <- *defaultValue
+		}
+
+		resultChan <- scanner.Text()
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case err := <-errorChan:
+		return "", err
+	case result := <-resultChan:
+		return result, nil
 	}
-
-	scanner.Scan()
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("failed to read stdin: %w", err)
-	}
-	return scanner.Text(), nil
 }
 
 // Outf is a shortcut to write to [BaseCommand.Stdout].

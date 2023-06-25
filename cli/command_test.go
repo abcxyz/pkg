@@ -269,6 +269,120 @@ func TestRootCommand_Run(t *testing.T) {
 	}
 }
 
+func TestRootCommand_Prompt_Values(t *testing.T) {
+	t.Parallel()
+
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+
+	rootCmd := func() Command {
+		return &RootCommand{}
+	}
+
+	defaultValue := "default"
+
+	cases := []struct {
+		name         string
+		args         []string
+		msg          string
+		defaultValue *string
+		inputValue   string
+		exp          string
+	}{
+		{
+			name:         "base_success",
+			args:         []string{"prompt"},
+			msg:          "enter input value:",
+			defaultValue: nil,
+			inputValue:   "input",
+			exp:          "input",
+		},
+		{
+			name:         "defaults_input",
+			args:         []string{"prompt"},
+			msg:          "enter default value:",
+			defaultValue: &defaultValue,
+			inputValue:   "",
+			exp:          "default",
+		},
+		{
+			name:         "trims_defaults_spaces",
+			args:         []string{"prompt"},
+			msg:          "enter default value:",
+			defaultValue: &defaultValue,
+			inputValue:   "   ",
+			exp:          "default",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := rootCmd()
+			stdin, _, stderr := cmd.Pipe()
+			stdin.WriteString(tc.inputValue)
+
+			v, err := cmd.Prompt(ctx, tc.msg, tc.defaultValue)
+			if diff := testutil.DiffErrString(err, ""); diff != "" {
+				t.Errorf("Unexpected err: %s", diff)
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			if got, want := v, tc.exp; got != want {
+				t.Errorf("expected\n\n%s\n\nto equal\n\n%s\n\n", got, want)
+			}
+			if got := strings.TrimSpace(stderr.String()); got != "" {
+				t.Errorf("unexpected stderr: %s", got)
+			}
+		})
+	}
+}
+
+func TestRootCommand_Prompt_Cancel(t *testing.T) {
+	t.Parallel()
+
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+
+	rootCmd := func() Command {
+		return &RootCommand{}
+	}
+
+	cases := []struct {
+		name string
+		msg  string
+		err  string
+	}{
+		{
+			name: "contex_times_out",
+			msg:  "enter value:",
+			err:  "context canceled",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := rootCmd()
+
+			cancelCtx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			_, err := cmd.Prompt(cancelCtx, tc.msg, nil)
+			if diff := testutil.DiffErrString(err, tc.err); diff != "" {
+				t.Errorf("Unexpected err: %s", diff)
+			}
+		})
+	}
+}
+
 type TestCommand struct {
 	BaseCommand
 
