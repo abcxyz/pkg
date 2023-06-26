@@ -1,0 +1,68 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Override Workflow Variables'
+description: |-
+  Use this action to load/override variables into GITHUB_ENV.
+
+inputs:
+  working_directory:
+    description: 'The working directory to look for the env file.'
+    required: false
+    default: '.'
+  env_file:
+    description: 'The env file containing variables to override with.'
+    required: false
+    default: '.env'
+  require_env:
+    description: 'fail if the env file is not found; unless enforced_directories is set, every working_directory must have an .env file.'
+    required: false
+    default: 'false'
+  enforced_directories:
+    description: 'only used when require_env=true; rather than looking for an env file in all working-directories, just require it in working-directories belonging to this set of parent directories.'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Load Env File'
+      shell: 'bash'
+      working-directory: '${{ inputs.working_directory }}'
+      env:
+        ENV_FILE: '${{ inputs.env_file }}'
+        REQUIRE_ENV: '${{ inputs.require_env }}'
+        ENFORCED_DIRECTORIES: '${{ inputs.enforced_directories }}'
+      run: |-
+        if [ -f "$ENV_FILE" ]; then
+          # Filter out comment lines, empty lines, and lines with only whitespace.
+          grep -v '^[[:space:]]*#\|^$\|^\s*$' $ENV_FILE >> ${GITHUB_ENV}
+        elif [ "$REQUIRE_ENV" == true ]; then
+
+          if [ "$ENFORCED_DIRECTORIES" == "" ]; then
+            # Set to top-level dir of respository to enforce on all working-directories.
+            ENFORCED_DIRECTORIES="$GITHUB_WORKSPACE"
+          fi
+
+          # Replace , with space to make values iterable.
+          for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
+
+            ENFORCED_PATH="${GITHUB_WORKSPACE}/${REQUIRED_DIR}"
+            # Fail if the current directory is subdirectory of an enforced directory.
+            if [[ "$PWD" = "$ENFORCED_PATH"* ]]; then
+              echo "::error::env file is missing in $PWD"
+              exit 1
+            fi
+          done
+        fi
