@@ -279,6 +279,9 @@ func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (stri
 	errCh := make(chan error, 1)
 
 	// Prompts for user input and returns the value or an error if there is one.
+	// If the context is canceled, this function leaves the c.Stdin in a bad state.
+	// This is currently acceptable as the cli process should ideallly be terminated
+	// after the context is canceled.
 	go func() {
 		defer close(resultCh)
 		defer close(errCh)
