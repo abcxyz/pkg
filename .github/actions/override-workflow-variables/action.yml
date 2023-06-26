@@ -26,7 +26,7 @@ inputs:
     required: false
     default: '.env'
   require_env:
-    description: 'fail if the env file isn't found; unless enforced_directories is set, every working_directory must have an .env file'
+    description: 'fail if the env file isn't found; unless enforced_directories is set, every working_directory must have an .env file.'
     required: false
     default: 'false'
   enforced_directories:
