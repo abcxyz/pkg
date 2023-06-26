@@ -278,39 +278,19 @@ func TestRootCommand_Prompt_Values(t *testing.T) {
 		return &RootCommand{}
 	}
 
-	defaultValue := "default"
-
 	cases := []struct {
-		name         string
-		args         []string
-		msg          string
-		defaultValue *string
-		inputValue   string
-		exp          string
+		name       string
+		args       []string
+		msg        string
+		inputValue string
+		exp        string
 	}{
 		{
-			name:         "base_success",
-			args:         []string{"prompt"},
-			msg:          "enter input value:",
-			defaultValue: nil,
-			inputValue:   "input",
-			exp:          "input",
-		},
-		{
-			name:         "defaults_input",
-			args:         []string{"prompt"},
-			msg:          "enter default value:",
-			defaultValue: &defaultValue,
-			inputValue:   "",
-			exp:          "default",
-		},
-		{
-			name:         "trims_defaults_spaces",
-			args:         []string{"prompt"},
-			msg:          "enter default value:",
-			defaultValue: &defaultValue,
-			inputValue:   "   ",
-			exp:          "default",
+			name:       "base_success",
+			args:       []string{"prompt"},
+			msg:        "enter input value:",
+			inputValue: "input",
+			exp:        "input",
 		},
 	}
 
@@ -324,7 +304,7 @@ func TestRootCommand_Prompt_Values(t *testing.T) {
 			stdin, _, stderr := cmd.Pipe()
 			stdin.WriteString(tc.inputValue)
 
-			v, err := cmd.Prompt(ctx, tc.msg, tc.defaultValue)
+			v, err := cmd.Prompt(ctx, tc.msg)
 			if diff := testutil.DiffErrString(err, ""); diff != "" {
 				t.Errorf("Unexpected err: %s", diff)
 			}
@@ -343,7 +323,7 @@ func TestRootCommand_Prompt_Values(t *testing.T) {
 	}
 }
 
-func TestRootCommand_Prompt_Cancel(t *testing.T) {
+func TestRootCommand_Prompt_Cancels(t *testing.T) {
 	t.Parallel()
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
@@ -358,7 +338,7 @@ func TestRootCommand_Prompt_Cancel(t *testing.T) {
 		err  string
 	}{
 		{
-			name: "contex_times_out",
+			name: "context_cancels",
 			msg:  "enter value:",
 			err:  "context canceled",
 		},
@@ -370,12 +350,11 @@ func TestRootCommand_Prompt_Cancel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cmd := rootCmd()
-
 			cancelCtx, cancel := context.WithCancel(ctx)
 			cancel()
 
-			_, err := cmd.Prompt(cancelCtx, tc.msg, nil)
+			cmd := rootCmd()
+			_, err := cmd.Prompt(cancelCtx, tc.msg)
 			if diff := testutil.DiffErrString(err, tc.err); diff != "" {
 				t.Errorf("Unexpected err: %s", diff)
 			}
