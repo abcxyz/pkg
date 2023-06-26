@@ -280,7 +280,8 @@ func (c *BaseCommand) Hidden() bool {
 // it reads from the reader.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, defaultValue *string) (string, error) {
 	// guarantee Prompt is cancelable with SIGTERM and SIGINT
-	ctx, _ = signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	ctx, done := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer done()
 
 	resultChan := make(chan string)
 	errorChan := make(chan error)
@@ -307,9 +308,9 @@ func (c *BaseCommand) Prompt(ctx context.Context, msg string, defaultValue *stri
 
 	select {
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
 	case err := <-errorChan:
-		return "", err
+		return "", fmt.Errorf("failed to prompt: %w", err)
 	case result := <-resultChan:
 		return result, nil
 	}
