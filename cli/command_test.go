@@ -269,7 +269,7 @@ func TestRootCommand_Run(t *testing.T) {
 	}
 }
 
-func TestRootCommand_Prompt_Values(t *testing.T) {
+func TestBaseCommand_Prompt_Values(t *testing.T) {
 	t.Parallel()
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
@@ -326,7 +326,7 @@ func TestRootCommand_Prompt_Values(t *testing.T) {
 	}
 }
 
-func TestRootCommand_Prompt_Cancels(t *testing.T) {
+func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 	t.Parallel()
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))

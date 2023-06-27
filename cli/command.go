@@ -63,10 +63,7 @@ type Command interface {
 	// Run executes the command.
 	Run(ctx context.Context, args []string) error
 
-	// Prompt provides a mechanism for asking for user input. It reads from
-	// [Stdin]. If there's an input stream (e.g. a pipe), it will read the pipe.
-	// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
-	// no pipe and the terminal is not a tty.
+	// Prompt provides a mechanism for asking for user input.
 	Prompt(ctx context.Context, msg string, args ...any) (string, error)
 
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
@@ -272,51 +269,33 @@ func (c *BaseCommand) Hidden() bool {
 	return false
 }
 
-// Prompt prompts the user for a value. If stdin is a tty, it prompts. Otherwise
-// it reads from the reader.
+// Prompt prompts the user for a value. It reads from [Stdin], up to 64k bytes.
+// If there's an input stream (e.g. a pipe), it will read the pipe.
+// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
+// no pipe and the terminal is not a tty. If the context is canceled, this function
+// leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
-	resultCh := make(chan string, 1)
-	errCh := make(chan error, 1)
+	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
+		fmt.Fprint(c.Stdout(), msg, args)
+	}
 
-	// Prompts for user input and returns the value or an error if there is one.
-	// If the context is canceled, this function leaves the c.Stdin in a bad state.
-	// This is currently acceptable as the cli process should ideallly be terminated
-	// after the context is canceled.
+	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
+	finished := make(chan struct{})
 	go func() {
-		defer close(resultCh)
-		defer close(errCh)
-
-		scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
-
-		if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
-			fmt.Fprint(c.Stdout(), msg, args)
-		}
-
+		defer close(finished)
 		scanner.Scan()
-
-		if err := scanner.Err(); err != nil {
-			select {
-			case errCh <- fmt.Errorf("failed to read stdin: %w", err):
-			default:
-			}
-		}
-
-		select {
-		case resultCh <- scanner.Text():
-		default:
-		}
 	}()
 
-	// If input is provided and the provided context are cancelled simultaneously,
-	// the behavior is undefined. See https://www.sethvargo.com/what-id-like-to-see-in-go-2/#deterministic-select.
 	select {
 	case <-ctx.Done():
 		return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
-	case err := <-errCh:
-		return "", fmt.Errorf("failed to prompt: %w", err)
-	case result := <-resultCh:
-		return result, nil
+	case <-finished:
 	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("failed to read stdin: %w", err)
+	}
+	return scanner.Text(), nil
 }
 
 // Outf is a shortcut to write to [BaseCommand.Stdout].
