@@ -63,11 +63,8 @@ type Command interface {
 	// Run executes the command.
 	Run(ctx context.Context, args []string) error
 
-	// Prompt provides a mechanism for asking for user input. It reads from
-	// [Stdin]. If there's an input stream (e.g. a pipe), it will read the pipe.
-	// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
-	// no pipe and the terminal is not a tty.
-	Prompt(msg string) (string, error)
+	// Prompt provides a mechanism for asking for user input.
+	Prompt(ctx context.Context, msg string, args ...any) (string, error)
 
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
 	Stdout() io.Writer
@@ -272,16 +269,28 @@ func (c *BaseCommand) Hidden() bool {
 	return false
 }
 
-// Prompt prompts the user for a value. If stdin is a tty, it prompts. Otherwise
-// it reads from the reader.
-func (c *BaseCommand) Prompt(msg string) (string, error) {
-	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
-
+// Prompt prompts the user for a value. It reads from [Stdin], up to 64k bytes.
+// If there's an input stream (e.g. a pipe), it will read the pipe.
+// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
+// no pipe and the terminal is not a tty. If the context is canceled, this function
+// leaves the c.Stdin in a bad state.
+func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
 	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprint(c.Stdout(), msg)
+		fmt.Fprint(c.Stdout(), msg, args)
 	}
 
-	scanner.Scan()
+	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		scanner.Scan()
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
+	case <-finished:
+	}
 
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("failed to read stdin: %w", err)

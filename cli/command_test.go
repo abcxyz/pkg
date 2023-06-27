@@ -269,6 +269,125 @@ func TestRootCommand_Run(t *testing.T) {
 	}
 }
 
+func TestBaseCommand_Prompt_Values(t *testing.T) {
+	t.Parallel()
+
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+
+	rootCmd := func() Command {
+		return &RootCommand{}
+	}
+
+	cases := []struct {
+		name      string
+		args      []string
+		msg       string
+		inputs    []string
+		err       string
+		expStderr string
+	}{
+		{
+			name:   "sets_input_value",
+			args:   []string{"prompt"},
+			msg:    "enter input value:",
+			inputs: []string{"input"},
+		}, {
+			name:   "handles_multiple_prompts",
+			args:   []string{"prompt"},
+			msg:    "enter input value:",
+			inputs: []string{"input1", "input2"},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := rootCmd()
+			stdin, _, stderr := cmd.Pipe()
+
+			for _, input := range tc.inputs {
+				stdin.WriteString(input)
+
+				v, err := cmd.Prompt(ctx, tc.msg)
+				if diff := testutil.DiffErrString(err, tc.err); diff != "" {
+					t.Errorf("unexpected err: %s", diff)
+				}
+				if got, want := v, input; got != want {
+					t.Errorf("expected\n\n%s\n\nto equal\n\n%s\n\n", got, want)
+				}
+				if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
+					t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestBaseCommand_Prompt_Cancels(t *testing.T) {
+	t.Parallel()
+
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+
+	rootCmd := func() Command {
+		return &RootCommand{}
+	}
+
+	cases := []struct {
+		name      string
+		args      []string
+		msg       string
+		inputs    []string
+		exp       string
+		err       string
+		expStderr string
+	}{
+		{
+			name:   "context_cancels",
+			args:   []string{"prompt"},
+			msg:    "enter value:",
+			inputs: []string{"input1", "input2"},
+			err:    "context canceled",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := rootCmd()
+			stdin, _, stderr := cmd.Pipe()
+
+			for _, input := range tc.inputs {
+				stdin.WriteString(input)
+
+				_, err := cmd.Prompt(ctx, tc.msg)
+				if diff := testutil.DiffErrString(err, ""); diff != "" {
+					t.Errorf("unexpected err: %s", diff)
+				}
+				if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
+					t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
+				}
+			}
+
+			cancelCtx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			_, err := cmd.Prompt(cancelCtx, tc.msg)
+			if diff := testutil.DiffErrString(err, tc.err); diff != "" {
+				t.Errorf("unexpected err: %s", diff)
+			}
+			if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
+				t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
+			}
+		})
+	}
+}
+
 type TestCommand struct {
 	BaseCommand
 
