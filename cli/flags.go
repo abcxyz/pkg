@@ -41,6 +41,10 @@ type LookupEnvFunc = func(string) (string, bool)
 // environment. This is mostly used for testing.
 func MapLookuper(m map[string]string) LookupEnvFunc {
 	return func(s string) (string, bool) {
+		if m == nil {
+			return "", false
+		}
+
 		v, ok := m[s]
 		return v, ok
 	}
@@ -59,12 +63,10 @@ type Option func(fs *FlagSet) *FlagSet
 // WithLookupEnv defines a custom function for looking up environment variables.
 // This is mostly useful for testing.
 func WithLookupEnv(fn LookupEnvFunc) Option {
-	if fn == nil {
-		panic("lookup cannot be nil")
-	}
-
 	return func(fs *FlagSet) *FlagSet {
-		fs.lookupEnv = fn
+		if fn != nil {
+			fs.lookupEnv = fn
+		}
 		return fs
 	}
 }
