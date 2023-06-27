@@ -276,7 +276,7 @@ func (c *BaseCommand) Hidden() bool {
 // leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
 	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprint(c.Stdout(), msg, args)
+		fmt.Fprintf(c.Stdout(), msg, args...)
 	}
 
 	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
