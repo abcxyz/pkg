@@ -46,12 +46,12 @@ var (
 // variables aren't set.
 type FallbackConfig struct {
 	// The log mode to use if the environment variable isn't set. Valid values
-	// are "dev" and "production".
+	// are "dev" and "production". May be empty to use the hardoded default.
 	ModeIfNoEnv string
 
 	// The log level to use if the environment variable isn't set. Valid values
 	// are anything accepted by zap (debug, info, warn, error, dpanic, panic,
-	// fatal).
+	// fatal). May be empty to use the hardoded default.
 	LevelIfNoEnv string
 }
 
