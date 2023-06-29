@@ -42,12 +42,51 @@ var (
 	defaultLoggerOnce sync.Once
 )
 
+// FallbackConfig specifies a logging configuration to use if environment
+// variables aren't set.
+type FallbackConfig struct {
+	// The log mode to use if the environment variable isn't set. Valid values
+	// are "dev" and "production".
+	ModeIfNoEnv string
+
+	// The log level to use if the environment variable isn't set. Valid values
+	// are anything accepted by zap (debug, info, warn, error, dpanic, panic,
+	// fatal).
+	LevelIfNoEnv string
+}
+
 // NewFromEnv creates a new logger from env vars.
-// Set envPrefix+"LOG_LEVEL" to overwrite log level. Default log level is warning.
+//
+// Set envPrefix+"LOG_LEVEL" to overwrite log level. Default log level is warn.
 // Set envPrefix+"LOG_MODE" to overwrite log mode. Default log mode is production.
 func NewFromEnv(envPrefix string) *zap.SugaredLogger {
+	return NewFromEnvWithDefaults(envPrefix, &FallbackConfig{
+		ModeIfNoEnv:  "dev",
+		LevelIfNoEnv: "warn",
+	})
+}
+
+// NewFromEnv creates a new logger from env vars, with programmatically
+// configured defaults that will be used if the env vars are not set.
+//
+// Set envPrefix+"LOG_LEVEL" to configure log level. If the environment variable
+// isn't set, then the provided fallback log level will be used. If the fallback
+// level is empty or isn't a valid mode, then the "warn" level will be used.
+//
+// Set envPrefix+"LOG_MODE" to configure log mode. If the environment variable
+// isn't set, then the provided fallback log mode will be used. If the fallback
+// log mode is empty or isn't a valid mode, then the "production" mode will be
+// used.
+func NewFromEnvWithDefaults(envPrefix string, fc *FallbackConfig) *zap.SugaredLogger {
 	level := os.Getenv(envPrefix + "LOG_LEVEL")
+	if level == "" {
+		level = fc.LevelIfNoEnv
+	}
 	logMode := strings.ToLower(strings.TrimSpace(os.Getenv(envPrefix + "LOG_MODE")))
+	if logMode == "" {
+		logMode = fc.ModeIfNoEnv
+	}
+
 	devMode := strings.HasPrefix(logMode, "dev")
 	var cfg zap.Config
 	if devMode {
