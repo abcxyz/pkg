@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package worker
+package workerpool
 
 import (
 	"context"
@@ -29,12 +29,12 @@ func TestWorker(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	w := New[*Void](3)
+	pool := New[*Void](3)
 
 	now := time.Now().UTC()
 
 	for i := 0; i < 5; i++ {
-		if err := w.Do(ctx, func() (*Void, error) {
+		if err := pool.Do(ctx, func() (*Void, error) {
 			time.Sleep(10 * time.Millisecond)
 			return nil, nil
 		}); err != nil {
@@ -42,7 +42,7 @@ func TestWorker(t *testing.T) {
 		}
 	}
 
-	if _, err := w.Done(ctx); err != nil {
+	if _, err := pool.Done(ctx); err != nil {
 		t.Fatal(err)
 	}
 
@@ -59,12 +59,12 @@ func TestWorker_Do(t *testing.T) {
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
 
-		w := New[*Void](2)
-		if _, err := w.Done(ctx); err != nil {
+		pool := New[*Void](2)
+		if _, err := pool.Done(ctx); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := w.Do(ctx, func() (*Void, error) {
+		if err := pool.Do(ctx, func() (*Void, error) {
 			return nil, nil
 		}); !errors.Is(err, ErrStopped) {
 			t.Errorf("expected %q to be %q", err, ErrStopped)
@@ -80,11 +80,11 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
 
-		w := New[*Void](2)
-		if _, err := w.Done(ctx); err != nil {
+		pool := New[*Void](2)
+		if _, err := pool.Done(ctx); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := w.Done(ctx); !errors.Is(err, ErrStopped) {
+		if _, err := pool.Done(ctx); !errors.Is(err, ErrStopped) {
 			t.Errorf("expected %q to be %q", err, ErrStopped)
 		}
 	})
@@ -92,12 +92,12 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("error_results", func(t *testing.T) {
 		t.Parallel()
 
-		w := New[*Void](2)
+		pool := New[*Void](2)
 
 		for i := 0; i < 5; i++ {
 			i := i
 
-			if err := w.Do(ctx, func() (*Void, error) {
+			if err := pool.Do(ctx, func() (*Void, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return nil, fmt.Errorf("%d", i)
 			}); err != nil {
@@ -105,7 +105,7 @@ func TestWorker_Done(t *testing.T) {
 			}
 		}
 
-		results, err := w.Done(ctx)
+		results, err := pool.Done(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -123,12 +123,12 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("ordered_results", func(t *testing.T) {
 		t.Parallel()
 
-		w := New[int](2)
+		pool := New[int](2)
 
 		for i := 0; i < 5; i++ {
 			i := i
 
-			if err := w.Do(ctx, func() (int, error) {
+			if err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return i, nil
 			}); err != nil {
@@ -136,7 +136,7 @@ func TestWorker_Done(t *testing.T) {
 			}
 		}
 
-		results, err := w.Done(ctx)
+		results, err := pool.Done(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,12 +157,12 @@ func TestWorker_Done(t *testing.T) {
 		ctx, done := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		t.Cleanup(done)
 
-		w := New[int](2)
+		pool := New[int](2)
 
 		for i := 0; i < 5; i++ {
 			i := i
 
-			err := w.Do(ctx, func() (int, error) {
+			err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(100 * time.Millisecond)
 				return i, nil
 			})
@@ -182,7 +182,7 @@ func TestWorker_Done(t *testing.T) {
 		}
 
 		finishCtx := context.Background()
-		results, err := w.Done(finishCtx)
+		results, err := pool.Done(finishCtx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -199,7 +199,7 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("concurrency", func(t *testing.T) {
 		t.Parallel()
 
-		w := New[int](3)
+		pool := New[int](3)
 		var wg sync.WaitGroup
 
 		for i := 0; i < 15; i++ {
@@ -208,7 +208,7 @@ func TestWorker_Done(t *testing.T) {
 
 			go func() {
 				defer wg.Done()
-				_ = w.Do(ctx, func() (int, error) {
+				_ = pool.Do(ctx, func() (int, error) {
 					time.Sleep(time.Duration(i) * time.Millisecond)
 					return i, nil
 				})
@@ -217,7 +217,7 @@ func TestWorker_Done(t *testing.T) {
 
 		wg.Wait()
 
-		results, err := w.Done(ctx)
+		results, err := pool.Done(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //nolint:all // This is sample code
-package worker_test
+package workerpool_test
 
 import (
 	"context"
@@ -22,15 +22,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/abcxyz/pkg/worker"
+	workerpool "github.com/abcxyz/pkg/workerpool"
 )
 
 func Example_sleep() {
 	ctx := context.TODO()
-	w := worker.New[*worker.Void](3)
+	pool := workerpool.New[*workerpool.Void](3)
 
 	for i := 0; i < 5; i++ {
-		if err := w.Do(ctx, func() (*worker.Void, error) {
+		if err := pool.Do(ctx, func() (*workerpool.Void, error) {
 			time.Sleep(10 * time.Millisecond)
 			return nil, nil
 		}); err != nil {
@@ -38,7 +38,7 @@ func Example_sleep() {
 		}
 	}
 
-	results, err := w.Done(ctx)
+	results, err := pool.Done(ctx)
 	if err != nil {
 		// TODO: check err
 	}
@@ -47,7 +47,7 @@ func Example_sleep() {
 
 func Example_hTTP() {
 	ctx := context.TODO()
-	w := worker.New[string](0)
+	w := workerpool.New[string](0)
 
 	urls := []string{
 		"https://apple.com",
