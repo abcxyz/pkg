@@ -17,6 +17,7 @@ package workerpool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -141,7 +142,15 @@ func (p *Pool[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 //
 // The results are returned in the order in which jobs were enqueued into the
 // worker pool. Each result will include a result value or corresponding error
-// type. The function itself returns an error only if the context is cancelled.
+// type.
+//
+// The function will return an error if:
+//
+//   - The pool is stopped. The error will be [ErrStopped].
+//   - The incoming context is cancelled. The error will be
+//     [context.DeadlineExceeded] or [context.Canceled].
+//   - Any of the worker jobs returned a non-nil error. The error will be a
+//     multi-error [errors.Unwrap].
 //
 // If the worker pool is already done, it returns [ErrStopped].
 func (p *Pool[T]) Done(ctx context.Context) ([]*Result[T], error) {
@@ -162,7 +171,15 @@ func (p *Pool[T]) Done(ctx context.Context) ([]*Result[T], error) {
 	for _, v := range p.results {
 		final[v.idx] = v.result
 	}
-	return final, nil
+
+	// Aggregate any errors into a multi-error. Individual errors are still
+	// available on the specific result.
+	var merr error
+	for _, v := range final {
+		merr = errors.Join(merr, v.Error)
+	}
+
+	return final, merr
 }
 
 // isStopped returns true if the worker pool is stopped, false otherwise. It is

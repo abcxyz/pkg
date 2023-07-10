@@ -106,8 +106,11 @@ func TestWorker_Done(t *testing.T) {
 		}
 
 		results, err := pool.Done(ctx)
-		if err != nil {
-			t.Fatal(err)
+		if err == nil {
+			t.Fatal("expected error, but got nothing")
+		}
+		if got, want := err.Error(), "0\n1\n2\n3\n4"; got != want {
+			t.Errorf("expected %q to be %q", got, want)
 		}
 
 		want := []string{"0", "1", "2", "3", "4"}
@@ -116,7 +119,7 @@ func TestWorker_Done(t *testing.T) {
 			got = append(got, fmt.Sprintf("%s", result.Error))
 		}
 		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("justs: diff (-want, +got):\n%s", diff)
+			t.Error(diff)
 		}
 	})
 
