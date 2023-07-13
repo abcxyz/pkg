@@ -122,10 +122,23 @@ func WithOnError(fn func(err error)) Option {
 // WithTemplateFuncs registers additional template functions. The renderer
 // includes many helpful functions, but some applications may wish to
 // inject/define their own template helpers. Functions in this map take
-// precedence over the built-in list.
-func WithTemplateFuncs(fns template.FuncMap) Option {
+// precedence over the built-in list. If called with multiple func maps or
+// called multiple times with conflicting keys, the last key takes precedence.
+// To delete an entry, supply a key with a nil value.
+func WithTemplateFuncs(fns ...template.FuncMap) Option {
 	return func(r *Renderer) *Renderer {
-		r.templateFuncs = fns
+		if r.templateFuncs == nil {
+			r.templateFuncs = make(map[string]any)
+		}
+		for _, fn := range fns {
+			for k, v := range fn {
+				if v == nil {
+					delete(r.templateFuncs, k)
+				} else {
+					r.templateFuncs[k] = v
+				}
+			}
+		}
 		return r
 	}
 }
