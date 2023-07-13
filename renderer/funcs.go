@@ -24,6 +24,9 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func builtinFuncs() template.FuncMap {
@@ -34,6 +37,7 @@ func builtinFuncs() template.FuncMap {
 		"stringContains": strings.Contains,
 		"toLower":        strings.ToLower,
 		"toUpper":        strings.ToUpper,
+		"toTitle":        cases.Title(language.English, cases.NoLower).String,
 		"toJSON":         json.Marshal,
 		"toBase64":       base64.StdEncoding.EncodeToString,
 		"toPercent":      toPercent,
