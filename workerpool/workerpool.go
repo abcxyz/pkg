@@ -45,6 +45,8 @@ type Pool[T any] struct {
 	results     []*result[T]
 	resultsLock sync.Mutex
 
+	stopOnError bool
+
 	stopped uint32
 }
 
@@ -61,6 +63,17 @@ type Result[T any] struct {
 	Error error
 }
 
+// Config represents the input configuration to the worker.
+type Config struct {
+	// Concurrency is the maximum number of jobs to run in parallel.
+	Concurrency int64
+
+	// StopOnError instructs the worker pool to stop processing new work after the
+	// first error is returned. In-flight jobs may still be processed, even if
+	// they complete after the first error is returned.
+	StopOnError bool
+}
+
 // New creates a new worker pool that executes work in parallel, up to the
 // maximum provided concurrency. Work is guaranteed to be executed in the order
 // in which it was enqueued, but is not guaranteed to complete in the order in
@@ -68,7 +81,12 @@ type Result[T any] struct {
 //
 // If the provided concurrency is less than 1, it defaults to the number of CPU
 // cores.
-func New[T any](concurrency int64) *Pool[T] {
+func New[T any](c *Config) *Pool[T] {
+	if c == nil {
+		c = new(Config)
+	}
+
+	concurrency := c.Concurrency
 	if concurrency < 1 {
 		concurrency = int64(runtime.NumCPU())
 	}
@@ -77,10 +95,11 @@ func New[T any](concurrency int64) *Pool[T] {
 	}
 
 	return &Pool[T]{
-		size:    concurrency,
-		i:       -1,
-		sem:     semaphore.NewWeighted(concurrency),
-		results: make([]*result[T], 0, concurrency),
+		size:        concurrency,
+		i:           -1,
+		sem:         semaphore.NewWeighted(concurrency),
+		results:     make([]*result[T], 0, concurrency),
+		stopOnError: c.StopOnError,
 	}
 }
 
@@ -100,37 +119,35 @@ func New[T any](concurrency int64) *Pool[T] {
 //
 // Never call Do from within a Do function because it will deadlock.
 func (p *Pool[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
-	// Do not enqueue new work if the worker pool is stopped.
+	i := atomic.AddInt64(&p.i, 1)
+
 	if p.isStopped() {
+		p.appendResult(i, *new(T), ErrStopped)
 		return ErrStopped
 	}
 
 	if err := p.sem.Acquire(ctx, 1); err != nil {
-		return fmt.Errorf("failed to acquire semaphore: %w", err)
+		err := fmt.Errorf("failed to acquire semaphore: %w", err)
+		p.appendResult(i, *new(T), err)
+		return err
 	}
 
 	// It's possible the worker pool was stopped while we were waiting for the
 	// semaphore to acquire, but the worker pool is actually stopped.
 	if p.isStopped() {
 		p.sem.Release(1)
+		p.appendResult(i, *new(T), ErrStopped)
 		return ErrStopped
 	}
-
-	i := atomic.AddInt64(&p.i, 1)
 
 	go func() {
 		defer p.sem.Release(1)
 		t, err := fn()
+		if err != nil && p.stopOnError {
+			p.stop()
+		}
 
-		p.resultsLock.Lock()
-		defer p.resultsLock.Unlock()
-		p.results = append(p.results, &result[T]{
-			idx: i,
-			result: &Result[T]{
-				Value: t,
-				Error: err,
-			},
-		})
+		p.appendResult(i, t, err)
 	}()
 
 	return nil
@@ -146,7 +163,6 @@ func (p *Pool[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 //
 // The function will return an error if:
 //
-//   - The pool is stopped. The error will be [ErrStopped].
 //   - The incoming context is cancelled. The error will be
 //     [context.DeadlineExceeded] or [context.Canceled].
 //   - Any of the worker jobs returned a non-nil error. The error will be a
@@ -154,14 +170,14 @@ func (p *Pool[T]) Do(ctx context.Context, fn WorkFunc[T]) error {
 //
 // If the worker pool is already done, it returns [ErrStopped].
 func (p *Pool[T]) Done(ctx context.Context) ([]*Result[T], error) {
-	if !atomic.CompareAndSwapUint32(&p.stopped, 0, 1) {
-		return nil, ErrStopped
-	}
-
+	// Wait for all work to finish.
 	if err := p.sem.Acquire(ctx, p.size); err != nil {
-		return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
+		return nil, fmt.Errorf("failed to wait for jobs to finish: %w", err)
 	}
 	defer p.sem.Release(p.size)
+
+	// Stop the worker now that all other work has finished.
+	p.stop()
 
 	p.resultsLock.Lock()
 	defer p.resultsLock.Unlock()
@@ -182,8 +198,28 @@ func (p *Pool[T]) Done(ctx context.Context) ([]*Result[T], error) {
 	return final, merr
 }
 
+// stop terminates the worker from receiving new work. It returns true if the
+// worker was stopped or false if the worker was already stopped.
+func (p *Pool[T]) stop() bool {
+	return atomic.CompareAndSwapUint32(&p.stopped, 0, 1)
+}
+
 // isStopped returns true if the worker pool is stopped, false otherwise. It is
 // safe for concurrent use.
 func (p *Pool[T]) isStopped() bool {
 	return atomic.LoadUint32(&p.stopped) == 1
+}
+
+// appendResult is a helper that adds a result to the results slice.
+func (p *Pool[T]) appendResult(i int64, value T, err error) {
+	p.resultsLock.Lock()
+	defer p.resultsLock.Unlock()
+
+	p.results = append(p.results, &result[T]{
+		idx: i,
+		result: &Result[T]{
+			Value: value,
+			Error: err,
+		},
+	})
 }

@@ -27,7 +27,9 @@ import (
 
 func Example_sleep() {
 	ctx := context.TODO()
-	pool := workerpool.New[*workerpool.Void](3)
+	pool := workerpool.New[*workerpool.Void](&workerpool.Config{
+		Concurrency: 3,
+	})
 
 	for i := 0; i < 5; i++ {
 		if err := pool.Do(ctx, func() (*workerpool.Void, error) {
@@ -47,7 +49,9 @@ func Example_sleep() {
 
 func Example_hTTP() {
 	ctx := context.TODO()
-	w := workerpool.New[string](0)
+	w := workerpool.New[string](&workerpool.Config{
+		Concurrency: 0,
+	})
 
 	urls := []string{
 		"https://apple.com",

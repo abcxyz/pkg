@@ -23,13 +23,16 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestWorker(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	pool := New[*Void](3)
+	pool := New[*Void](&Config{
+		Concurrency: 3,
+	})
 
 	now := time.Now().UTC()
 
@@ -59,7 +62,9 @@ func TestWorker_Do(t *testing.T) {
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
 
-		pool := New[*Void](2)
+		pool := New[*Void](&Config{
+			Concurrency: 2,
+		})
 		if _, err := pool.Done(ctx); err != nil {
 			t.Fatal(err)
 		}
@@ -80,19 +85,20 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
 
-		pool := New[*Void](2)
+		pool := New[*Void](&Config{
+			Concurrency: 2,
+		})
 		if _, err := pool.Done(ctx); err != nil {
 			t.Fatal(err)
-		}
-		if _, err := pool.Done(ctx); !errors.Is(err, ErrStopped) {
-			t.Errorf("expected %q to be %q", err, ErrStopped)
 		}
 	})
 
 	t.Run("error_results", func(t *testing.T) {
 		t.Parallel()
 
-		pool := New[*Void](2)
+		pool := New[*Void](&Config{
+			Concurrency: 2,
+		})
 
 		for i := 0; i < 5; i++ {
 			i := i
@@ -126,7 +132,9 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("ordered_results", func(t *testing.T) {
 		t.Parallel()
 
-		pool := New[int](2)
+		pool := New[int](&Config{
+			Concurrency: 2,
+		})
 
 		for i := 0; i < 5; i++ {
 			i := i
@@ -154,13 +162,60 @@ func TestWorker_Done(t *testing.T) {
 		}
 	})
 
+	t.Run("stop_on_error", func(t *testing.T) {
+		t.Parallel()
+
+		sentinelError := fmt.Errorf("error from test")
+
+		pool := New[int](&Config{
+			Concurrency: 2,
+			StopOnError: true,
+		})
+
+		for i := 0; i < 5; i++ {
+			i := i
+
+			_ = pool.Do(ctx, func() (int, error) {
+				if i < 2 {
+					return i, nil
+				}
+				return 0, sentinelError
+			})
+		}
+
+		results, err := pool.Done(ctx)
+		if got, want := err, sentinelError; !errors.Is(got, want) {
+			t.Errorf("expected %q to be %q", got, want)
+		}
+		if got, want := err, ErrStopped; !errors.Is(got, want) {
+			t.Errorf("expected %q to be %q", got, want)
+		}
+
+		want := []*Result[int]{
+			{Value: 0},
+			{Value: 1},
+			{Error: sentinelError},
+
+			// These jobs could have queued before the other job returned as stopped,
+			// so we assume any error is a good error. It could be the sentinel error
+			// or it could be [ErrStopped].
+			{Error: cmpopts.AnyError},
+			{Error: cmpopts.AnyError},
+		}
+		if diff := cmp.Diff(want, results, cmpopts.EquateErrors()); diff != "" {
+			t.Errorf("justs: diff (-want, +got):\n%s", diff)
+		}
+	})
+
 	t.Run("cancelled", func(t *testing.T) {
 		t.Parallel()
 
 		ctx, done := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		t.Cleanup(done)
 
-		pool := New[int](2)
+		pool := New[int](&Config{
+			Concurrency: 2,
+		})
 
 		for i := 0; i < 5; i++ {
 			i := i
@@ -186,15 +241,18 @@ func TestWorker_Done(t *testing.T) {
 
 		finishCtx := context.Background()
 		results, err := pool.Done(finishCtx)
-		if err != nil {
-			t.Fatal(err)
+		if got, want := err, context.DeadlineExceeded; !errors.Is(got, want) {
+			t.Errorf("expected %v to be %v", got, want)
 		}
-		want := []int{0, 1}
-		var got []int
-		for _, result := range results {
-			got = append(got, result.Value)
+
+		want := []*Result[int]{
+			{Value: 0},
+			{Value: 1},
+			{Error: context.DeadlineExceeded},
+			{Error: context.DeadlineExceeded},
+			{Error: context.DeadlineExceeded},
 		}
-		if diff := cmp.Diff(want, got); diff != "" {
+		if diff := cmp.Diff(results, want, cmpopts.EquateErrors()); diff != "" {
 			t.Errorf("justs: diff (-want, +got):\n%s", diff)
 		}
 	})
@@ -202,7 +260,9 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("concurrency", func(t *testing.T) {
 		t.Parallel()
 
-		pool := New[int](3)
+		pool := New[int](&Config{
+			Concurrency: 3,
+		})
 		var wg sync.WaitGroup
 
 		for i := 0; i < 15; i++ {
