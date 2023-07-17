@@ -64,7 +64,6 @@ linters:
     - 'govet'
     - 'importas'
     - 'ineffassign'
-    # - 'ireturn' # does not handle generics yet: https://github.com/butuzov/ireturn/issues/37
     - 'loggercheck'
     - 'makezero'
     - 'misspell'
@@ -107,14 +106,25 @@ issues:
 
 linters-settings:
   depguard:
-    list-type: 'denylist'
-    packages-with-error-message:
-      - 'github.com/auth0/go-jwt-middleware': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
-      - 'github.com/gin-contrib/*': 'third-party web frameworks are not approved, use net/http'
-      - 'github.com/gin-gonic/contrib': 'third-party web frameworks are not approved, use net/http'
-      - 'github.com/gin-gonic/gin': 'third-party web frameworks are not approved, use net/http'
-      - 'github.com/golang-jwt/jwe': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
-      - 'github.com/golang-jwt/jwt': 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+    rules:
+      main:
+        files:
+          - '$all'
+        deny:
+          - pkg: 'github.com/auth0/go-jwt-middleware'
+            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+          - pkg: 'github.com/gin-contrib/*'
+            desc: 'third-party web frameworks are not approved, use net/http'
+          - pkg: 'github.com/gin-gonic/contrib'
+            desc: 'third-party web frameworks are not approved, use net/http'
+          - pkg: 'github.com/gin-gonic/gin'
+            desc: 'third-party web frameworks are not approved, use net/http'
+          - pkg: 'github.com/golang-jwt/jwe'
+            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+          - pkg: 'github.com/golang-jwt/jwt'
+            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+          - pkg: 'github.com/stretchr/testify'
+            desc: 'use the standard library for tests'
 
   gofumpt:
     # default: false

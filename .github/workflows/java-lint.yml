@@ -14,7 +14,7 @@ on:
       google_java_format_version:
         description: 'The version of google-java-format to use. This must be the full version with no leading "v" prefix.'
         type: 'string'
-        default: '1.15.0'
+        default: '1.17.0'
       directory:
         description: 'Directory in which Java files reside.'
         type: 'string'
@@ -31,10 +31,10 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b' # ratchet:actions/checkout@v3
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
 
       - name: 'Setup Java'
-        uses: 'actions/setup-java@c3ac5dd0ed8db40fedb61c32fbe677e6b355e94c' # ratchet:actions/setup-java@v3
+        uses: 'actions/setup-java@5ffc13f4174014e2d4d4572b3d74c3fa61aeb2c2' # ratchet:actions/setup-java@v3
         with:
           distribution: '${{ inputs.java_distribution }}'
           java-version: '${{ inputs.java_version }}'
