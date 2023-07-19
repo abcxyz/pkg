@@ -26,16 +26,16 @@ import (
 // any rendering errors to avoid partial responses sent to the response by
 // writing to a buffer first, then flushing the buffer to the response.
 //
-// If the provided data is nil and the response code is a 200, the result will
-// be `{"ok":true}`. If the code is not a 200, the response will be of the
-// format `{"error":"<val>"}` where val is the JSON-escaped http.StatusText for
-// the provided code.
+// If the provided data is nil and the response code is a 2xx, the body will be
+// empty. If the code is not a 2xx, the response will be of the format
+// `{"error":"<val>"}` where val is the lowercase, JSON-escaped
+// [http.StatusText] for the provided code.
 //
 // If rendering fails, a generic 500 JSON response is returned. In dev mode, the
 // error is included in the payload. If flushing the buffer to the response
 // fails, an error is logged, but no recovery is attempted.
 //
-// The buffers are fetched via a sync.Pool to reduce allocations and improve
+// The buffers are fetched via a [sync.Pool] to reduce allocations and improve
 // performance.
 func (r *Renderer) RenderJSON(w http.ResponseWriter, code int, data any) {
 	// Avoid marshaling nil data.
@@ -45,12 +45,11 @@ func (r *Renderer) RenderJSON(w http.ResponseWriter, code int, data any) {
 
 		// Return an OK response.
 		if code >= http.StatusOK && code < http.StatusMultipleChoices {
-			fmt.Fprint(w, jsonOKResp)
 			return
 		}
 
 		// Return an error with the generic HTTP text as the error.
-		msg := escapeJSON(http.StatusText(code))
+		msg := escapeJSON(strings.ToLower(http.StatusText(code)))
 		fmt.Fprintf(w, jsonErrTmpl, msg)
 		return
 	}
@@ -117,9 +116,6 @@ func escapeJSON(s string) string {
 // rendered using Logf, not json.Encode, so values must be escaped by the
 // caller.
 const jsonErrTmpl = `{"errors":["%s"]}`
-
-// jsonOKResp is the return value for empty data responses.
-const jsonOKResp = `{"ok":true}`
 
 type multiError struct {
 	Errors []string `json:"errors,omitempty"`

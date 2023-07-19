@@ -47,13 +47,25 @@ func TestRenderJSON(t *testing.T) {
 			name: "nil_200",
 			code: 200,
 			in:   nil,
-			exp:  `{"ok":true}`,
+			exp:  ``,
+		},
+		{
+			name: "nil_201",
+			code: 201,
+			in:   nil,
+			exp:  ``,
+		},
+		{
+			name: "nil_302",
+			code: 302,
+			in:   nil,
+			exp:  `{"errors":["found"]}`,
 		},
 		{
 			name: "nil_403",
 			code: 403,
 			in:   nil,
-			exp:  `{"errors":["Forbidden"]}`,
+			exp:  `{"errors":["forbidden"]}`,
 		},
 		{
 			name: "joined_error",
