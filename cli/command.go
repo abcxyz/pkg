@@ -25,6 +25,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete/v2"
@@ -43,8 +44,8 @@ var isCompletionRequest = os.Getenv("COMP_LINE") != "" ||
 // Command is the interface for a command or subcommand. Most of these functions
 // have default implementations on [BaseCommand].
 type Command interface {
-	// Desc provides a short, one-line description of the command. It should be
-	// shorter than 50 characters.
+	// Desc provides a short, one-line description of the command. It must be
+	// shorter than 50 characters and should not end with a period or punctuation.
 	Desc() string
 
 	// Help is the long-form help output. It should include usage instructions and
@@ -70,14 +71,16 @@ type Command interface {
 	Stdout() io.Writer
 	SetStdout(w io.Writer)
 
-	// Outf is a shortcut to write to [Command.Stdout].
+	// Outf is a shortcut to write to [Command.Stdout]. It automatically appends a
+	// trailing newline if one is not present.
 	Outf(format string, a ...any)
 
 	// Stderr returns the stderr stream. SetStderr sets the stderr stream.
 	Stderr() io.Writer
 	SetStderr(w io.Writer)
 
-	// Errf is a shortcut to write to [Command.Stderr].
+	// Errf is a shortcut to write to [Command.Stderr]. It automatically appends a
+	// trailing newline if one is not present.
 	Errf(format string, a ...any)
 
 	// Stdin returns the stdin stream. SetStdin sets the stdin stream.
@@ -165,11 +168,15 @@ func (r *RootCommand) Help() string {
 		}
 
 		if !cmd.Hidden() {
-			fmt.Fprintf(&b, "  %-*s%s\n", longest+4, name, cmd.Desc())
+			// Trim any trailing periods or spaces.
+			desc := strings.TrimRightFunc(cmd.Desc(), func(r rune) bool {
+				return unicode.IsSpace(r) || r == '\uFEFF' || r == '.' || r == '!' || r == '?'
+			})
+			fmt.Fprintf(&b, "  %-*s%s\n", longest+4, name, desc)
 		}
 	}
 
-	return strings.TrimRight(b.String(), "\n")
+	return strings.TrimRightFunc(b.String(), unicode.IsSpace)
 }
 
 // Run executes the command and prints help output or delegates to a subcommand.

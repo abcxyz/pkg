@@ -103,7 +103,8 @@ type FlagSection struct {
 	lookupEnv LookupEnvFunc
 }
 
-// NewSection creates a new flag section.
+// NewSection creates a new flag section. By convention, section names should be
+// all capital letters (e.g. "MY SECTION"), but this is not strictly enforced.
 func (f *FlagSet) NewSection(name string) *FlagSection {
 	fs := &FlagSection{
 		name:      name,
@@ -208,6 +209,9 @@ type Value interface {
 	// Example returns an example input for the flag. For example, if the flag was
 	// accepting a URL, this could be "https://example.com". This is largely meant
 	// as a hint to the CLI user and only affects help output.
+	//
+	// If there is a default value, the example value should be different from the
+	// default value.
 	Example() string
 
 	// Hidden returns true if the flag is hidden, false otherwise.
@@ -388,6 +392,13 @@ type BoolVar struct {
 	Target  *bool
 }
 
+// BoolVar creates a new boolean variable (true/false). By convention, the
+// default value should always be false. For example:
+//
+//	Bad: -enable-cookies (default: true)
+//	Good: -disable-cookies (default: false)
+//
+// Consider naming your flags to match this convention.
 func (f *FlagSection) BoolVar(i *BoolVar) {
 	Flag(f, &Var[bool]{
 		Name:    i.Name,
