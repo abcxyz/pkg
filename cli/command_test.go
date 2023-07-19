@@ -388,6 +388,32 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 	}
 }
 
+func TestBaseCommand_WorkingDir(t *testing.T) {
+	t.Parallel()
+
+	var cmd RootCommand
+	dir, err := cmd.WorkingDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dir == "" {
+		t.Errorf("expected working dir to be defined")
+	}
+}
+
+func TestBaseCommand_ExecutablePath(t *testing.T) {
+	t.Parallel()
+
+	var cmd RootCommand
+	pth, err := cmd.ExecutablePath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pth == "" {
+		t.Errorf("expected executable path to be defined")
+	}
+}
+
 type TestCommand struct {
 	BaseCommand
 
