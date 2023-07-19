@@ -12,7 +12,7 @@ require (
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/mattn/go-isatty v0.0.17
 	github.com/ory/dockertest/v3 v3.9.1
-	github.com/posener/complete/v2 v2.0.1-alpha.13
+	github.com/posener/complete/v2 v2.1.0
 	github.com/sethvargo/go-envconfig v0.9.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.8.0
@@ -42,8 +42,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.14 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
@@ -60,7 +58,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/posener/script v1.1.5 // indirect
+	github.com/posener/script v1.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
