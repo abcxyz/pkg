@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"unicode"
@@ -91,6 +92,15 @@ type Command interface {
 	// command, and returns them. This is most useful for testing where callers
 	// want to simulate inputs or assert certain command outputs.
 	Pipe() (stdin, stdout, stderr *bytes.Buffer)
+
+	// WorkingDir returns the absolute path of current working directory from
+	// where the command was started. All symlinks are resolved to their real
+	// paths.
+	WorkingDir() (string, error)
+
+	// ExecutablePath returns the absolute path of the CLI executable binary. All
+	// symlinks are resolved to their real values.
+	ExecutablePath() (string, error)
 }
 
 // ArgPredictor is an optional interface that [Command] can implement to declare
@@ -365,6 +375,42 @@ func (c *BaseCommand) Pipe() (stdin, stdout, stderr *bytes.Buffer) {
 	c.stdout = stdout
 	c.stderr = stderr
 	return
+}
+
+// WorkingDir returns the working directory. See [Command] for more information.
+func (c *BaseCommand) WorkingDir() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	symCwd, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve symlinks for current working directory: %w", err)
+	}
+
+	abs, err := filepath.Abs(symCwd)
+	if err != nil {
+		return "", fmt.Errorf("failed to compute absolute path for current working directory: %w", err)
+	}
+
+	return abs, nil
+}
+
+// ExecutablePath returns the executable's path. See [Command] for more
+// information.
+func (c *BaseCommand) ExecutablePath() (string, error) {
+	pth, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("failed to get executable path: %w", err)
+	}
+
+	sym, err := filepath.EvalSymlinks(pth)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate executable path symlink: %w", err)
+	}
+
+	return sym, nil
 }
 
 // buildCompleteCommands maps a [Command] to its flag and argument completion. If
