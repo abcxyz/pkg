@@ -47,7 +47,7 @@ Usage: {{ COMMAND }} [options] MAX
 }
 
 func (c *CountCommand) Flags() *cli.FlagSet {
-	set := cli.NewFlagSet()
+	set := c.NewFlagSet()
 
 	f := set.NewSection("Number options")
 

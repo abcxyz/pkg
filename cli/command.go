@@ -257,6 +257,13 @@ func formatHelp(help, name string, flags *FlagSet) string {
 type BaseCommand struct {
 	stdout, stderr io.Writer
 	stdin          io.Reader
+
+	lookupEnv LookupEnvFunc
+}
+
+// NewFlagSet creates a new flag set that inherits properties from the command.
+func (c *BaseCommand) NewFlagSet(opts ...Option) *FlagSet {
+	return NewFlagSet(WithLookupEnv(c.LookupEnv))
 }
 
 // Flags returns the base command flags, which is always nil.
@@ -360,7 +367,29 @@ func (c *BaseCommand) Pipe() (stdin, stdout, stderr *bytes.Buffer) {
 	return
 }
 
-// WorkingDir returns the working directory. See [Command] for more information.
+// LookupEnv returns the value from the environment at the given key. The second
+// return value indicates whether the value was set.
+func (c *BaseCommand) LookupEnv(key string) (string, bool) {
+	if v := c.lookupEnv; v != nil {
+		return c.lookupEnv(key)
+	}
+	return os.LookupEnv(key)
+}
+
+// SetLookupEnv sets the CLIs environment lookup logic to use the provided
+// function.
+func (c *BaseCommand) SetLookupEnv(fn LookupEnvFunc) {
+	c.lookupEnv = fn
+}
+
+// GetEnv returns the value from the environment at the given key.
+func (c *BaseCommand) GetEnv(key string) string {
+	v, _ := c.LookupEnv(key)
+	return v
+}
+
+// WorkingDir returns the absolute path of current working directory from where
+// the command was started. All symlinks are resolved to their real paths.
 func (c *BaseCommand) WorkingDir() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -380,8 +409,8 @@ func (c *BaseCommand) WorkingDir() (string, error) {
 	return abs, nil
 }
 
-// ExecutablePath returns the executable's path. See [Command] for more
-// information.
+// ExecutablePath returns the absolute path of the CLI executable binary. All
+// symlinks are resolved to their real values.
 func (c *BaseCommand) ExecutablePath() (string, error) {
 	pth, err := os.Executable()
 	if err != nil {
