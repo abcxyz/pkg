@@ -122,7 +122,7 @@ func TestRootCommand_Run(t *testing.T) {
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
-	rootCmd := func() Command {
+	rootCmd := func() *RootCommand {
 		return &RootCommand{
 			Name:    "test",
 			Version: "1.2.3",
@@ -274,10 +274,6 @@ func TestBaseCommand_Prompt_Values(t *testing.T) {
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
-	rootCmd := func() Command {
-		return &RootCommand{}
-	}
-
 	cases := []struct {
 		name      string
 		args      []string
@@ -305,7 +301,7 @@ func TestBaseCommand_Prompt_Values(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cmd := rootCmd()
+			var cmd RootCommand
 			stdin, _, stderr := cmd.Pipe()
 
 			for _, input := range tc.inputs {
@@ -331,10 +327,6 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
-	rootCmd := func() Command {
-		return &RootCommand{}
-	}
-
 	cases := []struct {
 		name      string
 		args      []string
@@ -359,7 +351,7 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cmd := rootCmd()
+			var cmd RootCommand
 			stdin, _, stderr := cmd.Pipe()
 
 			for _, input := range tc.inputs {

@@ -65,9 +65,6 @@ type Command interface {
 	// Run executes the command.
 	Run(ctx context.Context, args []string) error
 
-	// Prompt provides a mechanism for asking for user input.
-	Prompt(ctx context.Context, msg string, args ...any) (string, error)
-
 	// Stdout returns the stdout stream. SetStdout sets the stdout stream.
 	Stdout() io.Writer
 	SetStdout(w io.Writer)
@@ -87,20 +84,6 @@ type Command interface {
 	// Stdin returns the stdin stream. SetStdin sets the stdin stream.
 	Stdin() io.Reader
 	SetStdin(r io.Reader)
-
-	// Pipe creates new unqiue stdin, stdout, and stderr buffers, sets them on the
-	// command, and returns them. This is most useful for testing where callers
-	// want to simulate inputs or assert certain command outputs.
-	Pipe() (stdin, stdout, stderr *bytes.Buffer)
-
-	// WorkingDir returns the absolute path of current working directory from
-	// where the command was started. All symlinks are resolved to their real
-	// paths.
-	WorkingDir() (string, error)
-
-	// ExecutablePath returns the absolute path of the CLI executable binary. All
-	// symlinks are resolved to their real values.
-	ExecutablePath() (string, error)
 }
 
 // ArgPredictor is an optional interface that [Command] can implement to declare
@@ -286,11 +269,11 @@ func (c *BaseCommand) Hidden() bool {
 	return false
 }
 
-// Prompt prompts the user for a value. It reads from [Stdin], up to 64k bytes.
-// If there's an input stream (e.g. a pipe), it will read the pipe.
-// If the terminal is a TTY, it will prompt. Otherwise it will fail if there's
-// no pipe and the terminal is not a tty. If the context is canceled, this function
-// leaves the c.Stdin in a bad state.
+// Prompt provides a mechanism for asking for user input. It reads from [Stdin],
+// up to 64k bytes. If there's an input stream (e.g. a pipe), it will read the
+// pipe. If the terminal is a TTY, it will prompt. Otherwise it will fail if
+// there's no pipe and the terminal is not a tty. If the context is canceled,
+// this function leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
 	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
 		fmt.Fprintf(c.Stdout(), msg, args...)
