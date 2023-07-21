@@ -123,6 +123,11 @@ func SubtractMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 	}
 
 	for _, m := range maps[1:] {
+		// Short-circuit: if the map is empty, there's nothing left to subtract.
+		if len(final) == 0 {
+			return final
+		}
+
 		for k := range m {
 			delete(final, k)
 		}
