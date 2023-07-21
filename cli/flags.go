@@ -50,6 +50,25 @@ func MapLookuper(m map[string]string) LookupEnvFunc {
 	}
 }
 
+// MultiLookuper accepts multiple [LookupEnvFunc]. It runs them in order on the
+// environment key, returning the first entry that reports found.
+func MultiLookuper(fns ...LookupEnvFunc) LookupEnvFunc {
+	return func(s string) (string, bool) {
+		for _, fn := range fns {
+			if fn == nil {
+				continue
+			}
+
+			v, ok := fn(s)
+			if ok {
+				return v, ok
+			}
+		}
+
+		return "", false
+	}
+}
+
 // FlagSet is the root flag set for creating and managing flag sections.
 type FlagSet struct {
 	flagSet   *flag.FlagSet
