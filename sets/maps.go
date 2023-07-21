@@ -15,8 +15,9 @@
 package sets
 
 // IntersectMapKeys finds the intersection of all m keys, where intersection is
-// defined as keys that exist in all m. It always returns an allocated map, even
-// if the intersection is the empty set.
+// defined as keys that exist in all m. In the case where duplicate keys exist
+// across maps, the value corresponding to the key in the first map is used. It
+// always returns an allocated map, even if the intersection is the empty set.
 //
 // It does not modify any of the given inputs, but also does not deep copy any
 // values. That means the returned map may have keys and values that point to
