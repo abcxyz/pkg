@@ -104,6 +104,11 @@ func TestIntersect(t *testing.T) {
 				t.Errorf("incorrect insersection (-want/+got):\n%s", diff)
 			}
 
+			// Ensure we freed up as much memory as possible.
+			if c, l := cap(got), len(got); c != l {
+				t.Errorf("expected cap(%d) to equal len(%d)", c, l)
+			}
+
 			// Ensure the slices were not modified.
 			if diff := cmp.Diff(slicesCopy, tc.slices); diff != "" {
 				t.Errorf("insersection modified slice (-want/+got):\n%s", diff)
@@ -191,6 +196,11 @@ func TestIntersectStable(t *testing.T) {
 			got := IntersectStable(tc.slices...)
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Errorf("incorrect insersection (-want/+got):\n%s", diff)
+			}
+
+			// Ensure we freed up as much memory as possible.
+			if c, l := cap(got), len(got); c != l {
+				t.Errorf("expected cap(%d) to equal len(%d)", c, l)
 			}
 
 			// Ensure the slices were not modified.
@@ -359,6 +369,11 @@ func TestSubtract(t *testing.T) {
 			got := Subtract(tc.slices...)
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Errorf("incorrect insersection (-want/+got):\n%s", diff)
+			}
+
+			// Ensure we freed up as much memory as possible.
+			if c, l := cap(got), len(got); c != l {
+				t.Errorf("expected cap(%d) to equal len(%d)", c, l)
 			}
 
 			// Ensure the slices were not modified.

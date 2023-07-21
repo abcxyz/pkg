@@ -58,24 +58,16 @@ func IntersectStable[T comparable](slices ...[]T) []T {
 	if len(slices) == 0 {
 		return []T{}
 	}
-
-	// Make a copy of the first slice; we're going to gradually remove elements.
-	final := append([]T{}, slices[0]...)
-
-	// Remove duplicates
-	finalSeen := make(map[T]struct{}, len(final))
-	var i int
-	for _, v := range final {
-		if _, ok := finalSeen[v]; !ok {
-			finalSeen[v] = struct{}{}
-			final[i] = v
-			i++
+	// Make a copy of the slice with duplicates removed.
+	final := make([]T, 0, len(slices[0]))
+	uniq := make(map[T]struct{}, len(slices[0]))
+	for _, v := range slices[0] {
+		if _, ok := uniq[v]; !ok {
+			uniq[v] = struct{}{}
+			final = append(final, v)
 		}
 	}
-	for j := i; j < len(final); j++ {
-		final[j] = *new(T)
-	}
-	final = final[:i:len(final)]
+	final = final[:len(final):len(final)]
 
 	for _, s := range slices[1:] {
 		// Short-circuit: if our intersection is already the empty set, we can
@@ -95,7 +87,7 @@ func IntersectStable[T comparable](slices ...[]T) []T {
 		for j := i; j < len(final); j++ {
 			final[j] = *new(T)
 		}
-		final = final[:i:len(final)]
+		final = final[:i:i]
 	}
 	return final
 }
@@ -153,33 +145,25 @@ func Subtract[T comparable](slices ...[]T) []T {
 		return []T{}
 	}
 
-	// Make a copy of the first slice; we're going to gradually remove elements.
-	final := append([]T{}, slices[0]...)
-
 	var alloc int
 	for _, s := range slices[1:] {
 		alloc += len(s)
 	}
-	toDelete := make(map[T]struct{}, alloc)
+	toSkip := make(map[T]struct{}, alloc)
 	for _, s := range slices[1:] {
 		for _, k := range s {
-			toDelete[k] = struct{}{}
+			toSkip[k] = struct{}{}
 		}
 	}
 
-	var i int
-	for _, v := range final {
-		if _, ok := toDelete[v]; !ok {
-			final[i] = v
-			i++
+	final := make([]T, 0, len(slices[0]))
+	for _, v := range slices[0] {
+		if _, ok := toSkip[v]; ok {
+			continue
 		}
+		final = append(final, v)
 	}
-	// Delete unused elements, nil out unused space so we don't leak.
-	for j := i; j < len(final); j++ {
-		final[j] = *new(T)
-	}
-	final = final[:i:len(final)]
-	return final
+	return final[:len(final):len(final)]
 }
 
 func sliceIndex[T comparable](haystack []T, needle T) int {
