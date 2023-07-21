@@ -17,6 +17,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -380,6 +381,122 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 	}
 }
 
+func TestBaseCommand_LookupEnv(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		lookupEnv LookupEnvFunc
+		expValue  string
+		expFound  bool
+	}{
+		{
+			name: "uses_override",
+			lookupEnv: MapLookuper(map[string]string{
+				"PATH": "value",
+			}),
+			expValue: "value",
+			expFound: true,
+		},
+		{
+			name: "uses_override_not_present",
+			lookupEnv: MapLookuper(map[string]string{
+				"ZIP": "zap",
+			}),
+			expValue: "",
+			expFound: false,
+		},
+		{
+			name:     "uses_os_no_override",
+			expValue: os.Getenv("PATH"),
+			expFound: true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cmd RootCommand
+			cmd.lookupEnv = tc.lookupEnv
+
+			got, found := cmd.LookupEnv("PATH")
+			if got, want := got, tc.expValue; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+			if got, want := found, tc.expFound; got != want {
+				t.Errorf("expected %t to be %t", got, want)
+			}
+		})
+	}
+}
+
+func TestBaseCommand_SetLookupEnv(t *testing.T) {
+	t.Parallel()
+
+	var cmd RootCommand
+
+	if got := cmd.lookupEnv; got != nil {
+		t.Errorf("expected func to be nil")
+	}
+
+	fn := func(_ string) (string, bool) {
+		return "banana", false
+	}
+	cmd.SetLookupEnv(fn)
+
+	got, _ := cmd.lookupEnv("")
+	if got, want := got, "banana"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestBaseCommand_GetEnv(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name      string
+		lookupEnv LookupEnvFunc
+		expValue  string
+	}{
+		{
+			name: "uses_override",
+			lookupEnv: MapLookuper(map[string]string{
+				"PATH": "value",
+			}),
+			expValue: "value",
+		},
+		{
+			name: "uses_override_not_present",
+			lookupEnv: MapLookuper(map[string]string{
+				"ZIP": "zap",
+			}),
+			expValue: "",
+		},
+		{
+			name:     "uses_os_no_override",
+			expValue: os.Getenv("PATH"),
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cmd RootCommand
+			cmd.lookupEnv = tc.lookupEnv
+
+			if got, want := cmd.GetEnv("PATH"), tc.expValue; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+		})
+	}
+}
+
 func TestBaseCommand_WorkingDir(t *testing.T) {
 	t.Parallel()
 
@@ -425,7 +542,7 @@ func (c *TestCommand) Help() string {
 }
 
 func (c *TestCommand) Flags() *FlagSet {
-	set := NewFlagSet()
+	set := c.NewFlagSet()
 
 	f := set.NewSection("Options")
 

@@ -62,6 +62,14 @@ type Option func(fs *FlagSet) *FlagSet
 
 // WithLookupEnv defines a custom function for looking up environment variables.
 // This is mostly useful for testing.
+//
+// To bind to a CLI's lookup function:
+//
+//	func (c *CountCommand) Flags() *cli.FlagSet {
+//		set := cli.NewFlagSet(cli.WithLookupEnv(c.LookupEnv))
+//	}
+//
+// Alternatively use [BaseCommand.NewFlagSet].
 func WithLookupEnv(fn LookupEnvFunc) Option {
 	return func(fs *FlagSet) *FlagSet {
 		if fn != nil {

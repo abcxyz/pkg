@@ -68,7 +68,7 @@ Usage: {{ COMMAND }} [options]
 }
 
 func (c *UploadCommand) Flags() *cli.FlagSet {
-	set := cli.NewFlagSet()
+	set := c.NewFlagSet()
 	c.serverFlags.addServerFlags(set)
 	return set
 }
@@ -103,7 +103,7 @@ Usage: {{ COMMAND }} [options]
 }
 
 func (c *DownloadCommand) Flags() *cli.FlagSet {
-	set := cli.NewFlagSet()
+	set := c.NewFlagSet()
 	c.serverFlags.addServerFlags(set)
 	return set
 }

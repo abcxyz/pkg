@@ -39,7 +39,7 @@ Usage: {{ COMMAND }} [options]
 }
 
 func (c *EatCommand) Flags() *cli.FlagSet {
-	return cli.NewFlagSet()
+	return c.NewFlagSet()
 }
 
 func (c *EatCommand) Run(ctx context.Context, args []string) error {
@@ -68,7 +68,7 @@ Usage: {{ COMMAND }} [options]
 }
 
 func (c *DrinkCommand) Flags() *cli.FlagSet {
-	return cli.NewFlagSet()
+	return c.NewFlagSet()
 }
 
 func (c *DrinkCommand) Run(ctx context.Context, args []string) error {
