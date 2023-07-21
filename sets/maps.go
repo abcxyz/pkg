@@ -53,7 +53,7 @@ func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 		// Short-circuit: we've already got the smallest possible intersection
 		// (empty set), so there's no point in continuing.
 		if len(final) == 0 {
-			return final
+			return make(map[K]V)
 		}
 
 		// This is us, ignore
@@ -75,9 +75,9 @@ func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 }
 
 // UnionMapKeys finds the union of all m, where union is defined as the
-// combination of all keys in all m. In the case of conflict, the last-provided
-// key will be in the result. It always returns an allocated map, even if the
-// union is the empty set.
+// combination of all keys in all m. In the case where duplicate keys exist
+// across maps, the value corresponding to the key in the first map is used. It
+// always returns an allocated map, even if the union is the empty set.
 //
 // It does not modify any of the given inputs, but also does not deep copy any
 // values. That means the returned map may have keys and values that point to
@@ -97,7 +97,10 @@ func UnionMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 	// Iterate over all maps and combine elements.
 	for _, m := range maps {
 		for k, v := range m {
-			final[k] = v
+			// Only overwrite if we haven't previously seen the value.
+			if _, ok := final[k]; !ok {
+				final[k] = v
+			}
 		}
 	}
 
@@ -126,7 +129,7 @@ func SubtractMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 	for _, m := range maps[1:] {
 		// Short-circuit: if the map is empty, there's nothing left to subtract.
 		if len(final) == 0 {
-			return final
+			return make(map[K]V)
 		}
 
 		for k := range m {

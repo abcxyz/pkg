@@ -81,7 +81,7 @@ func IntersectStable[T comparable](slices ...[]T) []T {
 		// Short-circuit: if our intersection is already the empty set, we can
 		// return now.
 		if len(final) == 0 {
-			return final
+			return []T{}
 		}
 
 		var i int
