@@ -49,15 +49,10 @@ jobs:
           repository: 'abcxyz/pkg'
           path: 'abcxyz-pkg'
 
-      - id: 'setup-go'
-        uses: 'actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753' # ratchet:actions/setup-go@v4
+      - id: 'lint'
+        uses: './.github/actions/terraform-linter'
         with:
-          go-version: '1.20'
-
-      - id: 'run-linter'
-        shell: 'bash'
-        working-directory: 'abcxyz-pkg'
-        run: 'go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}'
+          directory: '${{ inputs.directory }}'
 
       - name: 'Initialize and validate sub directories'
         if: '${{ inputs.walk_dirs }}'
