@@ -50,7 +50,7 @@ jobs:
           path: 'abcxyz-pkg'
 
       - id: 'lint'
-        uses: './.github/actions/terraform-linter'
+        uses: './abcxyz-pkg/.github/actions/terraform-linter'
         with:
           directory: '${{ inputs.directory }}'
 
