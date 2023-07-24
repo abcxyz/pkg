@@ -33,15 +33,22 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
-          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+          echo "path=${HOME}/.abc" >> $GITHUB_OUTPUT
 
-      - name: 'Setup binary'
+      - name: 'Setup binary (no cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
+          name: 'abc'
           install_dir: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_linux_amd64.tar.gz'
-          enable_cache: 'true'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_ubuntu'
+
+      - name: 'Setup binary (cache)'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          name: 'abc'
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_linux_amd64.tar.gz'
+          enable_cache: true
 
       - name: 'Test'
         shell: 'bash'
@@ -62,16 +69,22 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
-          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+          echo "path=${HOME}/.abc" >> $GITHUB_OUTPUT
 
-      - name: 'Setup binary'
+      - name: 'Setup binary (no cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
+          name: 'abc'
           install_dir: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_windows_amd64.zip'
-          file_ext: 'zip'
-          enable_cache: 'true'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_windows'
+
+      - name: 'Setup binary (cache)'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          name: 'abc'
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_windows_amd64.zip'
+          enable_cache: true
 
       - name: 'Test'
         shell: 'bash'
@@ -92,15 +105,22 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
-          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+          echo "path=${HOME}/.abc" >> $GITHUB_OUTPUT
 
-      - name: 'Setup binary'
+      - name: 'Setup binary (no cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
+          name: 'abc'
           install_dir: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_darwin_amd64.tar.gz'
-          enable_cache: 'true'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_macos'
+
+      - name: 'Setup binary (cache)'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          name: 'abc'
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_darwin_amd64.tar.gz'
+          enable_cache: true
 
       - name: 'Test'
         shell: 'bash'
