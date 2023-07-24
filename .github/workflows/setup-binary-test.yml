@@ -1,0 +1,107 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'setup-binary-test'
+on:
+  pull_request:
+    paths:
+      - '.github/actions/setup-binary/**'
+jobs:
+  setup-binary-test-ubuntu:
+    strategy:
+      matrix:
+        os:
+          - 'ubuntu-latest'
+          - 'ubuntu-20.04'
+    runs-on: '${{ matrix.os }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Path'
+        id: 'path'
+        shell: 'bash'
+        run: |
+          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+
+      - name: 'Setup binary'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_linux_amd64.tar.gz'
+          enable_cache: 'true'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_ubuntu'
+
+      - name: 'Test'
+        shell: 'bash'
+        run: 'abc --version'
+
+  setup-binary-test-windows:
+    strategy:
+      matrix:
+        os:
+          - 'windows-latest'
+          - 'windows-2019'
+    runs-on: '${{ matrix.os }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Path'
+        id: 'path'
+        shell: 'bash'
+        run: |
+          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+
+      - name: 'Setup binary'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_windows_amd64.zip'
+          file_ext: 'zip'
+          enable_cache: 'true'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_windows'
+
+      - name: 'Test'
+        shell: 'bash'
+        run: 'abc --version'
+
+  setup-binary-test-macos:
+    strategy:
+      matrix:
+        os:
+          - 'macos-latest'
+          - 'macos-11'
+    runs-on: '${{ matrix.os }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Path'
+        id: 'path'
+        shell: 'bash'
+        run: |
+          echo "path=${HOME}/.test" >> $GITHUB_OUTPUT
+
+      - name: 'Setup binary'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          install_dir: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_darwin_amd64.tar.gz'
+          enable_cache: 'true'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_test_setup_binary_macos'
+
+      - name: 'Test'
+        shell: 'bash'
+        run: 'abc --version'
