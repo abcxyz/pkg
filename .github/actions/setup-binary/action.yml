@@ -18,46 +18,34 @@ description: |-
   Use this action to install and cache a binary for use within a GitHub workflow.
 
 inputs:
-  name:
-    description: 'The name of the binary.'
-    required: true
   download_url:
-    description: 'The download URL for the binary.'
+    description: 'The download URL for the binary. This must be of the format https://...'
     required: true
-  install_dir:
-    description: 'The directory to install the binary (e.g. install/dir).'
+  install_path:
+    description: 'The path on disk in which to install the binary (defaults to the current directory). This includes the folder and binary name (e.g. /path/to/my/binary). This action does not modify $PATH; if you want the binary to be accessible, make sure the parent folder is in $PATH.'
     default: '.'
     required: false
-  binary_dir:
-    description: 'The directory to the binary. This is useful when the binary is located in a sub-path of the downloaded archive (e.g. install/dir/sub/path).'
-    required: false
-  enable_cache:
-    description: 'Enable the use of caching for the binary.'
-    default: 'false'
-    required: false
-  override_cache_key:
-    description: 'Override the default value of the cache key.'
+  cache_key:
+    description: 'The cache key to use when caching the downloaded binary. If this value is empty, caching will be disabled.'
     required: false
 
 runs:
   using: 'composite'
   steps:
-    - name: 'Validate required inputs'
+    - name: 'Validate inputs'
       shell: 'bash'
       env:
-        NAME: '${{ inputs.name }}'
         DOWNLOAD_URL: '${{ inputs.download_url }}'
       run: |
+        # Validate inputs
         errors=false
 
-        if [ -z "${NAME}" ]; then
-          errors=true
-          echo "::error ::name is a required input"
-        fi
-
-        if [ -z "${DOWNLOAD_URL}" ]; then
-          errors=true
-          echo "::error ::download_url is a required input"
+        if [[ -z "${DOWNLOAD_URL}" ]]; then
+            errors=true
+            echo "::error ::download_url is a required input"
+        elif [[ "${DOWNLOAD_URL}" != https://* ]]; then
+            errors=true
+            echo "::error ::download_url must start with https://..."
         fi
 
         if [ "$errors" = true ]; then
@@ -67,22 +55,23 @@ runs:
     - name: 'Restore cache binary'
       id: 'cache-binary'
       if: |
-        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.enable_cache)
+        inputs.cache_key != ''
       uses: 'actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8' # ratchet:actions/cache/restore@v3
       with:
-        path: '${{ inputs.install_dir }}'
-        key: |
-          ${{ inputs.override_cache_key || format('{0}_{1}_{2}', runner.os, runner.arch, inputs.name) }}
+        path: '${{ inputs.install_path }}'
+        key: 'setup-binary-${{ inputs.cache_key }}'
 
-    - name: 'Create install dir'
+    - name: 'Create install path'
       if: |
         steps.cache-binary.outputs.cache-hit != 'true'
       shell: 'bash'
       env:
-        INSTALL_DIR: '${{ inputs.install_dir }}'
+        INSTALL_PATH: '${{ inputs.install_path }}'
       run: |-
-        if [ ! -d "${INSTALL_DIR}" ]; then
-          mkdir "${INSTALL_DIR}"
+        # Create install path
+        if [ ! -d "${INSTALL_PATH}" ]; then
+          echo "Creating install path: ${INSTALL_PATH}..."
+          mkdir "${INSTALL_PATH}"
         fi
 
     - name: 'Download binary'
@@ -90,10 +79,11 @@ runs:
         steps.cache-binary.outputs.cache-hit != 'true'
       shell: 'bash'
       env:
-        INSTALL_DIR: '${{ inputs.install_dir }}'
+        INSTALL_PATH: '${{ inputs.install_path }}'
         DOWNLOAD_URL: '${{ inputs.download_url }}'
       run: |-
-        cd "${INSTALL_DIR}"
+        # Download binary
+        cd "${INSTALL_PATH}"
         curl -sSL -o "setup-binary-artifact" "${DOWNLOAD_URL}"
 
     - name: 'Extract'
@@ -101,10 +91,11 @@ runs:
         steps.cache-binary.outputs.cache-hit != 'true'
       shell: 'bash'
       env:
-        INSTALL_DIR: '${{ inputs.install_dir }}'
+        INSTALL_PATH: '${{ inputs.install_path }}'
         DOWNLOAD_URL: '${{ inputs.download_url }}'
       run: |-
-        cd "${INSTALL_DIR}"
+        # Extract binary
+        cd "${INSTALL_PATH}"
 
         if [[ "${DOWNLOAD_URL}" == *.tar || "${DOWNLOAD_URL}" == *.gz ]]
         then
@@ -119,17 +110,8 @@ runs:
 
     - name: 'Save cache binary'
       if: |
-        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.enable_cache) &&
-        steps.cache-binary.outputs.cache-hit != 'true'
+        inputs.cache_key != '' && steps.cache-binary.outputs.cache-hit != 'true'
       uses: 'actions/cache/save@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8' # ratchet:actions/cache/save@v3
       with:
-        path: '${{ inputs.install_dir }}'
-        key: |
-          ${{ inputs.override_cache_key || format('{0}_{1}_{2}', runner.os, runner.arch, inputs.name) }}
-
-    - name: 'Add binary to path'
-      shell: 'bash'
-      env:
-        BIN_PATH: '${{ inputs.binary_dir || inputs.install_dir }}'
-      run: |-
-        echo "${BIN_PATH}" >> $GITHUB_PATH
+        path: '${{ inputs.install_path }}'
+        key: 'setup-binary-${{ inputs.cache_key }}'
