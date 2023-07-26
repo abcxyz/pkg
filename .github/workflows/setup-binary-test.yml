@@ -23,32 +23,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - 'ubuntu-latest'
-          - 'ubuntu-20.04'
-          - 'windows-latest'
-          - 'windows-2019'
-          - 'macos-latest'
-          - 'macos-11'
         include:
           - os: 'ubuntu-latest'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_linux_amd64.tar.gz'
-
-          - os: 'ubuntu-20.04'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_linux_amd64.tar.gz'
-
+            name: 'linux'
+            ext: 'tar.gz'
+            checksum: '1b0ac92898af5a853dc6f8e4432e9241d6efb22eda48253424236e2e5bc6ccd0b5d18d8c5a46ea096a27bba0027c359396736b83b729b6b51852f71eb1a17702'
           - os: 'windows-latest'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_windows_amd64.zip'
-
-          - os: 'windows-2019'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_windows_amd64.zip'
-
+            name: 'windows'
+            ext: 'zip'
+            checksum: 'e64c57fb786d1fc5949542e21903dc4e15ab083a7d0b533a1cb115b689a4f72e5d76af50848c937f103264130913fb974dec9afea7f311897d7f776f6423268a'
           - os: 'macos-latest'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_darwin_amd64.tar.gz'
-
-          - os: 'macos-11'
-            download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_darwin_amd64.tar.gz'
-
+            name: 'darwin'
+            ext: 'tar.gz'
+            checksum: '5ee5467091c7058c018cd83fbae8295b18c710135a8bb197eda6705b0562b9849df8519e82e09d79895a7bd7fadd60f3cad01f1509a8de2bcd8638f9b057a476'
     runs-on: '${{ matrix.os }}'
     steps:
       - name: 'Checkout'
@@ -64,30 +51,27 @@ jobs:
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: '${{ matrix.download_url }}'
-          cache_key: '${{ runner.name }}_abc_${{ github.sha }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          checksum: '${{ matrix.checksum }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: '${{ matrix.download_url }}'
-          cache_key: '${{ runner.name }}_abc_${{ github.sha }}'
-
-      - name: 'Add binary to path'
-        shell: 'bash'
-        env:
-          BINARY_PATH: '${{ steps.path.outputs.path }}'
-        run: |-
-          echo "${BINARY_PATH}" >> $GITHUB_PATH
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          checksum: '${{ matrix.checksum }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          add_to_path: true
 
       - name: 'Test'
         shell: 'bash'
         run: |
+          abc -version
           GOT=$(abc -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="abc 0.0.1-alpha4"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
-            echo "::error ::Expected ${GOT} to be ${WANT}"
+            echo "::error ::Expected ${GOT} to contain ${WANT}"
             exit 1
           fi
