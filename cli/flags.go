@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -69,11 +70,16 @@ func MultiLookuper(fns ...LookupEnvFunc) LookupEnvFunc {
 	}
 }
 
+// AfterParseFunc is the type signature for functions that are called after
+// flags have been parsed.
+type AfterParseFunc func(existingErr error) error
+
 // FlagSet is the root flag set for creating and managing flag sections.
 type FlagSet struct {
-	flagSet   *flag.FlagSet
-	sections  []*FlagSection
-	lookupEnv LookupEnvFunc
+	flagSet         *flag.FlagSet
+	sections        []*FlagSection
+	lookupEnv       LookupEnvFunc
+	afterParseFuncs []AfterParseFunc
 }
 
 // Option is an option to the flagset.
@@ -142,14 +148,52 @@ func (f *FlagSet) NewSection(name string) *FlagSection {
 	return fs
 }
 
+// AfterParse defines a post-parse function. This can be used to set flag
+// defaults that should not be set until after parsing, such as defaulting flag
+// values to the value of other flags. These functions are called after flags
+// have been parsed by the flag library, but before [Parse] returns.
+func (f *FlagSet) AfterParse(fn AfterParseFunc) {
+	if fn == nil {
+		return
+	}
+
+	f.afterParseFuncs = append(f.afterParseFuncs, fn)
+}
+
+// Arg implements flag.FlagSet#Arg.
+func (f *FlagSet) Arg(i int) string {
+	return f.flagSet.Arg(i)
+}
+
 // Args implements flag.FlagSet#Args.
 func (f *FlagSet) Args() []string {
 	return f.flagSet.Args()
 }
 
+// Lookup implements flag.FlagSet#Lookup.
+func (f *FlagSet) Lookup(name string) *flag.Flag {
+	return f.flagSet.Lookup(name)
+}
+
 // Args implements flag.FlagSet#Parse.
 func (f *FlagSet) Parse(args []string) error {
-	return f.flagSet.Parse(args)
+	// Call the normal parse function first, so that Args and everything are
+	// properly set for any after functions.
+	merr := f.flagSet.Parse(args)
+
+	for _, fn := range f.afterParseFuncs {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					merr = errors.Join(merr, fmt.Errorf("panic: %v", r))
+				}
+			}()
+
+			merr = errors.Join(merr, fn(merr))
+		}()
+	}
+
+	return merr
 }
 
 // Args implements flag.FlagSet#Parsed.
@@ -218,6 +262,21 @@ func (f *FlagSet) Help() string {
 	}
 
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// GetEnv is a convenience function for looking up an environment variable. By
+// default, it is the same as [os.GetEnv], but the lookup function can be
+// overridden.
+func (f *FlagSet) GetEnv(k string) string {
+	v, _ := f.LookupEnv(k)
+	return v
+}
+
+// LookupEnv is a convenience function for looking up an environment variable.
+// By default, it is the same as [os.LookupEnv], but the lookup function can be
+// overridden.
+func (f *FlagSet) LookupEnv(k string) (string, bool) {
+	return f.lookupEnv(k)
 }
 
 // Value is an extension of [flag.Value] which adds additional fields for

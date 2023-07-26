@@ -49,7 +49,7 @@ Usage: {{ COMMAND }} [options] MAX
 func (c *CountCommand) Flags() *cli.FlagSet {
 	set := c.NewFlagSet()
 
-	f := set.NewSection("Number options")
+	f := set.NewSection("NUMBER OPTIONS")
 
 	f.Int64Var(&cli.Int64Var{
 		Name:    "step",

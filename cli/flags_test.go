@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/abcxyz/pkg/testutil"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -153,6 +154,160 @@ func TestFlagSet_Default(t *testing.T) {
 		if diff := cmp.Diff(want, got); diff != "" {
 			t.Errorf("string slice value from default (-want,+got):\n%s", diff)
 		}
+	})
+}
+
+func TestFlagSet_AfterParse(t *testing.T) {
+	t.Parallel()
+
+	t.Run("recovers_panic", func(t *testing.T) {
+		t.Parallel()
+
+		fs := NewFlagSet()
+		fs.AfterParse(func(existingErr error) error {
+			panic("oh no!")
+		})
+
+		// This implicitly checks we did not panic
+		err := fs.Parse(nil)
+		if diff := testutil.DiffErrString(err, "panic: oh no!"); diff != "" {
+			t.Error(diff)
+		}
+	})
+
+	t.Run("runs_all", func(t *testing.T) {
+		t.Parallel()
+
+		var names []string
+
+		fs := NewFlagSet()
+		fs.AfterParse(func(existingErr error) error {
+			names = append(names, "one")
+			return nil
+		})
+		fs.AfterParse(func(existingErr error) error {
+			names = append(names, "two")
+			return nil
+		})
+
+		if err := fs.Parse(nil); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff([]string{"one", "two"}, names); diff != "" {
+			t.Errorf("did not run all functions (-want, +got):\n%s", diff)
+		}
+	})
+
+	t.Run("runs_all_error", func(t *testing.T) {
+		t.Parallel()
+
+		fs := NewFlagSet()
+		fs.AfterParse(func(existingErr error) error {
+			return fmt.Errorf("one")
+		})
+		fs.AfterParse(func(existingErr error) error {
+			return fmt.Errorf("two")
+		})
+
+		err := fs.Parse(nil)
+		if diff := testutil.DiffErrString(err, "one\ntwo"); diff != "" {
+			t.Error(diff)
+		}
+	})
+}
+
+func ExampleFlagSet_AfterParse_validation() {
+	set := NewFlagSet()
+	f := set.NewSection("FLAGS")
+
+	var address string
+	f.StringVar(&StringVar{
+		Name:   "address",
+		Target: &address,
+	})
+
+	var protocol string
+	f.StringVar(&StringVar{
+		Name:   "protocol",
+		Target: &protocol,
+	})
+
+	set.AfterParse(func(existingErr error) error {
+		var merr error
+		if address == "" {
+			return fmt.Errorf("-address is required")
+		}
+		if address == "" {
+			return fmt.Errorf("-protocol is required")
+		}
+		return merr
+	})
+}
+
+func ExampleFlagSet_AfterParse_deferredDefault() {
+	set := NewFlagSet()
+	f := set.NewSection("FLAGS")
+
+	// This is an old flag that we will remove in the future. We want "-address"
+	// to default to the value of this flag. However, the value of this flag is
+	// not known until after parsing, so we can't set `Default` on the address
+	// flag to this flag, since that's resolved at compile time. Instead, we need
+	// to use the `AfterParse` function to set the defaults.
+	var host string
+	f.StringVar(&StringVar{
+		Name:   "host",
+		Target: &host,
+		Hidden: true,
+	})
+
+	var address string
+	f.StringVar(&StringVar{
+		Name:   "address",
+		Target: &address,
+	})
+
+	set.AfterParse(func(existingErr error) error {
+		if address == "" {
+			address = host
+		}
+		return nil
+	})
+}
+
+func ExampleFlagSet_AfterParse_deferredDefaultArgs() {
+	set := NewFlagSet()
+	f := set.NewSection("FLAGS")
+
+	// The default value should be the first argument. Setting this to default to
+	// `os.Args[1]` will not work, because arguments can shift after flag parsing.
+	// Instead, we need to use the `AfterParse` function to set the default.
+	var address string
+	f.StringVar(&StringVar{
+		Name:   "address",
+		Target: &address,
+	})
+
+	set.AfterParse(func(existingErr error) error {
+		if address == "" {
+			address = set.Arg(1)
+		}
+		return nil
+	})
+}
+
+func ExampleFlagSet_AfterParse_checkIfError() {
+	set := NewFlagSet()
+
+	set.AfterParse(func(existingErr error) error {
+		// Do not run this function if flag parsing or other AfterParse functions
+		// have failed.
+		if existingErr != nil {
+			return nil
+		}
+
+		// Logic
+		return nil
 	})
 }
 
