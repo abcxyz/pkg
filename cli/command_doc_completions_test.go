@@ -53,7 +53,7 @@ func (c *SingCommand) PredictArgs() complete.Predictor {
 func (c *SingCommand) Flags() *cli.FlagSet {
 	set := c.NewFlagSet()
 
-	f := set.NewSection("Song options")
+	f := set.NewSection("SONG OPTIONS")
 
 	f.StringVar(&cli.StringVar{
 		Name:    "song",

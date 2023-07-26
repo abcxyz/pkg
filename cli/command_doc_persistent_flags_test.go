@@ -22,22 +22,22 @@ import (
 	"github.com/abcxyz/pkg/cli"
 )
 
-// serverFlags represent the shared flags among all server commands. Embed this
+// ServerFlags represent the shared flags among all server commands. Embed this
 // struct into any commands that interact with a server.
-type serverFlags struct {
+type ServerFlags struct {
 	flagAddress       string
 	flagTLSSkipVerify bool
 }
 
-func (s *serverFlags) addServerFlags(set *cli.FlagSet) {
-	f := set.NewSection("Server options")
+func (sf *ServerFlags) Register(set *cli.FlagSet) {
+	f := set.NewSection("SERVER OPTIONS")
 
 	f.StringVar(&cli.StringVar{
 		Name:    "server-address",
 		Example: "https://my.corp.server:8145",
 		Default: "http://localhost:8145",
 		EnvVar:  "CLI_SERVER_ADDRESS",
-		Target:  &s.flagAddress,
+		Target:  &sf.flagAddress,
 		Usage:   "Endpoint, including protocol and port, the server.",
 	})
 
@@ -45,14 +45,14 @@ func (s *serverFlags) addServerFlags(set *cli.FlagSet) {
 		Name:    "insecure",
 		Default: false,
 		EnvVar:  "CLI_SERVER_TLS_SKIP_VERIFY",
-		Target:  &s.flagTLSSkipVerify,
+		Target:  &sf.flagTLSSkipVerify,
 		Usage:   "Skip TLS verification. This is bad, please don't do it.",
 	})
 }
 
 type UploadCommand struct {
 	cli.BaseCommand
-	serverFlags
+	serverFlags ServerFlags
 }
 
 func (c *UploadCommand) Desc() string {
@@ -69,7 +69,7 @@ Usage: {{ COMMAND }} [options]
 
 func (c *UploadCommand) Flags() *cli.FlagSet {
 	set := c.NewFlagSet()
-	c.serverFlags.addServerFlags(set)
+	c.serverFlags.Register(set)
 	return set
 }
 
@@ -78,8 +78,8 @@ func (c *UploadCommand) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
-	_ = c.flagAddress // or c.serverFlags.flagAddress
-	_ = c.flagTLSSkipVerify
+	_ = c.serverFlags.flagAddress
+	_ = c.serverFlags.flagTLSSkipVerify
 
 	// TODO: implement
 	return nil
@@ -87,7 +87,7 @@ func (c *UploadCommand) Run(ctx context.Context, args []string) error {
 
 type DownloadCommand struct {
 	cli.BaseCommand
-	serverFlags
+	serverFlags ServerFlags
 }
 
 func (c *DownloadCommand) Desc() string {
@@ -104,7 +104,7 @@ Usage: {{ COMMAND }} [options]
 
 func (c *DownloadCommand) Flags() *cli.FlagSet {
 	set := c.NewFlagSet()
-	c.serverFlags.addServerFlags(set)
+	c.serverFlags.Register(set)
 	return set
 }
 
@@ -113,8 +113,8 @@ func (c *DownloadCommand) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
-	_ = c.flagAddress // or c.serverFlags.flagAddress
-	_ = c.flagTLSSkipVerify
+	_ = c.serverFlags.flagAddress
+	_ = c.serverFlags.flagTLSSkipVerify
 
 	// TODO: implement
 	return nil
@@ -166,7 +166,7 @@ func Example_persistentFlags() {
 	//
 	//   Download a file from the server.
 	//
-	// Server options
+	// SERVER OPTIONS
 	//
 	//     -insecure
 	//         Skip TLS verification. This is bad, please don't do it. The default

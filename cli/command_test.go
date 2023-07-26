@@ -544,7 +544,7 @@ func (c *TestCommand) Help() string {
 func (c *TestCommand) Flags() *FlagSet {
 	set := c.NewFlagSet()
 
-	f := set.NewSection("Options")
+	f := set.NewSection("OPTIONS")
 
 	f.StringVar(&StringVar{
 		Name:    "string",

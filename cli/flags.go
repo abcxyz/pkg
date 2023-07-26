@@ -72,7 +72,7 @@ func MultiLookuper(fns ...LookupEnvFunc) LookupEnvFunc {
 
 // AfterParseFunc is the type signature for functions that are called after
 // flags have been parsed.
-type AfterParseFunc func(f *FlagSet) error
+type AfterParseFunc func(existingErr error) error
 
 // FlagSet is the root flag set for creating and managing flag sections.
 type FlagSet struct {
@@ -153,7 +153,7 @@ func (f *FlagSet) NewSection(name string) *FlagSection {
 // values to the value of other flags. These functions are called after flags
 // have been parsed by the flag library, but before [Parse] returns.
 func (f *FlagSet) AfterParse(fn AfterParseFunc) {
-	if fn != nil {
+	if fn == nil {
 		return
 	}
 
@@ -182,7 +182,15 @@ func (f *FlagSet) Parse(args []string) error {
 	merr := f.flagSet.Parse(args)
 
 	for _, fn := range f.afterParseFuncs {
-		merr = errors.Join(merr, fn(f))
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					merr = errors.Join(merr, fmt.Errorf("panic: %v", r))
+				}
+			}()
+
+			merr = errors.Join(merr, fn(merr))
+		}()
 	}
 
 	return merr
