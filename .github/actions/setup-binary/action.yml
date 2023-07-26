@@ -1,0 +1,152 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Setup Binary'
+
+description: |-
+  Use this action to install and cache a binary for use within a GitHub workflow. This action wraps the functionality of go-getter to provide advanced donwload and checksum capabilities.
+
+inputs:
+  download_url:
+    description: 'The download URL for the binary. This must a valid go-getter URL. See https://github.com/hashicorp/go-getter#url-format'
+    required: true
+  install_path:
+    description: 'The path on disk in which to extract the binary, this cannot be equal to the current directory. Set `add_to_path` to true to add this to the $PATH.'
+    required: true
+  checksum:
+    description: 'The checksum for the downloaded artifact. See https://github.com/hashicorp/go-getter#checksumming'
+    required: false
+  cache_key:
+    description: 'The cache key to use when caching the downloaded binary. If this value is empty, caching will be disabled.'
+    required: false
+  add_to_path:
+    description: 'Add the install_path to the $PATH variable.'
+    default: 'false'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Validate inputs'
+      shell: 'bash'
+      env:
+        DOWNLOAD_URL: '${{ inputs.download_url }}'
+        INSTALL_PATH: '${{ inputs.install_path }}'
+      run: |
+        # Validate inputs
+        errors=false
+
+        if [[ -z "${DOWNLOAD_URL}" ]]; then
+          errors=true
+          echo "::error ::download_url is a required input"
+        fi
+
+        if [[ -z "${INSTALL_PATH}" ]]; then
+          errors=true
+          echo "::error ::install_path is a required input"
+        elif [[ "${INSTALL_PATH}" == "." || "${INSTALL_PATH}" == "${GITHUB_WORKSPACE}" ]]; then
+          errors=true
+          echo "::error ::install_path is a required input"
+        fi
+
+        if [ "$errors" = true ]; then
+          exit 1
+        fi
+
+    - name: 'Restore cache binary'
+      id: 'cache-binary'
+      if: |
+        inputs.cache_key != ''
+      uses: 'actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8' # ratchet:actions/cache/restore@v3
+      with:
+        path: '${{ inputs.install_path }}'
+        key: 'setup-binary-${{ inputs.cache_key }}'
+
+    - name: 'Install hashicorp/go-getter'
+      id: 'go-getter'
+      if: |
+        steps.cache-guardian.outputs.cache-hit != 'true'
+      shell: 'bash'
+      env:
+        GOGETTER_VERSION: '1.7.1'
+      run: |-
+        # Install hashicorp/go-getter
+        if [[ "${RUNNER_OS}" == "Linux" ]]
+        then
+          TEMP_DIR="${RUNNER_TEMP}/go-getter"
+          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_linux_amd64.zip"
+        elif [[ "${RUNNER_OS}" == "macOS" ]]
+        then
+          TEMP_DIR="${RUNNER_TEMP}/go-getter"
+          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_darwin_amd64.zip"
+        elif [[ "${RUNNER_OS}" == "Windows" ]]
+        then
+          TEMP_DIR="${RUNNER_TEMP}\go-getter"
+          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_windows_amd64.zip"
+        else
+          echo "::error ::Unsupported operating system ${RUNNER_OS}"
+          exit 1
+        fi
+
+        if [[ -f "${TEMP_DIR}/go-getter" ]]; then
+          echo "Skipping, go-getter is already downloaded"
+        else
+          echo "Downloading hashicorp/go-getter from ${RELEASE_URL}"
+          mkdir -p "${TEMP_DIR}" && cd "${TEMP_DIR}"
+          curl -sfL "${RELEASE_URL}" -o go-getter.zip
+          unzip go-getter.zip
+        fi
+
+        echo "path=${TEMP_DIR}" >> $GITHUB_OUTPUT
+
+    - name: 'Download binary'
+      if: |
+        steps.cache-binary.outputs.cache-hit != 'true'
+      shell: 'bash'
+      env:
+        GOGETTER_PATH: '${{ steps.go-getter.outputs.path }}'
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        DOWNLOAD_URL: '${{ inputs.download_url }}'
+        CHECKSUM: '${{ inputs.checksum }}'
+      run: |-
+        # Download binary
+        if [[ ! -z "${CHECKSUM}" ]]; then
+          SEPARATOR="?"
+          if [[ "" == *"?"* ]]; then
+            SEPARATOR="&"
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_URL}${SEPARATOR}checksum=${CHECKSUM}"
+        fi
+
+        "${GOGETTER_PATH}/go-getter" "${DOWNLOAD_URL}" "${INSTALL_PATH}"
+
+    - name: 'Save cache binary'
+      if: |
+        inputs.cache_key != '' && steps.cache-binary.outputs.cache-hit != 'true'
+      uses: 'actions/cache/save@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8' # ratchet:actions/cache/save@v3
+      with:
+        path: '${{ inputs.install_path }}'
+        key: 'setup-binary-${{ inputs.cache_key }}'
+
+    - name: 'Add binary to path'
+      if: |
+        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.add_to_path)
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+      run: |-
+        # Add binary to path
+        echo "Adding ${INSTALL_PATH} to PATH"
+        echo "${INSTALL_PATH}" >> $GITHUB_PATH

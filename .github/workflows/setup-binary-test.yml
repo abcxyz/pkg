@@ -1,0 +1,77 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'setup-binary-test'
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/setup-binary/**'
+jobs:
+  setup-binary-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: 'ubuntu-latest'
+            name: 'linux'
+            ext: 'tar.gz'
+            checksum: '1b0ac92898af5a853dc6f8e4432e9241d6efb22eda48253424236e2e5bc6ccd0b5d18d8c5a46ea096a27bba0027c359396736b83b729b6b51852f71eb1a17702'
+          - os: 'windows-latest'
+            name: 'windows'
+            ext: 'zip'
+            checksum: 'e64c57fb786d1fc5949542e21903dc4e15ab083a7d0b533a1cb115b689a4f72e5d76af50848c937f103264130913fb974dec9afea7f311897d7f776f6423268a'
+          - os: 'macos-latest'
+            name: 'darwin'
+            ext: 'tar.gz'
+            checksum: '5ee5467091c7058c018cd83fbae8295b18c710135a8bb197eda6705b0562b9849df8519e82e09d79895a7bd7fadd60f3cad01f1509a8de2bcd8638f9b057a476'
+    runs-on: '${{ matrix.os }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Path'
+        id: 'path'
+        shell: 'bash'
+        run: |
+          echo "path=${HOME}/.abc" >> $GITHUB_OUTPUT
+
+      - name: 'Setup binary (save cache)'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          install_path: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          checksum: '${{ matrix.checksum }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+
+      - name: 'Setup binary (restore cache)'
+        uses: './.github/actions/setup-binary' # ratchet:exclude
+        with:
+          install_path: '${{ steps.path.outputs.path }}'
+          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          checksum: '${{ matrix.checksum }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          add_to_path: true
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |
+          abc -version
+          GOT=$(abc -version 2>&1) # abcxyz/pkg/cli writes help to stderr
+          WANT="abc 0.0.1-alpha4"
+
+          if [[ "${GOT}" != "${WANT}"* ]]; then
+            echo "::error ::Expected ${GOT} to contain ${WANT}"
+            exit 1
+          fi
