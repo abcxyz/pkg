@@ -85,7 +85,8 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
 
 // RetryQueryEntries retries the given [Query] until either the query result
 // returns "wantCount" number of entries or the retry backoff is exhausted (and
-// returns error).
+// returns error). The returned result size is guaranteed to be greater or equal
+// to "wantCount".
 //
 // To collect result in custom Go struct:
 //
