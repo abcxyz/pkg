@@ -127,7 +127,6 @@ func RetryQueryEntries[T any](ctx context.Context, q Query[T], wantCount int, ba
 
 		logger.Debugw("Not enough entries; will retry", "gotCount", gotCount, "wantCount", wantCount)
 		return retry.RetryableError(fmt.Errorf("not enough entries"))
-
 	}); err != nil {
 		return nil, fmt.Errorf("retry backoff exhausted: %w", err)
 	}
