@@ -30,11 +30,11 @@ import (
 
 type fakeQuery[T any] struct {
 	count           int
-	result          []*T
+	result          []T
 	returnErrString string
 }
 
-func newFakeQuery[T any](result []*T, returnErrString string) Query[T] {
+func newFakeQuery[T any](result []T, returnErrString string) Query[T] {
 	return &fakeQuery[T]{
 		result:          result,
 		returnErrString: returnErrString,
@@ -45,7 +45,7 @@ func (q *fakeQuery[T]) String() string {
 	return "fake query"
 }
 
-func (q *fakeQuery[T]) Execute(ctx context.Context) ([]*T, error) {
+func (q *fakeQuery[T]) Execute(ctx context.Context) ([]T, error) {
 	if q.returnErrString != "" {
 		return nil, fmt.Errorf(q.returnErrString)
 	}
@@ -113,7 +113,7 @@ func TestRetryQueryEntries(t *testing.T) {
 				t.Errorf("RetryQueryEntries result (-want,+got):\n%s", diff)
 			}
 
-			fq, ok := q.(*fakeQuery[fakeQueryResult])
+			fq, ok := q.(*fakeQuery[*fakeQueryResult])
 			if !ok {
 				t.Fatalf("Wrong fake query type %T", q)
 			}

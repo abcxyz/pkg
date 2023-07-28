@@ -29,7 +29,7 @@ import (
 // Query is the interface to execute a query.
 type Query[T any] interface {
 	// Execute runs the query and returns the result in type []*T.
-	Execute(context.Context) ([]*T, error)
+	Execute(context.Context) ([]T, error)
 
 	// String returns the underlying query string.
 	String() string
@@ -50,7 +50,7 @@ func (q *bqQuery[T]) String() string {
 }
 
 // Execute runs the BigQuery query and get the result.
-func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
+func (q *bqQuery[T]) Execute(ctx context.Context) ([]T, error) {
 	job, err := q.bqq.Run(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run query: %w", err)
@@ -67,7 +67,7 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
 		return nil, fmt.Errorf("failed to read query result: %w", err)
 	}
 
-	var entries []*T
+	var entries []T
 	for {
 		var v T
 		err := it.Next(&v)
@@ -78,7 +78,7 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
 			return nil, fmt.Errorf("failed to get next entry: %w", err)
 		}
 
-		entries = append(entries, &v)
+		entries = append(entries, v)
 	}
 	return entries, nil
 }
@@ -94,7 +94,7 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
 //		ColNameX, ColNameY string
 //	}
 //
-//	q := NewQuery[queryResult](bigqueryQuery)
+//	q := NewQuery[*queryResult](bigqueryQuery)
 //	backoff := retry.WithMaxRetries(3, retry.NewConstant(time.Second))
 //	result, err := RetryQueryEntries(context.Background(), q, 1, backoff)
 //	// result will be in type []*queryResult
@@ -105,14 +105,14 @@ func (q *bqQuery[T]) Execute(ctx context.Context) ([]*T, error) {
 //	ctx := logging.WithLogger(context.Background(),
 //		logging.TestLogger(t, zaptest.Level(zapcore.DebugLevel)))
 //
-//	q := NewQuery[queryResult](bigqueryQuery)
+//	q := NewQuery[*queryResult](bigqueryQuery)
 //	backoff := retry.WithMaxRetries(3, retry.NewConstant(time.Second))
 //	result, err := RetryQueryEntries(ctx, q, 1, backoff)
-func RetryQueryEntries[T any](ctx context.Context, q Query[T], wantCount int, backoff retry.Backoff) ([]*T, error) {
+func RetryQueryEntries[T any](ctx context.Context, q Query[T], wantCount int, backoff retry.Backoff) ([]T, error) {
 	logger := logging.FromContext(ctx)
 	logger.Debugw("Start retrying query", "query", q.String())
 
-	var result []*T
+	var result []T
 	if err := retry.Do(ctx, backoff, func(ctx context.Context) error {
 		entries, err := q.Execute(ctx)
 		if err != nil {
