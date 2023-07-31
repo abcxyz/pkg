@@ -675,14 +675,19 @@ type StringMapVar struct {
 
 func (f *FlagSection) StringMapVar(i *StringMapVar) {
 	parser := func(s string) (map[string]string, error) {
-		idx := strings.Index(s, "=")
-		if idx == -1 {
-			return nil, fmt.Errorf("missing = in KV pair %q", s)
+		final := make(map[string]string, 1)
+		parts := strings.Split(s, ",")
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				idx := strings.Index(trimmed, "=")
+				if idx == -1 {
+					return nil, fmt.Errorf("missing = in KV pair %q", trimmed)
+				}
+				final[trimmed[0:idx]] = trimmed[idx+1:]
+			}
 		}
-
-		m := make(map[string]string, 1)
-		m[s[0:idx]] = s[idx+1:]
-		return m, nil
+		return final, nil
 	}
 
 	printer := func(m map[string]string) string {
