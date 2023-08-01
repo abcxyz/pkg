@@ -385,6 +385,8 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 
 // Tests back-and-forth conversation using Prompt().
 func TestBaseCommand_Prompt_Dialog(t *testing.T) {
+	t.Parallel()
+
 	cmd := &RootCommand{}
 
 	stdinReader, stdinWriter := io.Pipe()
@@ -438,6 +440,8 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 // that read fails or the returned string doesn't contain wantSubStr. May leak a
 // goroutine on timeout.
 func readWithTimeout(t *testing.T, r io.Reader, wantSubstr string) {
+	t.Helper()
+
 	t.Logf("readWith starting with %q", wantSubstr)
 
 	var got string
@@ -470,6 +474,8 @@ func readWithTimeout(t *testing.T, r io.Reader, wantSubstr string) {
 // writeWithTimeout does a single write to the given writer. It calls Fatal
 // if that read dosen't contain wantSubStr. May leak a goroutine on timeout.
 func writeWithTimeout(t *testing.T, w io.Writer, msg string) {
+	t.Helper()
+
 	t.Logf("writeWithTimeout starting with %q", msg)
 
 	errCh := make(chan error)

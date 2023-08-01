@@ -287,7 +287,7 @@ func (c *BaseCommand) Hidden() bool {
 // It will fail if stdin pipe and the terminal is not a tty. If the context is canceled,
 // this function leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
-	_, stdoutIsPipe := c.Stdout().(*io.PipeWriter) // true if this is a unit test
+	_, stdoutIsPipe := c.Stdout().(*io.PipeWriter) // we expect unit tests to use PipeWriter if they want to see prompts
 
 	stdinIsTTY := c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd())
 
