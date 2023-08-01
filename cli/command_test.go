@@ -17,9 +17,11 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/testutil"
@@ -378,6 +380,111 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 				t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
 			}
 		})
+	}
+}
+
+// Tests back-and-forth conversation using Prompt().
+func TestBaseCommand_Prompt_Dialog(t *testing.T) {
+	cmd := &RootCommand{}
+
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
+
+	cmd.SetStdin(stdinReader)
+	cmd.SetStdout(stdoutWriter)
+
+	ctx := context.Background()
+	errCh := make(chan error)
+	var color, iceCream string
+	go func() {
+		defer close(errCh)
+		var err error
+		color, err = cmd.Prompt(ctx, "Please enter a color: ")
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		iceCream, err = cmd.Prompt(ctx, "Please enter a flavor of ice cream: ")
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	readWithTimeout(t, stdoutReader, "Please enter a color:")
+	writeWithTimeout(t, stdinWriter, "blue\n")
+	readWithTimeout(t, stdoutReader, "Please enter a flavor of ice cream:")
+	writeWithTimeout(t, stdinWriter, "mint chip\n")
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for background Prompt() goroutine to exit")
+	}
+
+	if color != "blue" {
+		t.Fatalf(`got color %q, wanted "blue"`, color)
+	}
+	if iceCream != "mint chip" {
+		t.Fatalf(`got iceCream %q, wanted "mint chip"`, iceCream)
+	}
+}
+
+// readWithTimeout does a single read from the given reader. It calls Fatal if
+// that read fails or the returned string doesn't contain wantSubStr. May leak a
+// goroutine on timeout.
+func readWithTimeout(t *testing.T, r io.Reader, wantSubstr string) {
+	t.Logf("readWith starting with %q", wantSubstr)
+
+	var got string
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+		buf := make([]byte, 64*1_000)
+		n, err := r.Read(buf)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		got = string(buf[:n])
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("timed out waiting to read %q", wantSubstr)
+	}
+
+	if !strings.Contains(got, wantSubstr) {
+		t.Fatalf("got a prompt %q, but wanted a prompt containing %q", got, wantSubstr)
+	}
+}
+
+// writeWithTimeout does a single write to the given writer. It calls Fatal
+// if that read dosen't contain wantSubStr. May leak a goroutine on timeout.
+func writeWithTimeout(t *testing.T, w io.Writer, msg string) {
+	t.Logf("writeWithTimeout starting with %q", msg)
+
+	errCh := make(chan error)
+	go func() {
+		_, err := w.Write([]byte(msg))
+		errCh <- err
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("timed out waiting to write %q", msg)
 	}
 }
 

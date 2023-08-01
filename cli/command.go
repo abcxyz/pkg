@@ -278,11 +278,20 @@ func (c *BaseCommand) Hidden() bool {
 
 // Prompt provides a mechanism for asking for user input. It reads from [Stdin],
 // up to 64k bytes. If there's an input stream (e.g. a pipe), it will read the
-// pipe. If the terminal is a TTY, it will prompt. Otherwise it will fail if
-// there's no pipe and the terminal is not a tty. If the context is canceled,
+// pipe.
+//
+// The prompt will be printed to stdout if any of these cases is true:
+//   - the terminal is a TTY (for real user interaction)
+//   - c.Stdout() is an *io.PipeReader (for unit-testing back-and-forth dialog)
+//
+// It will fail if stdin pipe and the terminal is not a tty. If the context is canceled,
 // this function leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
-	if c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
+	_, stdoutIsPipe := c.Stdout().(*io.PipeWriter) // true if this is a unit test
+
+	stdinIsTTY := c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd())
+
+	if stdinIsTTY || stdoutIsPipe {
 		fmt.Fprintf(c.Stdout(), msg, args...)
 	}
 
