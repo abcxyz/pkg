@@ -280,7 +280,7 @@ func (c *BaseCommand) Hidden() bool {
 // up to 64k bytes. If there's an input stream (e.g. a pipe), it will read the
 // pipe.
 //
-// The prompt will be printed to stdout if any of these cases is true:
+// The prompt will be printed to c.Stdout() if any of these cases is true:
 //   - the terminal is a TTY (for real user interaction)
 //   - c.StdIn(), c.Stdout(), and c.Stderr() came from io.Pipe() (for unit-testing back-and-forth dialog)
 //

@@ -500,6 +500,7 @@ func writeWithTimeout(tb testing.TB, w io.Writer, msg string) {
 
 	errCh := make(chan error)
 	go func() {
+		defer close(errCh)
 		_, err := w.Write([]byte(msg))
 		errCh <- err
 	}()
