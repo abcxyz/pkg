@@ -15,11 +15,14 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/testutil"
@@ -378,6 +381,141 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 				t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
 			}
 		})
+	}
+}
+
+// Tests back-and-forth conversation using Prompt().
+func TestBaseCommand_Prompt_Dialog(t *testing.T) {
+	t.Parallel()
+
+	cmd := &RootCommand{}
+
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
+	_, stderrWriter := io.Pipe()
+
+	cmd.SetStdin(stdinReader)
+	cmd.SetStdout(stdoutWriter)
+	cmd.SetStderr(stderrWriter)
+
+	ctx := context.Background()
+	errCh := make(chan error)
+	var gotColor, gotIceCream string
+	go func() {
+		defer close(errCh)
+		var err error
+		gotColor, err = cmd.Prompt(ctx, "Please enter a color: ")
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		gotIceCream, err = cmd.Prompt(ctx, "Please enter a flavor of ice cream: ")
+		if err != nil {
+			errCh <- err
+			return
+		}
+	}()
+
+	readWithTimeout(t, stdoutReader, "Please enter a color:")
+	writeWithTimeout(t, stdinWriter, "blue\n")
+	readWithTimeout(t, stdoutReader, "Please enter a flavor of ice cream:")
+	writeWithTimeout(t, stdinWriter, "mint chip\n")
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for background Prompt() goroutine to exit")
+	}
+	const wantColor = "blue"
+	if gotColor != wantColor {
+		t.Fatalf(`got color %q, wanted %q`, gotColor, wantColor)
+	}
+	const wantIceCream = "mint chip"
+	if gotIceCream != wantIceCream {
+		t.Fatalf(`got iceCream %q, wanted %q`, gotIceCream, wantIceCream)
+	}
+}
+
+func TestShouldPrompt_Pipe(t *testing.T) {
+	t.Parallel()
+
+	stdinReader, _ := io.Pipe()
+	_, stdoutWriter := io.Pipe()
+	_, stderrWriter := io.Pipe()
+
+	if !shouldPrompt(stdinReader, stdoutWriter, stderrWriter) {
+		t.Fatal("shouldPrompt() got false, want true, when passed io.Pipe")
+	}
+}
+
+func TestShouldPrompt_ByteBuffer(t *testing.T) {
+	t.Parallel()
+
+	if shouldPrompt(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}) {
+		t.Fatal("shouldPrompt() got true, want false, when passed a Buffer")
+	}
+}
+
+// readWithTimeout does a single read from the given reader. It calls Fatal if
+// that read fails or the returned string doesn't contain wantSubStr. May leak a
+// goroutine on timeout.
+func readWithTimeout(tb testing.TB, r io.Reader, wantSubstr string) {
+	tb.Helper()
+
+	tb.Logf("readWith starting with %q", wantSubstr)
+
+	var got string
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+		buf := make([]byte, 64*1_000)
+		n, err := r.Read(buf)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		got = string(buf[:n])
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			tb.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		tb.Fatalf("timed out waiting to read %q", wantSubstr)
+	}
+
+	if !strings.Contains(got, wantSubstr) {
+		tb.Fatalf("got a prompt %q, but wanted a prompt containing %q", got, wantSubstr)
+	}
+}
+
+// writeWithTimeout does a single write to the given writer. It calls Fatal
+// if that read doesn't contain wantSubStr. May leak a goroutine on timeout.
+func writeWithTimeout(tb testing.TB, w io.Writer, msg string) {
+	tb.Helper()
+
+	tb.Logf("writeWithTimeout starting with %q", msg)
+
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+		_, err := w.Write([]byte(msg))
+		errCh <- err
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			tb.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		tb.Fatalf("timed out waiting to write %q", msg)
 	}
 }
 
