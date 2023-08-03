@@ -15,6 +15,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -391,9 +392,11 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
+	_, stderrWriter := io.Pipe()
 
 	cmd.SetStdin(stdinReader)
 	cmd.SetStdout(stdoutWriter)
+	cmd.SetStderr(stderrWriter)
 
 	ctx := context.Background()
 	errCh := make(chan error)
@@ -436,13 +439,29 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 	}
 }
 
+func TestShouldPrompt_Pipe(t *testing.T) {
+	stdinReader, _ := io.Pipe()
+	_, stdoutWriter := io.Pipe()
+	_, stderrWriter := io.Pipe()
+
+	if !shouldPrompt(stdinReader, stdoutWriter, stderrWriter) {
+		t.Fatal("shouldPrompt() got false, want true, when passed io.Pipe")
+	}
+}
+
+func TestShouldPrompt_ByteBuffer(t *testing.T) {
+	if shouldPrompt(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}) {
+		t.Fatal("shouldPrompt() got true, want false, when passed a Buffer")
+	}
+}
+
 // readWithTimeout does a single read from the given reader. It calls Fatal if
 // that read fails or the returned string doesn't contain wantSubStr. May leak a
 // goroutine on timeout.
-func readWithTimeout(t *testing.T, r io.Reader, wantSubstr string) {
-	t.Helper()
+func readWithTimeout(tb testing.TB, r io.Reader, wantSubstr string) {
+	tb.Helper()
 
-	t.Logf("readWith starting with %q", wantSubstr)
+	tb.Logf("readWith starting with %q", wantSubstr)
 
 	var got string
 	errCh := make(chan error)
@@ -460,23 +479,23 @@ func readWithTimeout(t *testing.T, r io.Reader, wantSubstr string) {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			t.Fatal(err)
+			tb.Fatal(err)
 		}
 	case <-time.After(time.Second):
-		t.Fatalf("timed out waiting to read %q", wantSubstr)
+		tb.Fatalf("timed out waiting to read %q", wantSubstr)
 	}
 
 	if !strings.Contains(got, wantSubstr) {
-		t.Fatalf("got a prompt %q, but wanted a prompt containing %q", got, wantSubstr)
+		tb.Fatalf("got a prompt %q, but wanted a prompt containing %q", got, wantSubstr)
 	}
 }
 
 // writeWithTimeout does a single write to the given writer. It calls Fatal
-// if that read dosen't contain wantSubStr. May leak a goroutine on timeout.
-func writeWithTimeout(t *testing.T, w io.Writer, msg string) {
-	t.Helper()
+// if that read doesn't contain wantSubStr. May leak a goroutine on timeout.
+func writeWithTimeout(tb testing.TB, w io.Writer, msg string) {
+	tb.Helper()
 
-	t.Logf("writeWithTimeout starting with %q", msg)
+	tb.Logf("writeWithTimeout starting with %q", msg)
 
 	errCh := make(chan error)
 	go func() {
@@ -487,10 +506,10 @@ func writeWithTimeout(t *testing.T, w io.Writer, msg string) {
 	select {
 	case err := <-errCh:
 		if err != nil {
-			t.Fatal(err)
+			tb.Fatal(err)
 		}
 	case <-time.After(time.Second):
-		t.Fatalf("timed out waiting to write %q", msg)
+		tb.Fatalf("timed out waiting to write %q", msg)
 	}
 }
 

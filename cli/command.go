@@ -282,16 +282,12 @@ func (c *BaseCommand) Hidden() bool {
 //
 // The prompt will be printed to stdout if any of these cases is true:
 //   - the terminal is a TTY (for real user interaction)
-//   - c.Stdout() is an *io.PipeReader (for unit-testing back-and-forth dialog)
+//   - c.StdIn(), c.Stdout(), and c.Stderr() came from io.Pipe() (for unit-testing back-and-forth dialog)
 //
 // It will fail if stdin pipe and the terminal is not a tty. If the context is canceled,
 // this function leaves the c.Stdin in a bad state.
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
-	_, stdoutIsPipe := c.Stdout().(*io.PipeWriter) // we expect unit tests to use PipeWriter if they want to see prompts
-
-	stdinIsTTY := c.Stdin() == os.Stdin && isatty.IsTerminal(os.Stdin.Fd())
-
-	if stdinIsTTY || stdoutIsPipe {
+	if shouldPrompt(c.Stdin(), c.Stdout(), c.Stderr()) {
 		fmt.Fprintf(c.Stdout(), msg, args...)
 	}
 
@@ -312,6 +308,20 @@ func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (stri
 		return "", fmt.Errorf("failed to read stdin: %w", err)
 	}
 	return scanner.Text(), nil
+}
+
+// shouldPrompt returns whether we're in a situation where it makes sense to
+// prompt for input. See the comment on Prompt().
+func shouldPrompt(stdin io.Reader, stdout, stderr io.Writer) bool {
+	if stdin == os.Stdin && isatty.IsTerminal(os.Stdin.Fd()) {
+		return true
+	}
+
+	_, stdinIsPipe := stdin.(*io.PipeReader)
+	_, stdoutIsPipe := stdout.(*io.PipeWriter)
+	_, stderrIsPipe := stderr.(*io.PipeWriter)
+
+	return stdinIsPipe && stdoutIsPipe && stderrIsPipe
 }
 
 // Outf is a shortcut to write to [BaseCommand.Stdout].
