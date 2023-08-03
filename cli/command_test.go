@@ -441,6 +441,8 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 }
 
 func TestShouldPrompt_Pipe(t *testing.T) {
+	t.Parallel()
+
 	stdinReader, _ := io.Pipe()
 	_, stdoutWriter := io.Pipe()
 	_, stderrWriter := io.Pipe()
@@ -451,6 +453,8 @@ func TestShouldPrompt_Pipe(t *testing.T) {
 }
 
 func TestShouldPrompt_ByteBuffer(t *testing.T) {
+	t.Parallel()
+
 	if shouldPrompt(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}) {
 		t.Fatal("shouldPrompt() got true, want false, when passed a Buffer")
 	}
