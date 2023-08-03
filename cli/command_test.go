@@ -400,17 +400,17 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 
 	ctx := context.Background()
 	errCh := make(chan error)
-	var color, iceCream string
+	var gotColor, gotIceCream string
 	go func() {
 		defer close(errCh)
 		var err error
-		color, err = cmd.Prompt(ctx, "Please enter a color: ")
+		gotColor, err = cmd.Prompt(ctx, "Please enter a color: ")
 		if err != nil {
 			errCh <- err
 			return
 		}
 
-		iceCream, err = cmd.Prompt(ctx, "Please enter a flavor of ice cream: ")
+		gotIceCream, err = cmd.Prompt(ctx, "Please enter a flavor of ice cream: ")
 		if err != nil {
 			errCh <- err
 			return
@@ -430,12 +430,13 @@ func TestBaseCommand_Prompt_Dialog(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for background Prompt() goroutine to exit")
 	}
-
-	if color != "blue" {
-		t.Fatalf(`got color %q, wanted "blue"`, color)
+	const wantColor = "blue"
+	if gotColor != wantColor {
+		t.Fatalf(`got color %q, wanted %q`, gotColor, wantColor)
 	}
-	if iceCream != "mint chip" {
-		t.Fatalf(`got iceCream %q, wanted "mint chip"`, iceCream)
+	const wantIceCream = "mint chip"
+	if gotIceCream != wantIceCream {
+		t.Fatalf(`got iceCream %q, wanted %q`, gotIceCream, wantIceCream)
 	}
 }
 
