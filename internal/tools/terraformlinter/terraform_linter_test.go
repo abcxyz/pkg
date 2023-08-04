@@ -695,6 +695,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			`,
 			wantError: false,
 		},
+		{
+			name: "allows_import_blocks",
+			content: `
+			import {
+			  to = module.project.google_project.default
+			  id = "project-id-with-hyphens"
+			}
+			`,
+			wantError: false,
+		},
 	}
 
 	for _, tc := range cases {
