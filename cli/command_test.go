@@ -15,6 +15,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -273,29 +274,112 @@ func TestRootCommand_Run(t *testing.T) {
 	}
 }
 
-func TestBaseCommand_Prompt_Values(t *testing.T) {
+//nolint:thelper // These aren't actually helpers, and we want the failures to show the correct line
+func TestBaseCommand_Prompt(t *testing.T) {
 	t.Parallel()
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
 	cases := []struct {
-		name      string
-		args      []string
-		msg       string
-		inputs    []string
-		err       string
-		expStderr string
+		name    string
+		execute func(t *testing.T, cmd *BaseCommand)
 	}{
 		{
-			name:   "sets_input_value",
-			args:   []string{"prompt"},
-			msg:    "enter input value:",
-			inputs: []string{"input"},
-		}, {
-			name:   "handles_multiple_prompts",
-			args:   []string{"prompt"},
-			msg:    "enter input value:",
-			inputs: []string{"input1", "input2"},
+			name: "reads_line",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				var stdin bytes.Buffer
+				cmd.SetStdin(&stdin)
+
+				stdin.WriteString("hello ")
+				stdin.WriteString("world\n")
+				stdin.WriteString("🌎")
+
+				got, err := cmd.Prompt(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "hello world"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "reads_multiple",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				var stdin bytes.Buffer
+				cmd.SetStdin(&stdin)
+
+				stdin.WriteString("hello")
+				got, err := cmd.Prompt(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "hello"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+
+				stdin.WriteString("world")
+				got, err = cmd.Prompt(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "world"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "prompts",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				stdinR, stdinW := io.Pipe()
+				stdoutR, stdoutW := io.Pipe()
+				_, stderrW := io.Pipe()
+
+				cmd.SetStdin(stdinR)
+				cmd.SetStdout(stdoutW)
+				cmd.SetStderr(stderrW)
+
+				var gotName, gotAge string
+				var err error
+				errCh := make(chan error)
+				go func() {
+					defer close(errCh)
+
+					gotName, err = cmd.Prompt(ctx, "name: ")
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					gotAge, err = cmd.Prompt(ctx, "age: ")
+					if err != nil {
+						errCh <- err
+						return
+					}
+				}()
+
+				readWithTimeout(t, stdoutR, "name: ")
+				writeWithTimeout(t, stdinW, "turing\n")
+
+				readWithTimeout(t, stdoutR, "age: ")
+				writeWithTimeout(t, stdinW, "41\n")
+
+				select {
+				case err := <-errCh:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(time.Second):
+					t.Fatal("timed out waiting for prompt to stop")
+				}
+
+				if got, want := gotName, "turing"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+				if got, want := gotAge, "41"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
 		},
 	}
 
@@ -305,47 +389,113 @@ func TestBaseCommand_Prompt_Values(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var cmd RootCommand
-			stdin, _, stderr := cmd.Pipe()
+			var cmd BaseCommand
+			cmd.Pipe()
 
-			for _, input := range tc.inputs {
-				stdin.WriteString(input)
-
-				v, err := cmd.Prompt(ctx, tc.msg)
-				if diff := testutil.DiffErrString(err, tc.err); diff != "" {
-					t.Errorf("unexpected err: %s", diff)
-				}
-				if got, want := v, input; got != want {
-					t.Errorf("expected\n\n%s\n\nto equal\n\n%s\n\n", got, want)
-				}
-				if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
-					t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
-				}
-			}
+			tc.execute(t, &cmd)
 		})
 	}
 }
 
-func TestBaseCommand_Prompt_Cancels(t *testing.T) {
+//nolint:thelper // These aren't actually helpers, and we want the failures to show the correct line
+func TestBaseCommand_PromptAll(t *testing.T) {
 	t.Parallel()
 
 	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
 	cases := []struct {
-		name      string
-		args      []string
-		msg       string
-		inputs    []string
-		exp       string
-		err       string
-		expStderr string
+		name    string
+		execute func(t *testing.T, cmd *BaseCommand)
 	}{
 		{
-			name:   "context_cancels",
-			args:   []string{"prompt"},
-			msg:    "enter value:",
-			inputs: []string{"input1", "input2"},
-			err:    "context canceled",
+			name: "reads_all",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				var stdin bytes.Buffer
+				cmd.SetStdin(&stdin)
+
+				stdin.WriteString("hello ")
+				stdin.WriteString("world\n")
+				stdin.WriteString("🌎")
+
+				got, err := cmd.PromptAll(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "hello world\n🌎"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "reads_multiple",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				var stdin bytes.Buffer
+				cmd.SetStdin(&stdin)
+
+				stdin.WriteString("hello")
+				got, err := cmd.PromptAll(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "hello"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+
+				stdin.WriteString("world")
+				got, err = cmd.PromptAll(ctx, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, "world"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "prompts",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				stdinR, stdinW := io.Pipe()
+				stdoutR, stdoutW := io.Pipe()
+				_, stderrW := io.Pipe()
+
+				cmd.SetStdin(stdinR)
+				cmd.SetStdout(stdoutW)
+				cmd.SetStderr(stderrW)
+
+				var gotStory string
+				var err error
+				errCh := make(chan error)
+				go func() {
+					defer close(errCh)
+
+					gotStory, err = cmd.PromptAll(ctx, "story: ")
+					if err != nil {
+						errCh <- err
+						return
+					}
+				}()
+
+				readWithTimeout(t, stdoutR, "story: ")
+				writeWithTimeout(t, stdinW, "hello world\n")
+				writeWithTimeout(t, stdinW, "my name is: ")
+				writeWithTimeout(t, stdinW, "🌎")
+				if err := stdinW.Close(); err != nil {
+					t.Fatal(err)
+				}
+
+				select {
+				case err := <-errCh:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(time.Second):
+					t.Fatal("timed out waiting for prompt to stop")
+				}
+
+				if got, want := gotStory, "hello world\nmy name is: 🌎"; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
 		},
 	}
 
@@ -355,118 +505,111 @@ func TestBaseCommand_Prompt_Cancels(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var cmd RootCommand
-			stdin, _, stderr := cmd.Pipe()
+			var cmd BaseCommand
+			cmd.Pipe()
 
-			for _, input := range tc.inputs {
-				stdin.WriteString(input)
-
-				_, err := cmd.Prompt(ctx, tc.msg)
-				if diff := testutil.DiffErrString(err, ""); diff != "" {
-					t.Errorf("unexpected err: %s", diff)
-				}
-				if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
-					t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
-				}
-			}
-
-			cancelCtx, cancel := context.WithCancel(ctx)
-			cancel()
-
-			_, err := cmd.Prompt(cancelCtx, tc.msg)
-			if diff := testutil.DiffErrString(err, tc.err); diff != "" {
-				t.Errorf("unexpected err: %s", diff)
-			}
-			if got, want := strings.TrimSpace(stderr.String()), strings.TrimSpace(tc.expStderr); !strings.Contains(got, want) {
-				t.Errorf("expected\n\n%s\n\nto contain\n\n%s\n\n", got, want)
-			}
+			tc.execute(t, &cmd)
 		})
 	}
 }
 
-// Tests back-and-forth conversation using Prompt().
-func TestBaseCommand_Prompt_Dialog(t *testing.T) {
+//nolint:thelper // These aren't actually helpers, and we want the failures to show the correct line
+func TestBaseCommand_PromptTo(t *testing.T) {
 	t.Parallel()
 
-	cmd := &RootCommand{}
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
-	stdinReader, stdinWriter := io.Pipe()
-	stdoutReader, stdoutWriter := io.Pipe()
-	_, stderrWriter := io.Pipe()
+	cases := []struct {
+		name    string
+		execute func(t *testing.T, cmd *BaseCommand)
+	}{
+		{
+			name: "context_canceled",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				ctx, cancel := context.WithCancel(ctx)
+				cancel()
 
-	cmd.SetStdin(stdinReader)
-	cmd.SetStdout(stdoutWriter)
-	cmd.SetStderr(stderrWriter)
+				got, err := cmd.PromptTo(ctx, bufio.ScanLines, "")
+				if diff := testutil.DiffErrString(err, "context canceled"); diff != "" {
+					t.Errorf("unexpected err: %s", diff)
+				}
+				if got, want := got, ""; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "context_timeout",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				ctx, cancel := context.WithDeadline(ctx, time.Unix(0, 0))
+				defer cancel()
 
-	ctx := context.Background()
-	errCh := make(chan error)
-	var gotColor, gotIceCream string
-	go func() {
-		defer close(errCh)
-		var err error
-		gotColor, err = cmd.Prompt(ctx, "Please enter a color: ")
-		if err != nil {
-			errCh <- err
-			return
-		}
-
-		gotIceCream, err = cmd.Prompt(ctx, "Please enter a flavor of ice cream: ")
-		if err != nil {
-			errCh <- err
-			return
-		}
-	}()
-
-	readWithTimeout(t, stdoutReader, "Please enter a color:")
-	writeWithTimeout(t, stdinWriter, "blue\n")
-	readWithTimeout(t, stdoutReader, "Please enter a flavor of ice cream:")
-	writeWithTimeout(t, stdinWriter, "mint chip\n")
-
-	select {
-	case err := <-errCh:
-		if err != nil {
-			t.Fatal(err)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for background Prompt() goroutine to exit")
+				got, err := cmd.PromptTo(ctx, bufio.ScanLines, "")
+				if diff := testutil.DiffErrString(err, "context deadline exceeded"); diff != "" {
+					t.Errorf("unexpected err: %s", diff)
+				}
+				if got, want := got, ""; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
+		{
+			name: "eof",
+			execute: func(t *testing.T, cmd *BaseCommand) {
+				got, err := cmd.PromptTo(ctx, bufio.ScanLines, "")
+				if err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
+				if got, want := got, ""; got != want {
+					t.Errorf("expected %q to be %q", got, want)
+				}
+			},
+		},
 	}
-	const wantColor = "blue"
-	if gotColor != wantColor {
-		t.Fatalf(`got color %q, wanted %q`, gotColor, wantColor)
-	}
-	const wantIceCream = "mint chip"
-	if gotIceCream != wantIceCream {
-		t.Fatalf(`got iceCream %q, wanted %q`, gotIceCream, wantIceCream)
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cmd BaseCommand
+			cmd.Pipe()
+
+			tc.execute(t, &cmd)
+		})
 	}
 }
 
-func TestShouldPrompt_Pipe(t *testing.T) {
+func TestShouldPrompt(t *testing.T) {
 	t.Parallel()
 
-	stdinReader, _ := io.Pipe()
-	_, stdoutWriter := io.Pipe()
-	_, stderrWriter := io.Pipe()
+	t.Run("io_pipe", func(t *testing.T) {
+		t.Parallel()
 
-	if !shouldPrompt(stdinReader, stdoutWriter, stderrWriter) {
-		t.Fatal("shouldPrompt() got false, want true, when passed io.Pipe")
-	}
-}
+		stdinReader, _ := io.Pipe()
+		_, stdoutWriter := io.Pipe()
+		_, stderrWriter := io.Pipe()
 
-func TestShouldPrompt_ByteBuffer(t *testing.T) {
-	t.Parallel()
+		if !shouldPrompt(stdinReader, stdoutWriter, stderrWriter) {
+			t.Error("expected shouldPrompt to be true")
+		}
+	})
 
-	if shouldPrompt(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}) {
-		t.Fatal("shouldPrompt() got true, want false, when passed a Buffer")
-	}
+	t.Run("bytes_buffer", func(t *testing.T) {
+		t.Parallel()
+
+		if shouldPrompt(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}) {
+			t.Error("expected shouldPrompt to be false")
+		}
+	})
 }
 
 // readWithTimeout does a single read from the given reader. It calls Fatal if
 // that read fails or the returned string doesn't contain wantSubStr. May leak a
 // goroutine on timeout.
-func readWithTimeout(tb testing.TB, r io.Reader, wantSubstr string) {
+func readWithTimeout(tb testing.TB, r io.Reader, msg string) {
 	tb.Helper()
-
-	tb.Logf("readWith starting with %q", wantSubstr)
 
 	var got string
 	errCh := make(chan error)
@@ -487,11 +630,11 @@ func readWithTimeout(tb testing.TB, r io.Reader, wantSubstr string) {
 			tb.Fatal(err)
 		}
 	case <-time.After(time.Second):
-		tb.Fatalf("timed out waiting to read %q", wantSubstr)
+		tb.Fatalf("timed out waiting to read")
 	}
 
-	if !strings.Contains(got, wantSubstr) {
-		tb.Fatalf("got a prompt %q, but wanted a prompt containing %q", got, wantSubstr)
+	if got, want := got, msg; got != want {
+		tb.Errorf("expected %q to be %q", got, want)
 	}
 }
 
@@ -500,12 +643,16 @@ func readWithTimeout(tb testing.TB, r io.Reader, wantSubstr string) {
 func writeWithTimeout(tb testing.TB, w io.Writer, msg string) {
 	tb.Helper()
 
-	tb.Logf("writeWithTimeout starting with %q", msg)
-
 	errCh := make(chan error)
 	go func() {
 		defer close(errCh)
-		_, err := w.Write([]byte(msg))
+		n, err := w.Write([]byte(msg))
+		if n < len(msg) {
+			errCh <- fmt.Errorf("only wrote %d bytes of %d in message %q",
+				n, len(msg), msg)
+			return
+		}
+
 		errCh <- err
 	}()
 
