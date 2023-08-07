@@ -276,38 +276,111 @@ func (c *BaseCommand) Hidden() bool {
 	return false
 }
 
-// Prompt provides a mechanism for asking for user input. It reads from [Stdin],
-// up to 64k bytes. If there's an input stream (e.g. a pipe), it will read the
-// pipe.
+// Prompt asks for user input and reads it from [Stdin] until it encounters a
+// newline character. If there's an input stream (e.g. a pipe), it will read the
+// pipe. The result will not include the trailing newline or carriage return.
+// For more information about the conditions under which the prompt is
+// displayed, see [PromptTo].
+func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
+	// Unlike [bufio.ScanLines], this function reads at most a single line and
+	// then returns. bufio.ScanLines yields for each line, but this function
+	// yields a single line and then marks the read as terminated. This ensures we
+	// read up to the first newline character, but ignore lines thereafter
+	// (matching the original implementation's behavior).
+	splitFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if i := bytes.IndexByte(data, '\n'); i >= 0 {
+			// We have a full newline-terminated line.
+			return i + 1, dropCR(data[0:i]), bufio.ErrFinalToken
+		}
+		// If we're at EOF, we have a final, non-terminated line. Return it.
+		if atEOF {
+			return len(data), dropCR(data), bufio.ErrFinalToken
+		}
+		// Request more data.
+		return 0, nil, nil
+	}
+
+	return c.PromptTo(ctx, splitFunc, msg, args...)
+}
+
+// dropCR drops a terminal \r from the data.
+func dropCR(data []byte) []byte {
+	if len(data) > 0 && data[len(data)-1] == '\r' {
+		return data[0 : len(data)-1]
+	}
+	return data
+}
+
+// PromptAll asks for user input and reads from [Stdin] until it encounters an
+// EOF. If there's an input stream (e.g. a pipe), it will read the pipe. For
+// more information about the conditions under which the prompt is displayed,
+// see [PromptTo].
+func (c *BaseCommand) PromptAll(ctx context.Context, msg string, args ...any) (string, error) {
+	splitFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		return len(data), data, nil
+	}
+	return c.PromptTo(ctx, splitFunc, msg, args...)
+}
+
+// PromptTo provides a mechanism for asking for user input. It reads from
+// [Stdin], using the provided scanner split function. If there's an input
+// stream (e.g. a pipe), it will read the pipe.
 //
 // The prompt will be printed to c.Stdout() if any of these cases is true:
 //   - the terminal is a TTY (for real user interaction)
 //   - c.StdIn(), c.Stdout(), and c.Stderr() came from io.Pipe() (for unit-testing back-and-forth dialog)
 //
-// It will fail if stdin pipe and the terminal is not a tty. If the context is canceled,
-// this function leaves the c.Stdin in a bad state.
-func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
-	if shouldPrompt(c.Stdin(), c.Stdout(), c.Stderr()) {
-		fmt.Fprintf(c.Stdout(), msg, args...)
+// It will fail if stdin pipe and the terminal is not a tty. If the context is
+// canceled, [Stdin] could be in a partially-read state.
+func (c *BaseCommand) PromptTo(ctx context.Context, splitFunc bufio.SplitFunc, msg string, args ...any) (string, error) {
+	stdin, stdout, stderr := c.Stdin(), c.Stdout(), c.Stderr()
+
+	if shouldPrompt(stdin, stdout, stderr) {
+		fmt.Fprintf(stdout, msg, args...)
 	}
 
-	scanner := bufio.NewScanner(io.LimitReader(c.Stdin(), 64*1_000))
-	finished := make(chan struct{})
+	var b strings.Builder
+	errCh := make(chan error)
 	go func() {
-		defer close(finished)
-		scanner.Scan()
+		defer close(errCh)
+
+		scanner := bufio.NewScanner(stdin)
+		scanner.Split(splitFunc)
+
+		for scanner.Scan() {
+			if ctx.Err() != nil {
+				return
+			}
+
+			b.WriteString(scanner.Text())
+
+			if err := scanner.Err(); err != nil {
+				errCh <- err
+				return
+			}
+		}
 	}()
 
 	select {
 	case <-ctx.Done():
 		return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
-	case <-finished:
+	case err := <-errCh:
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
+		}
+
+		if err != nil {
+			return "", fmt.Errorf("failed to read stdin: %w", err)
+		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("failed to read stdin: %w", err)
-	}
-	return scanner.Text(), nil
+	return b.String(), nil
 }
 
 // shouldPrompt returns whether we're in a situation where it makes sense to
