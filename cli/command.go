@@ -282,6 +282,11 @@ func (c *BaseCommand) Hidden() bool {
 // For more information about the conditions under which the prompt is
 // displayed, see [PromptTo].
 func (c *BaseCommand) Prompt(ctx context.Context, msg string, args ...any) (string, error) {
+	// Unlike [bufio.ScanLines], this function reads at most a single line and
+	// then returns. bufio.ScanLines yields for each line, but this function
+	// yields a single line and then marks the read as terminated. This ensures we
+	// read up to the first newline character, but ignore lines thereafter
+	// (matching the original implementation's behavior).
 	splitFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
 			return 0, nil, nil
@@ -349,10 +354,8 @@ func (c *BaseCommand) PromptTo(ctx context.Context, splitFunc bufio.SplitFunc, m
 		scanner.Split(splitFunc)
 
 		for scanner.Scan() {
-			select {
-			case <-ctx.Done():
+			if ctx.Err() != nil {
 				return
-			default:
 			}
 
 			b.WriteString(scanner.Text())
@@ -368,10 +371,8 @@ func (c *BaseCommand) PromptTo(ctx context.Context, splitFunc bufio.SplitFunc, m
 	case <-ctx.Done():
 		return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
 	case err := <-errCh:
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			return "", fmt.Errorf("failed to prompt: %w", ctx.Err())
-		default:
 		}
 
 		if err != nil {
