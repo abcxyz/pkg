@@ -82,6 +82,7 @@ jobs:
         uses: 'actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753' # ratchet:actions/setup-go@v4
         with:
           go-version: '${{ inputs.go_version }}'
+          cache: false
 
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
@@ -109,6 +110,7 @@ jobs:
         with:
           args: |-
             --config "${{ steps.load-default-config.outputs.output-file }}"
+          skip-cache: true
           version: '${{ inputs.golangci_lint_version }}'
           working-directory: '${{ inputs.directory }}'
 
@@ -116,5 +118,6 @@ jobs:
         if: '${{ hashFiles(''.golangci.yml'', ''.golangci.yaml'') != '''' }}'
         uses: 'golangci/golangci-lint-action@639cd343e1d3b897ff35927a75193d57cfcba299' # ratchet:golangci/golangci-lint-action@v3
         with:
+          skip-cache: true
           version: '${{ inputs.golangci_lint_version }}'
           working-directory: '${{ inputs.directory }}'
