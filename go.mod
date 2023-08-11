@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/kr/text v0.2.0
-	github.com/lestrrat-go/jwx/v2 v2.0.11
+	github.com/lestrrat-go/jwx/v2 v2.0.12
 	github.com/mattn/go-isatty v0.0.19
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/posener/complete/v2 v2.1.0

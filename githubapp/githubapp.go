@@ -36,7 +36,7 @@ import (
 // to insert the installation id.
 const defaultGitHubAccessTokenURLPattern = "https://api.github.com/app/installations/%s/access_tokens" //nolint
 
-const cacheKey = "github-app-jwt"
+const cacheKey = "github-app-jwt" 
 
 // Config contains all of the required configuration for operating as a GitHub App.
 // This includes the three major components, the App ID, the Install ID and the Private Key.
