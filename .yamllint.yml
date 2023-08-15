@@ -95,3 +95,8 @@ rules:
   truthy:
     allowed-values: ['true', 'false', 'on'] # GitHub Actions uses "on"
     check-keys: true
+
+ignore:
+  - 'thirdparty/'
+  - 'third_party/'
+  - 'vendor/'
