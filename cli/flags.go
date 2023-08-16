@@ -579,7 +579,7 @@ type IntVar struct {
 
 func (f *FlagSection) IntVar(i *IntVar) {
 	parser := func(s string) (int, error) {
-		v, err := strconv.ParseInt(s, 10, 64)
+		v, err := strconv.ParseInt(s, 10, strconv.IntSize)
 		return int(v), err
 	}
 	printer := func(v int) string { return strconv.FormatInt(int64(v), 10) }
@@ -817,7 +817,7 @@ type UintVar struct {
 
 func (f *FlagSection) UintVar(i *UintVar) {
 	parser := func(s string) (uint, error) {
-		v, err := strconv.ParseUint(s, 10, 64)
+		v, err := strconv.ParseUint(s, 10, strconv.IntSize)
 		return uint(v), err
 	}
 	printer := func(v uint) string { return strconv.FormatUint(uint64(v), 10) }
