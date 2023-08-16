@@ -27,21 +27,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  go_lint:
     uses: './.github/workflows/go-lint.yml'
     with:
       go_version: '1.20'
 
-  test:
+  go_test:
     uses: './.github/workflows/go-test.yml'
     with:
       go_version: '1.20'
 
-  lint-terraform:
+  terraform_lint:
     uses: './.github/workflows/terraform-lint.yml'
     with:
       terraform_version: 1.3
       directory: 'terraform'
 
-  lint-yaml:
+  yaml_lint:
     uses: './.github/workflows/yaml-lint.yml'
