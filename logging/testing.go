@@ -27,6 +27,10 @@ func TestLogger(tb testing.TB) *slog.Logger {
 	tb.Helper()
 
 	w := &testingWriter{tb}
+
+	// Use the lowest possible level (aka log everything). Slog levels are
+	// arbitrary integers, so by choosing the lowest possible integer, we will
+	// catch every possible log.
 	level := slog.Level(math.MinInt)
 
 	return slog.New(NewLevelHandler(level, slog.NewTextHandler(w, &slog.HandlerOptions{
