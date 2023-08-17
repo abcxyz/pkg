@@ -24,8 +24,6 @@ import (
 	"github.com/abcxyz/pkg/testutil"
 	"github.com/google/go-cmp/cmp"
 	"github.com/sethvargo/go-retry"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest"
 )
 
 type fakeQuery[T any] struct {
@@ -94,8 +92,7 @@ func TestRetryQueryEntries(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := logging.WithLogger(context.Background(),
-				logging.TestLogger(t, zaptest.Level(zapcore.DebugLevel)))
+			ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
 
 			wantCount := len(tc.wantEntries)
 

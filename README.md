@@ -38,7 +38,7 @@ jobs:
   lint:
     uses: 'abcxyz/pkg/.github/workflows/go-lint.yml@main'
     with:
-      go_version: '1.20'
+      go_version: '1.21'
 ```
 
 Linting is done via [golangci-lint](https://golangci-lint.run/). If a
@@ -68,7 +68,7 @@ jobs:
   lint:
     uses: 'abcxyz/pkg/.github/workflows/go-test.yml@main'
     with:
-      go_version: '1.20'
+      go_version: '1.21'
 ```
 
 Testing is done via the `go test` command with:

@@ -32,7 +32,7 @@ on:
       golangci_lint_version:
         description: 'Version of golangci linter to use'
         type: 'string'
-        default: 'v1.53'
+        default: 'v1.54'
 
 jobs:
   # modules checks if the go modules are all up-to-date. While rare with modern
@@ -51,7 +51,6 @@ jobs:
         uses: 'actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753' # ratchet:actions/setup-go@v4
         with:
           go-version: '${{ inputs.go_version }}'
-          cache: false
 
       - name: 'Check modules'
         shell: 'bash'
@@ -82,6 +81,7 @@ jobs:
         uses: 'actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753' # ratchet:actions/setup-go@v4
         with:
           go-version: '${{ inputs.go_version }}'
+          cache: false
 
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
