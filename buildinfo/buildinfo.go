@@ -38,7 +38,6 @@
 package buildinfo
 
 import (
-	"log"
 	"runtime"
 	"runtime/debug"
 )
@@ -61,8 +60,6 @@ func Version() string {
 func Commit() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
-			log.Printf("setting: %#v\n", setting)
-
 			if setting.Key == "vcs.revision" {
 				return setting.Value
 			}
