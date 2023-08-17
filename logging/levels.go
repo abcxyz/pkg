@@ -77,9 +77,9 @@ func LookupLevel(name string) (slog.Level, error) {
 		return LevelInfo, nil
 	case levelNoticeName:
 		return LevelNotice, nil
-	case levelWarningName:
+	case levelWarningName, "WARN":
 		return LevelWarning, nil
-	case levelErrorName:
+	case levelErrorName, "ERR":
 		return LevelError, nil
 	case levelEmergencyName:
 		return LevelEmergency, nil
