@@ -34,7 +34,7 @@ func TestProjectID(t *testing.T) {
 				"GOOGLE_PROJECT":       "googleProject",
 				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
 			},
-			want: "projectIDD", // fix typo
+			want: "projectID",
 		},
 		{
 			name: "success_google_project",
