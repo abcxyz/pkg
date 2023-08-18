@@ -17,6 +17,7 @@ package logging
 import (
 	"io"
 	"log/slog"
+	"math"
 	"testing"
 )
 
@@ -26,17 +27,24 @@ func TestLogger(tb testing.TB) *slog.Logger {
 	tb.Helper()
 
 	w := &testingWriter{tb}
-	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{
+
+	// Use the lowest possible level (aka log everything). Slog levels are
+	// arbitrary integers, so by choosing the lowest possible integer, we will
+	// catch every possible log.
+	level := slog.Level(math.MinInt)
+
+	return slog.New(NewLevelHandler(level, slog.NewTextHandler(w, &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelDebug,
+		Level:     level,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			// Drop time key since the test failures will include timestamps
 			if a.Key == slog.TimeKey {
 				return slog.Attr{}
 			}
-			return a
+
+			return cloudLoggingAttrsEncoder()(groups, a)
 		},
-	}))
+	})))
 }
 
 var _ io.Writer = (*testingWriter)(nil)
