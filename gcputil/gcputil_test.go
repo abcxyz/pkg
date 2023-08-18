@@ -28,6 +28,15 @@ func TestProjectID(t *testing.T) {
 		want string
 	}{
 		{
+			name: "success_project_id",
+			env: map[string]string{
+				"PROJECT_ID":           "projectID",
+				"GOOGLE_PROJECT":       "googleProject",
+				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
+			},
+			want: "projectID",
+		},
+		{
 			name: "no_env_variables",
 			env:  map[string]string{},
 			want: "",
