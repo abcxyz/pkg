@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,42 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 package gcputil
+
 import (
-  "context"
-  "os"
-  "testing"
+	"context"
+	"os"
+	"testing"
 )
+
 func TestProjectID(t *testing.T) {
-  t.Parallel()
-  ctx := context.Background()
-  cases := []struct {
-    name string
-    env  map[string]string
-    want string
-  }{
-    {
-      name: "success_project_id",
-      env: map[string]string{
-        "PROJECT_ID":           "projectID",
-        "GOOGLE_PROJECT":       "googleProject",
-        "GOOGLE_CLOUD_PROJECT": "googleCloudProject",
-      },
-      want: "projectIDD", // fix typo
-    },
-  }
-  for _, tc := range cases {
-    tc := tc
-    t.Run(tc.name, func(t *testing.T) {
-      t.Parallel()
-      for key, value := range tc.env {
-        os.Setenv(key, value)
-      }
-      if got, want := ProjectID(ctx), tc.want; got != want {
-        t.Errorf("expected %q to be %q", got, want)
-      }
-      for key := range tc.env {
-        os.Setenv(key, "")
-      }
-    })
-  }
+	t.Parallel()
+	ctx := context.Background()
+	cases := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{
+			name: "success_project_id",
+			env: map[string]string{
+				"PROJECT_ID":           "projectID",
+				"GOOGLE_PROJECT":       "googleProject",
+				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
+			},
+			want: "projectID", // fix typo
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			for key, value := range tc.env {
+				os.Setenv(key, value)
+			}
+			if got, want := ProjectID(ctx), tc.want; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+			for key := range tc.env {
+				os.Setenv(key, "")
+			}
+		})
+	}
 }
