@@ -20,7 +20,7 @@ import (
 )
 
 func TestProjectID(t *testing.T) {
-					t.Parallel()
+	t.Parallel()
 	ctx := context.Background()
 	cases := []struct {
 		name string
@@ -34,7 +34,7 @@ func TestProjectID(t *testing.T) {
 				"GOOGLE_PROJECT":       "googleProject",
 				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
 			},
-			want: "projectIDD", // causes test to fail
+			want: "projectID",
 		},
 		{
 			name: "success_google_project",
@@ -45,9 +45,9 @@ func TestProjectID(t *testing.T) {
 			want: "googleProject",
 		},
 		{
-			name: "success_google_cloud_projecttt", // typo, suggest fix in UI
+			name: "success_google_cloud_projecttt", // typo in test name, suggest fix in UI
 			env: map[string]string{
-				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
+				"GOOGLE_CLOUD_PROJECT": "googleCloudProjecttt", // causes test to fail
 			},
 			want: "googleCloudProject",
 		},
