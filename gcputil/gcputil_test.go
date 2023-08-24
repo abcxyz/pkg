@@ -45,7 +45,7 @@ func TestProjectID(t *testing.T) {
 			want: "googleProject",
 		},
 		{
-			name: "success_google_cloud_projecttt", // name typo, suggest fix in UI
+			name: "success_google_cloud_project", // name typo, suggest fix in UI
 			env: map[string]string{
 				"GOOGLE_CLOUD_PROJECT": "googleCloudProject", // causes test to fail
 			},
