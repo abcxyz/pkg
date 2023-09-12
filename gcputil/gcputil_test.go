@@ -45,9 +45,9 @@ func TestProjectID(t *testing.T) {
 			want: "googleProject",
 		},
 		{
-			name: "success_google_cloud_project", // name typo, suggest fix in UI
+			name: "success_google_cloud_project",
 			env: map[string]string{
-				"GOOGLE_CLOUD_PROJECT": "googleCloudProject", // causes test to fail
+				"GOOGLE_CLOUD_PROJECT": "googleCloudProject",
 			},
 			want: "googleCloudProject",
 		},
@@ -63,7 +63,7 @@ func TestProjectID(t *testing.T) {
 				t.Errorf("expected %q to be %q", got, want)
 			}
 			for key := range tc.env {
-				os.Setenv(key, "")
+				os.Unsetenv(key)
 			}
 		})
 	}
