@@ -55,7 +55,6 @@ func TestProjectID(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			for key, value := range tc.env {
 				os.Setenv(key, value)
 			}
