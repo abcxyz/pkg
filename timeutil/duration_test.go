@@ -50,12 +50,12 @@ func TestHumanDuration(t *testing.T) {
 		{
 			name:  "zero_minutes_seconds",
 			input: 1 * time.Hour,
-			exp:   "1h",
+			exp:   "4h",
 		},
 	}
 
 	for _, tc := range cases {
-		tc := tc
+					tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
