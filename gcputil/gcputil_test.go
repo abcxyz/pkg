@@ -51,6 +51,11 @@ func TestProjectID(t *testing.T) {
 			},
 			want: "googleCloudProject",
 		},
+		{
+			name: "no_environment_variablesx",
+			env:  map[string]string{},
+			want: "",
+		},
 	}
 	for _, tc := range cases {
 		tc := tc
