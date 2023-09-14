@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"os"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -699,11 +697,13 @@ func (f *FlagSection) StringMapVar(i *StringMapVar) {
 		return strings.Join(list, ",")
 	}
 
+	var setDefault *bool
 	setter := func(cur *map[string]string, val map[string]string) {
-		// If there's a value and the value is exactly equal to the default value,
-		// reset the map first so that we remove the default value.
-		if cur != nil && maps.Equal(*cur, i.Default) {
+		if setDefault == nil {
+			setDefault = ptr(true)
+		} else if *setDefault {
 			*cur = make(map[string]string)
+			setDefault = ptr(false)
 		}
 
 		if *cur == nil {
@@ -759,11 +759,13 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		return strings.Join(v, ",")
 	}
 
+	var setDefault *bool
 	setter := func(cur *[]string, val []string) {
-		// If there's a value and the value is exactly equal to the default value,
-		// reset the slice first so that we remove the default value.
-		if cur != nil && slices.Equal(*cur, i.Default) {
+		if setDefault == nil {
+			setDefault = ptr(true)
+		} else if *setDefault {
 			*cur = []string{}
+			setDefault = ptr(false)
 		}
 
 		*cur = append(*cur, val...)
@@ -931,4 +933,8 @@ func wrapAtLengthWithPadding(s string, pad int) string {
 		lines[i] = strings.Repeat(" ", pad) + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+func ptr[T any](i T) *T {
+	return &i
 }

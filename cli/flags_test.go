@@ -218,6 +218,51 @@ func TestFlagSection_StringMapVar(t *testing.T) {
 				"c": "d",
 			},
 		},
+		{
+			name: "given_default_value_one",
+			args: []string{"-test", "foo=bar"},
+			def: map[string]string{
+				"foo": "bar",
+			},
+			exp: map[string]string{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "given_default_value_one_and_more",
+			args: []string{"-test", "foo=bar", "-test", "zip=zap"},
+			def: map[string]string{
+				"foo": "bar",
+			},
+			exp: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+		},
+		{
+			name: "given_default_value_many",
+			args: []string{"-test", "foo=bar", "-test", "zip=zap"},
+			def: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+			exp: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+		},
+		{
+			name: "given_default_value_many_and_more",
+			args: []string{"-test", "foo=bar", "-test", "a=b"},
+			def: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+			exp: map[string]string{
+				"foo": "bar",
+				"a":   "b",
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -285,6 +330,30 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 			args: []string{"-test", "a, b, c,d"},
 			def:  []string{"one", "two"},
 			exp:  []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "given_default_value_one",
+			args: []string{"-test", "a"},
+			def:  []string{"a"},
+			exp:  []string{"a"},
+		},
+		{
+			name: "given_default_value_one_and_more",
+			args: []string{"-test", "a", "-test", "b"},
+			def:  []string{"a"},
+			exp:  []string{"a", "b"},
+		},
+		{
+			name: "given_default_value_many",
+			args: []string{"-test", "a", "-test", "b"},
+			def:  []string{"a", "b"},
+			exp:  []string{"a", "b"},
+		},
+		{
+			name: "given_default_value_many_and_more",
+			args: []string{"-test", "a,b", "-test", "c"},
+			def:  []string{"a", "b"},
+			exp:  []string{"a", "b", "c"},
 		},
 	}
 
