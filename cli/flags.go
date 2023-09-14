@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -698,6 +700,12 @@ func (f *FlagSection) StringMapVar(i *StringMapVar) {
 	}
 
 	setter := func(cur *map[string]string, val map[string]string) {
+		// If there's a value and the value is exactly equal to the default value,
+		// reset the map first so that we remove the default value.
+		if cur != nil && maps.Equal(*cur, i.Default) {
+			*cur = make(map[string]string)
+		}
+
 		if *cur == nil {
 			*cur = make(map[string]string)
 		}
@@ -752,6 +760,12 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	}
 
 	setter := func(cur *[]string, val []string) {
+		// If there's a value and the value is exactly equal to the default value,
+		// reset the slice first so that we remove the default value.
+		if cur != nil && slices.Equal(*cur, i.Default) {
+			*cur = []string{}
+		}
+
 		*cur = append(*cur, val...)
 	}
 

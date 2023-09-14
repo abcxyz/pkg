@@ -160,6 +160,161 @@ func TestFlagSet_Default(t *testing.T) {
 	})
 }
 
+func TestFlagSection_StringMapVar(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		def  map[string]string
+		exp  map[string]string
+	}{
+		{
+			name: "empty",
+			args: []string{},
+			def:  nil,
+			exp:  map[string]string{},
+		},
+		{
+			name: "default",
+			args: []string{},
+			def: map[string]string{
+				"one": "hello",
+			},
+			exp: map[string]string{
+				"one": "hello",
+			},
+		},
+		{
+			name: "overrides_default_single",
+			args: []string{"-test", "a=b"},
+			def: map[string]string{
+				"one": "hello",
+			},
+			exp: map[string]string{
+				"a": "b",
+			},
+		},
+		{
+			name: "overrides_default_many",
+			args: []string{"-test", "a=b"},
+			def: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+			exp: map[string]string{
+				"a": "b",
+			},
+		},
+		{
+			name: "overrides_default_many_many",
+			args: []string{"-test", "a=b", "-test", "c=d"},
+			def: map[string]string{
+				"foo": "bar",
+				"zip": "zap",
+			},
+			exp: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			target := make(map[string]string)
+
+			fs := NewFlagSet()
+			s := fs.NewSection("")
+			s.StringMapVar(&StringMapVar{
+				Name:    "test",
+				Default: tc.def,
+				Target:  &target,
+			})
+
+			if err := fs.Parse(tc.args); err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(tc.exp, target); diff != "" {
+				t.Errorf("diff (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFlagSection_StringSliceVar(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		def  []string
+		exp  []string
+	}{
+		{
+			name: "empty",
+			args: []string{},
+			def:  nil,
+			exp:  []string{},
+		},
+		{
+			name: "default",
+			args: []string{},
+			def:  []string{"one"},
+			exp:  []string{"one"},
+		},
+		{
+			name: "overrides_default_single",
+			args: []string{"-test", "a"},
+			def:  []string{"one"},
+			exp:  []string{"a"},
+		},
+		{
+			name: "overrides_default_many",
+			args: []string{"-test", "a"},
+			def:  []string{"one", "two"},
+			exp:  []string{"a"},
+		},
+		{
+			name: "overrides_default_many_many",
+			args: []string{"-test", "a, b, c,d"},
+			def:  []string{"one", "two"},
+			exp:  []string{"a", "b", "c", "d"},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			target := make([]string, 0, 8)
+
+			fs := NewFlagSet()
+			s := fs.NewSection("")
+			s.StringSliceVar(&StringSliceVar{
+				Name:    "test",
+				Default: tc.def,
+				Target:  &target,
+			})
+
+			if err := fs.Parse(tc.args); err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(tc.exp, target); diff != "" {
+				t.Errorf("diff (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestFlagSet_AfterParse(t *testing.T) {
 	t.Parallel()
 
