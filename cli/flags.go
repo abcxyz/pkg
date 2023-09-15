@@ -697,7 +697,15 @@ func (f *FlagSection) StringMapVar(i *StringMapVar) {
 		return strings.Join(list, ",")
 	}
 
+	var setDefault *bool
 	setter := func(cur *map[string]string, val map[string]string) {
+		if setDefault == nil {
+			setDefault = ptr(true)
+		} else if *setDefault {
+			*cur = make(map[string]string)
+			setDefault = ptr(false)
+		}
+
 		if *cur == nil {
 			*cur = make(map[string]string)
 		}
@@ -751,7 +759,15 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		return strings.Join(v, ",")
 	}
 
+	var setDefault *bool
 	setter := func(cur *[]string, val []string) {
+		if setDefault == nil {
+			setDefault = ptr(true)
+		} else if *setDefault {
+			*cur = []string{}
+			setDefault = ptr(false)
+		}
+
 		*cur = append(*cur, val...)
 	}
 
@@ -917,4 +933,8 @@ func wrapAtLengthWithPadding(s string, pad int) string {
 		lines[i] = strings.Repeat(" ", pad) + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+func ptr[T any](i T) *T {
+	return &i
 }
