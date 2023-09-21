@@ -1,4 +1,4 @@
-// Copyright 2023 The Authors (see AUTHORS file)
+ // Copyright 2023 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package mysqltest
 
 import (
-	"fmt"
+	"fmt" 
 )
 
 // Logger allows the caller to optionally provide a custom logger for printing status updates about
