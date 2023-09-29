@@ -1,0 +1,118 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'create-tag'
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'The name of the tag to be created.'
+        type: 'string'
+        required: true
+      annotated_tag:
+        description: 'Whether it will be an annotated tag in Git.'
+        type: 'boolean'
+        default: true
+        required: false
+      branch:
+        description: 'The branch to create tag from.'
+        type: 'string'
+        required: false
+        default: 'main'
+      message:
+        description: 'Message for the tag.'
+        type: 'string'
+        required: false
+      deployment_environment:
+        description: 'The environment with protection rules, see reference https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment'
+        type: 'string'
+        required: true
+      token_minter_wif_provider:
+        description: 'The full identifier of the Workload Identity Provider, including the project number, pool name, and provider name.'
+        type: 'string'
+        required: true
+      token_minter_wif_service_account:
+        description: 'Email address or unique identifier of the Google Cloud service account for which to generate credentials.'
+        type: 'string'
+        required: true
+      token_minter_service_audience:
+        description: 'Cloud Run audience for the production github-token-minter service'
+        type: 'string'
+        required: true
+      token_minter_service_url:
+        description: 'URL for the production github-token-minter service'
+        type: 'string'
+        required: true
+
+jobs:
+  create-tag:
+    runs-on: 'ubuntu-latest'
+    environment: '${{ inputs.deployment_environment }}'
+    steps:
+      - name: 'Mint Token'
+        id: 'mint-token'
+        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@af661f898c6b0cda46dcaadd8299fb1eab264975' # ratchet:abcxyz/github-token-minter/.github/actions/mint-token@main
+        with:
+          wif_provider: '${{ inputs.token_minter_wif_provider }}'
+          wif_service_account: '${{ inputs.token_minter_wif_service_account }}'
+          service_audience: '${{ inputs.token_minter_service_audience }}'
+          service_url: '${{ inputs.token_minter_service_url }}'
+          requested_permissions: |-
+            {
+              "repositories": ["${{ github.event.repository.name }}"],
+              "permissions": {
+                "contents": "write"
+              }
+            }
+      - name: 'Create Tag'
+        uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+        with:
+          github-token: '${{ steps.mint-token.outputs.token }}'
+          retries: '3'
+          script: |+
+            let sha = '${{ github.sha }}'
+            if ('${{ inputs.branch }}' !== 'main') {
+              // Get branch.
+              const branch = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: '${{ inputs.branch }}',
+              })
+              // Branch returns the latest commit info. See schema:
+              // https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#get-a-branch
+              sha = branch['data']['commit']['sha']
+            }
+
+            await github.rest.git.createTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ inputs.tag }}',
+              object: sha,
+              type: 'commit',
+              message: '${{ inputs.message }}'
+            });
+
+            if ('${{ inputs.annotated_tag }}' === 'true') {
+              // Create a reference for annotated tag. See reference:
+              // https://docs.github.com/en/rest/git/tags?apiVersion=2022-11-28#create-a-tag-object
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/tags/${{ inputs.tag}}',
+                sha: sha,
+              })
+              core.info(`Created annotated tag (${{ inputs.tag }}), branch (${{inputs.branch}}), commit (${sha}).`)
+            } else {
+              core.info(`Created lightweight tag (${{ inputs.tag }}), branch (${{inputs.branch}}), commit (${sha}).`)
+            }
