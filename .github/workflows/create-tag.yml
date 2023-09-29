@@ -94,14 +94,14 @@ jobs:
             let sha = '${{ github.sha }}'
             if (branch !== '${{ github.ref_name }}') {
               // Get branch.
-              const branch = await github.rest.repos.getBranch({
+              const branchToTag = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 branch: branch,
               })
               // Branch returns the latest commit info. See schema:
               // https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#get-a-branch
-              sha = branch['data']['commit']['sha']
+              sha = branchToTag['data']['commit']['sha']
             }
 
             await github.rest.git.createTag({
