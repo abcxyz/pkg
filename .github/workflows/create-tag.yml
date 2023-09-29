@@ -35,7 +35,7 @@ on:
         type: 'string'
         required: false
       deployment_environment:
-        description: 'The environment with protection rules, see reference https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment'
+        description: 'The environment with protection rules, see reference https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment.'
         type: 'string'
         required: true
       token_minter_wif_provider:
@@ -47,17 +47,19 @@ on:
         type: 'string'
         required: true
       token_minter_service_audience:
-        description: 'Cloud Run audience for the production github-token-minter service'
+        description: 'Cloud Run audience for the production github-token-minter service.'
         type: 'string'
         required: true
       token_minter_service_url:
-        description: 'URL for the production github-token-minter service'
+        description: 'URL for the production github-token-minter service.'
         type: 'string'
         required: true
 
 jobs:
   create-tag:
     runs-on: 'ubuntu-latest'
+    # Only running the job when the triggering branch is the default branch.
+    if: '${{ github.ref_name == github.event.repository.default_branch }}'
     environment: '${{ inputs.deployment_environment }}'
     steps:
       - name: 'Mint Token'
