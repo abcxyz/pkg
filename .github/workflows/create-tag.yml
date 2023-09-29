@@ -77,17 +77,27 @@ jobs:
             }
       - name: 'Create Tag'
         uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+        env:
+          BRANCH: '${{ inputs.branch }}'
+          TAG: '${{ inputs.tag }}'
+          ANNOTATED_TAG: '${{ inputs.annotated_tag }}'
+          MESSAGE: '${{ inputs.message }}'
         with:
           github-token: '${{ steps.mint-token.outputs.token }}'
           retries: '3'
           script: |+
+            const branch = process.env.BRANCH
+            const tag = process.env.TAG
+            const annotatedTag = process.env.ANNOTATED_TAG
+            const message = process.env.MESSAGE
+
             let sha = '${{ github.sha }}'
-            if ('${{ inputs.branch }}' !== 'main') {
+            if (branch !== '${{ github.ref_name }}') {
               // Get branch.
               const branch = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                branch: '${{ inputs.branch }}',
+                branch: branch,
               })
               // Branch returns the latest commit info. See schema:
               // https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#get-a-branch
@@ -97,22 +107,22 @@ jobs:
             await github.rest.git.createTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag: '${{ inputs.tag }}',
+              tag: tag,
               object: sha,
               type: 'commit',
-              message: '${{ inputs.message }}'
+              message: message,
             });
 
-            if ('${{ inputs.annotated_tag }}' === 'true') {
+            if (annotatedTag === 'true') {
               // Create a reference for annotated tag. See reference:
               // https://docs.github.com/en/rest/git/tags?apiVersion=2022-11-28#create-a-tag-object
               await github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: 'refs/tags/${{ inputs.tag}}',
+                ref: `refs/tags/${tag}`,
                 sha: sha,
               })
-              core.info(`Created annotated tag (${{ inputs.tag }}), branch (${{inputs.branch}}), commit (${sha}).`)
+              core.info(`Created annotated tag (${tag}), branch (${branch}), commit (${sha}).`)
             } else {
-              core.info(`Created lightweight tag (${{ inputs.tag }}), branch (${{inputs.branch}}), commit (${sha}).`)
+              core.info(`Created lightweight tag (${tag}), branch (${branch}), commit (${sha}).`)
             }
