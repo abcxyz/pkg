@@ -25,13 +25,15 @@ on:
         type: 'boolean'
         default: true
         required: false
+      # Set the branch and message defaults when declaring environment variables
+      # in the job since inputs from calling workflow and the current workflow
+      # are mixed, see issue: https://github.com/actions/runner/issues/2274.
       branch:
-        description: 'The branch to create tag from.'
+        description: 'The branch of the head commit to create tag on. Default is the default branch of the calling repository.'
         type: 'string'
         required: false
-        default: 'main'
       message:
-        description: 'Message for the tag.'
+        description: 'Message for the tag. Default is the tag name.'
         type: 'string'
         required: false
       deployment_environment:
@@ -54,13 +56,21 @@ on:
         description: 'URL for the production github-token-minter service.'
         type: 'string'
         required: true
+    outputs:
+      result:
+        description: 'Create tag result.'
+        value: '${{ jobs.create-tag.outputs.result }}'
 
 jobs:
   create-tag:
     runs-on: 'ubuntu-latest'
     # Only running the job when the triggering branch is the default branch.
     if: '${{ github.ref_name == github.event.repository.default_branch }}'
+    # Use environment here since calling workflow does not support it, see ref:
+    # https://docs.github.com/en/actions/using-workflows/reusing-workflows#supported-keywords-for-jobs-that-call-a-reusable-workflow.
     environment: '${{ inputs.deployment_environment }}'
+    outputs:
+      result: '${{ steps.create-tag.outputs.result }}'
     steps:
       - name: 'Mint Token'
         id: 'mint-token'
@@ -77,7 +87,8 @@ jobs:
                 "contents": "write"
               }
             }
-      - name: 'Create Tag'
+      - id: 'create-tag'
+        name: 'Create Tag'
         uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
         env:
           BRANCH: '${{ inputs.branch }}'
@@ -87,13 +98,21 @@ jobs:
         with:
           github-token: '${{ steps.mint-token.outputs.token }}'
           retries: '3'
+          result-encoding: 'string'
           script: |+
             const branch = process.env.BRANCH
             const tag = process.env.TAG
             const annotatedTag = process.env.ANNOTATED_TAG
             const message = process.env.MESSAGE
 
+            // TODO(#215): Once prevent self-review in supported by GitHub, we can remove this condition.
+            if (branch != '${{ github.event.repository.default_branch }}') {
+              return `Skipped creating tag as currently we only support creating tags on repository default branch`
+            }
+
             let sha = '${{ github.sha }}'
+            // If the input branch is not the branch of the calling workflow,
+            // get the sha of input branch instead.
             if (branch !== '${{ github.ref_name }}') {
               // Get branch.
               const branchToTag = await github.rest.repos.getBranch({
@@ -124,7 +143,7 @@ jobs:
                 ref: `refs/tags/${tag}`,
                 sha: sha,
               })
-              core.info(`Created annotated tag (${tag}), branch (${branch}), commit (${sha}).`)
-            } else {
-              core.info(`Created lightweight tag (${tag}), branch (${branch}), commit (${sha}).`)
+              return `Created annotated tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
             }
+
+            return `Created lightweight tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
