@@ -1,0 +1,148 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'load-workflow-variables-test'
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/load-workflow-variables/**'
+
+jobs:
+  local:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/local'
+          env_filename: 'env.yml'
+          find_in_parents: false
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |-
+          EXP_OVERRIDE1="local1"
+          EXP_OVERRIDE2="local2\nlocal2"
+          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
+            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
+            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
+            exit 1
+          fi
+
+  missing-local:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars'
+        id: 'load-env'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        continue-on-error: true
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/local'
+          env_filename: 'missing.yml'
+          find_in_parents: false
+
+      - name: 'Expect Failure'
+        if: |-
+          steps.load-env.outcome != 'failure'
+        shell: 'bash'
+        run: |-
+          echo "Expected previous step to fail"
+          exit 1
+
+  multiple:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars 1'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/multiple'
+          env_filename: 'env1.yml'
+          find_in_parents: false
+
+      - name: 'Load Env Vars 2'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/multiple'
+          env_filename: 'env2.yml'
+          find_in_parents: false
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |-
+          EXP_OVERRIDE1="first"
+          EXP_OVERRIDE2="second"
+          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
+            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
+            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
+            exit 1
+          fi
+
+  parent:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/parent'
+          env_filename: 'env.yml'
+          find_in_parents: true
+          top_level_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test'
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |-
+          EXP_OVERRIDE1="parent1"
+          EXP_OVERRIDE2="parent2\nparent2"
+          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
+            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
+            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
+            exit 1
+          fi
+
+  missing-parent:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars'
+        id: 'load-env'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        continue-on-error: true
+        with:
+          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/parent'
+          env_filename: 'missing.yml'
+          find_in_parents: true
+          top_level_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test'
+
+      - name: 'Expect Failure'
+        if: |-
+          steps.load-env.outcome != 'failure'
+        shell: 'bash'
+        run: |-
+          echo "Expected previous step to fail"
+          exit 1
