@@ -41,20 +41,20 @@ runs:
       if: |-
         !contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.find_in_parents)
       shell: 'bash'
-      working-directory: '${{ inputs.working_directory }}'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
         ENV_FILENAME: '${{ inputs.env_filename }}'
         TOP_LEVEL_DIRECTORY: '${{ inputs.top_level_directory || github.workspace }}'
       run: |-
         WORKING_DIRECTORY=$(realpath "${WORKING_DIRECTORY}")
+        SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
 
-        if [[ ! -f "$ENV_FILENAME" ]]; then
-            echo "ERROR: Failed to find target file ${ENV_FILENAME} in ${WORKING_DIRECTORY}"
+        if [[ ! -f "${SEARCH_PATH}" ]]; then
+            echo "ERROR: Failed to find target file ${SEARCH_PATH}"
             exit 1
         fi
 
-        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${ENV_FILENAME}")
+        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${SEARCH_PATH}")
 
         for PROP in "${PROPS}"; do
             echo "${PROP}" >> $GITHUB_ENV
@@ -64,7 +64,6 @@ runs:
       if: |-
         contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.find_in_parents)
       shell: 'bash'
-      working-directory: '${{ inputs.working_directory }}'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
         ENV_FILENAME: '${{ inputs.env_filename }}'
@@ -78,16 +77,19 @@ runs:
           exit 1
         fi
 
-        echo -n "Checking ${WORKING_DIRECTORY} for ${ENV_FILENAME}..."
-        if [[ ! -f "$ENV_FILENAME" ]]; then
+        SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
+
+        echo -n "Checking ${SEARCH_PATH}..."
+        if [[ ! -f "${SEARCH_PATH}" ]]; then
           echo "MISSING"
 
+          # failsafe to prevent infinite loop
           while [[ "${WORKING_DIRECTORY}" != "/"  ]]; do
             WORKING_DIRECTORY=$(dirname "${WORKING_DIRECTORY}")
-            cd "${WORKING_DIRECTORY}"
+            SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
 
-            echo -n "Checking ${WORKING_DIRECTORY} for ${ENV_FILENAME}..."
-            if [ -f "${ENV_FILENAME}" ]; then
+            echo -n "Checking ${SEARCH_PATH}..."
+            if [[ -f "${SEARCH_PATH}" ]]; then
               echo "FOUND"
               break
             fi
@@ -95,13 +97,13 @@ runs:
             echo "MISSING"
 
             if [[ "${WORKING_DIRECTORY}" == "${TOP_LEVEL_DIRECTORY}" ]]; then
-              echo "ERROR: Failed to find target file ${ENV_FILENAME}"
+              echo "ERROR: Failed to find target file ${ENV_FILENAME} in hierarchy"
               exit 1
             fi
           done
         fi
 
-        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${ENV_FILENAME}")
+        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${SEARCH_PATH}")
 
         for PROP in "${PROPS}"; do
           echo "${PROP}" >> $GITHUB_ENV
