@@ -26,8 +26,8 @@ on:
         default: true
         required: false
       # Set the branch and message defaults when declaring environment variables
-      # in the job since inputs from calling workflow and the current workflow
-      # are mixed, see issue: https://github.com/actions/runner/issues/2274.
+      # as the default values in here may not be considered when the calling
+      # workflow provided a none input, likely a bug: https://github.com/actions/runner/issues/2907.
       branch:
         description: 'The branch of the head commit to create tag on. Default is the default branch of the calling repository.'
         type: 'string'
@@ -56,14 +56,28 @@ on:
         description: 'URL for the production github-token-minter service.'
         type: 'string'
         required: true
-    outputs:
-      result:
-        description: 'Create tag result.'
-        value: '${{ jobs.create-tag.outputs.result }}'
+
+env:
+  TAG: '${{ inputs.tag }}'
+  BRANCH: '${{ inputs.branch || github.event.repository.default_branch }}'
+  ANNOTATED_TAG: '${{ inputs.annotated_tag }}'
+  MESSAGE: '${{ inputs.message || inputs.tag }}'
 
 jobs:
+  print-inputs:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'job summary'
+        run: |
+          echo "### Inputs" >> $GITHUB_STEP_SUMMARY
+          echo "- tag: ${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- branch: ${{ env.BRANCH }}" >> $GITHUB_STEP_SUMMARY
+          echo "- annotated tag: ${{ env.ANNOTATED_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- message: ${{ env.MESSAGE }}" >> $GITHUB_STEP_SUMMARY
+
   create-tag:
     runs-on: 'ubuntu-latest'
+    needs: 'print-inputs'
     # Only running the job when the triggering branch is the default branch.
     if: '${{ github.ref_name == github.event.repository.default_branch }}'
     # Use environment here since calling workflow does not support it, see ref:
@@ -148,3 +162,12 @@ jobs:
             }
 
             return `Created lightweight tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
+
+  print-outputs:
+    runs-on: 'ubuntu-latest'
+    needs: 'create-tag'
+    steps:
+      - name: 'job summary'
+        run: |
+          echo "### outputs" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.create-tag.outputs.result }}" >> $GITHUB_STEP_SUMMARY
