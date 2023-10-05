@@ -20,7 +20,7 @@ on:
       - '.github/actions/load-workflow-variables/**'
 
 jobs:
-  local:
+  success:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
@@ -29,120 +29,134 @@ jobs:
       - name: 'Load Env Vars'
         uses: './.github/actions/load-workflow-variables' # ratchet:exclude
         with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/local'
-          env_filename: 'env.yml'
-          find_in_parents: false
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/org'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
+
+      - name: 'Load Env Vars'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/resources/project-a/production'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
+
+      - name: 'Load Env Vars'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/resources/project-b/development'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
 
       - name: 'Test'
         shell: 'bash'
         run: |-
-          EXP_OVERRIDE1="local1"
-          EXP_OVERRIDE2="local2\nlocal2"
-          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
-            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
-            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
+          GOT="${ORG_OVERRIDE_VALUE}"
+          WANT="terraform/org"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "ORG_OVERRIDE_VALUE - got ${GOT} want ${WANT}"
+            FAILURES="true"
+          fi
+
+          GOT="${PROJECT_A_OVERRIDE_VALUE}"
+          WANT="project-a/all"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "PROJECT_A_OVERRIDE_VALUE - got ${GOT} want ${WANT}"
+            FAILURES="true"
+          fi
+
+          GOT="${PROJECT_B_OVERRIDE_VALUE}"
+          WANT="project-b/development"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "PROJECT_B_OVERRIDE_VALUE - got ${GOT} want ${WANT}"
+            FAILURES="true"
+          fi
+
+          GOT="${ALL_VALUE}"
+          WANT="project-b/development"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "ALL_VALUE - got ${GOT} want ${WANT}"
+            FAILURES="true"
+          fi
+
+          if [[ ! -z "${FAILURES}" ]]; then
             exit 1
           fi
 
-  missing-local:
+  list:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
 
       - name: 'Load Env Vars'
-        id: 'load-env'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/deployments'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
+
+      - name: 'Refresh Test Value'
+        shell: 'bash'
+        run: |-
+          GOT="${LIST_OVERRIDE_VALUE}"
+          WANT="list/value"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "LIST_OVERRIDE_VALUE - got ${GOT} want ${WANT}"
+            exit 1
+          fi
+
+          echo "LIST_OVERRIDE_VALUE=wrong/value" >> $GITHUB_ENV
+
+      - name: 'Load Env Vars'
+        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
+        with:
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/experimental'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |-
+          GOT="${LIST_OVERRIDE_VALUE}"
+          WANT="list/value"
+          if [[ "${GOT}" != "${WANT}" ]]; then
+            echo "LIST_OVERRIDE_VALUE - got ${GOT} want ${WANT}"
+            exit 1
+          fi
+
+  missing_fail:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
+
+      - name: 'Load Env Vars'
+        id: 'load-env-vars'
         uses: './.github/actions/load-workflow-variables' # ratchet:exclude
         continue-on-error: true
         with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/local'
-          env_filename: 'missing.yml'
-          find_in_parents: false
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/project-c'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: true
 
       - name: 'Expect Failure'
         if: |-
-          steps.load-env.outcome != 'failure'
+          steps.load-env-vars.outcome != 'failure'
         shell: 'bash'
         run: |-
           echo "Expected previous step to fail"
           exit 1
 
-  multiple:
-    runs-on: 'ubuntu-latest'
-    steps:
-      - name: 'Checkout'
-        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
-
-      - name: 'Load Env Vars 1'
-        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
-        with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/multiple'
-          env_filename: 'env1.yml'
-          find_in_parents: false
-
-      - name: 'Load Env Vars 2'
-        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
-        with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/multiple'
-          env_filename: 'env2.yml'
-          find_in_parents: false
-
-      - name: 'Test'
-        shell: 'bash'
-        run: |-
-          EXP_OVERRIDE1="first"
-          EXP_OVERRIDE2="second"
-          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
-            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
-            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
-            exit 1
-          fi
-
-  parent:
+  missing_continue:
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
 
       - name: 'Load Env Vars'
+        id: 'load-env-vars'
         uses: './.github/actions/load-workflow-variables' # ratchet:exclude
         with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/parent'
-          env_filename: 'env.yml'
-          find_in_parents: true
-          top_level_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test'
-
-      - name: 'Test'
-        shell: 'bash'
-        run: |-
-          EXP_OVERRIDE1="parent1"
-          EXP_OVERRIDE2="parent2\nparent2"
-          if [[ "${EXP_OVERRIDE1}" != "${OVERRIDE1}" && "${EXP_OVERRIDE2}" != "${OVERRIDE2}" ]]; then
-            echo "got ${EXP_OVERRIDE1} want ${OVERRIDE1}"
-            echo "got ${EXP_OVERRIDE2} want ${OVERRIDE2}"
-            exit 1
-          fi
-
-  missing-parent:
-    runs-on: 'ubuntu-latest'
-    steps:
-      - name: 'Checkout'
-        uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3
-
-      - name: 'Load Env Vars'
-        id: 'load-env'
-        uses: './.github/actions/load-workflow-variables' # ratchet:exclude
-        continue-on-error: true
-        with:
-          working_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/parent'
-          env_filename: 'missing.yml'
-          find_in_parents: true
-          top_level_directory: '${{ github.workspace }}/.github/actions/load-workflow-variables/test'
-
-      - name: 'Expect Failure'
-        if: |-
-          steps.load-env.outcome != 'failure'
-        shell: 'bash'
-        run: |-
-          echo "Expected previous step to fail"
-          exit 1
+          working_directory: '.github/actions/load-workflow-variables/test/terraform/project-c'
+          filepath: '${{ github.workspace }}/.github/actions/load-workflow-variables/test/test.env.yml'
+          fail_on_missing: false
