@@ -18,93 +18,92 @@ description: |-
 
 inputs:
   working_directory:
-    description: 'The working directory to look for the env file.'
+    description: 'The working directory to look for the env file, relative to the GitHub workspace.'
     required: false
     default: '.'
-  env_filename:
-    description: 'The YAML filename containing variables to override with.'
+  filepath:
+    description: 'The YAML filepath to load the configuration from, relative to the GitHub workspace.'
     required: false
     default: 'env.yml'
-  find_in_parents:
-    description: 'If true, search for env_filename in parents until one is found.'
+  fail_on_missing:
+    description: 'If true, the process will exit with a non-zero exit code indicating failure when a value is not found.'
     required: false
-    default: 'false'
-  top_level_directory:
-    description: 'The top level directory to stop in when inheriting environment files.'
-    required: false
-    default: '.'
+    default: 'true'
 
 runs:
   using: 'composite'
   steps:
-    - name: 'Load From Local File Only'
-      if: |-
-        !contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.find_in_parents)
+    - name: 'Load Workflow Variables'
       shell: 'bash'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        ENV_FILENAME: '${{ inputs.env_filename }}'
-        TOP_LEVEL_DIRECTORY: '${{ inputs.top_level_directory || github.workspace }}'
+        FILEPATH: '${{ inputs.filepath }}'
+        FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
-        WORKING_DIRECTORY=$(realpath "${WORKING_DIRECTORY}")
-        SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
-
-        if [[ ! -f "${SEARCH_PATH}" ]]; then
-            echo "ERROR: Failed to find target file ${SEARCH_PATH}"
+        FULL_WORKING_DIR=$(realpath "${WORKING_DIRECTORY}")
+        if [[ "${FULL_WORKING_DIR}" != "${GITHUB_WORKSPACE}"* ]]; then
+            echo "ERROR: ${FULL_WORKING_DIR} is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
         fi
 
-        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${SEARCH_PATH}")
-
-        for PROP in "${PROPS}"; do
-            echo "${PROP}" >> $GITHUB_ENV
-        done
-
-    - name: 'Load From Local Or Parents'
-      if: |-
-        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.find_in_parents)
-      shell: 'bash'
-      env:
-        WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        ENV_FILENAME: '${{ inputs.env_filename }}'
-        TOP_LEVEL_DIRECTORY: '${{ inputs.top_level_directory || github.workspace }}'
-      run: |-
-        WORKING_DIRECTORY=$(realpath "${WORKING_DIRECTORY}")
-        TOP_LEVEL_DIRECTORY=$(realpath "${TOP_LEVEL_DIRECTORY}")
-
-        if [[ "${WORKING_DIRECTORY}" != "${TOP_LEVEL_DIRECTORY}"* ]]; then
-          echo "ERROR: ${TOP_LEVEL_DIRECTORY} is not a sub-directory of ${WORKING_DIRECTORY}"
-          exit 1
+        FILEPATH=$(realpath "${FILEPATH}")
+        if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
+            echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
+            exit 1
         fi
 
-        SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
+        WORKING_DIRECTORY=$(echo "${FULL_WORKING_DIR}" | sed -r "s|^${GITHUB_WORKSPACE}\/||g")
 
-        echo -n "Checking ${SEARCH_PATH}..."
-        if [[ ! -f "${SEARCH_PATH}" ]]; then
-          echo "MISSING"
+        echo "FULL_WORKING_DIR:${FULL_WORKING_DIR}"
+        echo "WORKING_DIRECTORY:${WORKING_DIRECTORY}"
+        echo "FILEPATH:${FILEPATH}"
 
-          # failsafe to prevent infinite loop
-          while [[ "${WORKING_DIRECTORY}" != "/"  ]]; do
-            WORKING_DIRECTORY=$(dirname "${WORKING_DIRECTORY}")
-            SEARCH_PATH="${WORKING_DIRECTORY}/${ENV_FILENAME}"
+        # YAML provides a more human friendly way to define configs, but yq
+        # does prefix/suffix matching on * which can cause unwanted results.
+        # jq does exact matching, so we use yq to convert YAML to JSON, then
+        # use jq to do exact matching for directory values.
 
-            echo -n "Checking ${SEARCH_PATH}..."
-            if [[ -f "${SEARCH_PATH}" ]]; then
-              echo "FOUND"
-              break
-            fi
+        # Convert YAML to JSON
+        JSON=$(yq -o=json "${FILEPATH}")
 
-            echo "MISSING"
+        # Look for exact match on working directory
+        FOUND=$(echo "${JSON}" | jq -r ".[] | select(.dirs[] | select(. == \"$WORKING_DIRECTORY\"))")
 
-            if [[ "${WORKING_DIRECTORY}" == "${TOP_LEVEL_DIRECTORY}" ]]; then
-              echo "ERROR: Failed to find target file ${ENV_FILENAME} in hierarchy"
-              exit 1
-            fi
-          done
+        if [[ -z "${FOUND}" ]]; then
+            echo "NOT FOUND   No exact match for ${WORKING_DIRECTORY}"
+
+            # Search directory hierarchy upwards for a * suffix indicating all children of parent be used
+            while [[ "${WORKING_DIRECTORY}" != "/" && "${WORKING_DIRECTORY}" != "." && "${WORKING_DIRECTORY}" != "" ]]; do
+                WORKING_DIRECTORY=$(dirname "${WORKING_DIRECTORY}")
+                SEARCH_DIR="${WORKING_DIRECTORY}/*"
+                FOUND=$(echo "${JSON}" | jq -r ".[] | select(.dirs[] | select(. == \"$SEARCH_DIR\"))")
+
+                if [[ ! -z "${FOUND}" ]]; then
+                    echo "FOUND       Found match for ${SEARCH_DIR}"
+                    break
+                fi
+
+                echo "NOT FOUND   No match for ${SEARCH_DIR}"
+
+                FULL_WORKING_DIR=$(realpath "${WORKING_DIRECTORY}")
+                if [[ "${FULL_WORKING_DIR}" == "${GITHUB_WORKSPACE}" ]]; then
+                    echo "NOTICE      Reached root of workspace"
+                    break
+                fi
+            done
+        else
+            echo "FOUND       Exact match for ${WORKING_DIRECTORY}"
         fi
 
-        PROPS=$(yq -o=props '.. | select(tag != "!!map" and tag != "!!seq") | ( (path | join("_")) + "<<EOT\n" + . + "\nEOT")' "${SEARCH_PATH}")
-
-        for PROP in "${PROPS}"; do
-          echo "${PROP}" >> $GITHUB_ENV
-        done
+        if [[ -z "${FOUND}" ]]; then
+            if [[ "${FAIL_ON_MISSING}" != "false" && "${FAIL_ON_MISSING}" != "FALSE" ]]; then
+                echo "FAILED      Failed to find config for dir ${WORKING_DIRECTORY}"
+                exit 1
+            else
+                echo "WARNING     Failed to find config for dir ${WORKING_DIRECTORY}"
+                exit 0
+            fi
+        else
+            VARS=$(echo "${FOUND}" | jq -r '.variables | to_entries | .[] | .key + "<<EOT\n" + .value + "\nEOT"')
+            echo "${VARS}" >> $GITHUB_ENV
+        fi
