@@ -40,21 +40,12 @@ runs:
         FILEPATH: '${{ inputs.filepath }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
-        FULL_WORKING_DIR=$(realpath "${WORKING_DIRECTORY}")
-        if [[ "${FULL_WORKING_DIR}" != "${GITHUB_WORKSPACE}"* ]]; then
-            echo "ERROR: ${FULL_WORKING_DIR} is not a sub-directory of ${GITHUB_WORKSPACE}"
-            exit 1
-        fi
-
         FILEPATH=$(realpath "${FILEPATH}")
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
         fi
 
-        WORKING_DIRECTORY=$(echo "${FULL_WORKING_DIR}" | sed -r "s|^${GITHUB_WORKSPACE}\/||g")
-
-        echo "FULL_WORKING_DIR:${FULL_WORKING_DIR}"
         echo "WORKING_DIRECTORY:${WORKING_DIRECTORY}"
         echo "FILEPATH:${FILEPATH}"
 
@@ -84,12 +75,6 @@ runs:
                 fi
 
                 echo "NOT FOUND   No match for ${SEARCH_DIR}"
-
-                FULL_WORKING_DIR=$(realpath "${WORKING_DIRECTORY}")
-                if [[ "${FULL_WORKING_DIR}" == "${GITHUB_WORKSPACE}" ]]; then
-                    echo "NOTICE      Reached root of workspace"
-                    break
-                fi
             done
         else
             echo "FOUND       Exact match for ${WORKING_DIRECTORY}"
