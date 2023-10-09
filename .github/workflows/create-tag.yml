@@ -104,11 +104,6 @@ jobs:
       - id: 'create-tag'
         name: 'Create Tag'
         uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
-        env:
-          BRANCH: '${{ inputs.branch }}'
-          TAG: '${{ inputs.tag }}'
-          ANNOTATED_TAG: '${{ inputs.annotated_tag }}'
-          MESSAGE: '${{ inputs.message }}'
         with:
           github-token: '${{ steps.mint-token.outputs.token }}'
           retries: '3'
@@ -169,5 +164,5 @@ jobs:
     steps:
       - name: 'job summary'
         run: |
-          echo "### outputs" >> $GITHUB_STEP_SUMMARY
+          echo "### Outputs" >> $GITHUB_STEP_SUMMARY
           echo "${{ needs.create-tag.outputs.result }}" >> $GITHUB_STEP_SUMMARY
