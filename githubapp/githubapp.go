@@ -115,7 +115,7 @@ func NewConfig(appID, installationID string, privateKey *rsa.PrivateKey, opts ..
 // requested permissions / scopes that are requested when generating a
 // new installation access token.
 type TokenRequest struct {
-	Repositories []string          `json:"repositories"`
+	Repositories []string          `json:"repositories,omitempty"`
 	Permissions  map[string]string `json:"permissions"`
 }
 
