@@ -211,6 +211,10 @@ func (g *GitHubApp) generateAppJWT() ([]byte, error) {
 // access token for this application installation with the requested
 // permissions and repositories.
 func (g *GitHubApp) AccessToken(ctx context.Context, request *TokenRequest) (string, error) {
+	if request.Repositories == nil {
+		return "", fmt.Errorf("requested repositories cannot be nil, did you mean to use AccessTokenAllRepos to request all repos?")
+	}
+
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return "", fmt.Errorf("error marshalling request data: %w", err)
