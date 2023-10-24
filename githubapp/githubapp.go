@@ -115,8 +115,16 @@ func NewConfig(appID, installationID string, privateKey *rsa.PrivateKey, opts ..
 // requested permissions / scopes that are requested when generating a
 // new installation access token.
 type TokenRequest struct {
-	Repositories *[]string         `json:"repositories,omitempty"`
+	Repositories []string          `json:"repositories"`
 	Permissions  map[string]string `json:"permissions"`
+}
+
+// TokenRequestAllRepos is a struct that contains the requested permissions/scopes
+// that are requested when generating a new installation access token.
+// This struct intentionally omits the repository properties to generate a token
+// for all repositories granted to this GitHub app installation.
+type TokenRequestAllRepos struct {
+	Permissions map[string]string `json:"permissions"`
 }
 
 // GitHubApp is an object that can be used to generate application level JWTs
@@ -203,15 +211,38 @@ func (g *GitHubApp) generateAppJWT() ([]byte, error) {
 // access token for this application installation with the requested
 // permissions and repositories.
 func (g *GitHubApp) AccessToken(ctx context.Context, request *TokenRequest) (string, error) {
+	if request.Repositories == nil {
+		return "", fmt.Errorf("requested repositories cannot be nil, did you mean to use AccessTokenAllRepos to request all repos?")
+	}
+
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return "", fmt.Errorf("error marshalling request data: %w", err)
+	}
+
+	return g.githubAccessToken(ctx, requestJSON)
+}
+
+// AccessTokenAllRepos calls the GitHub API to generate a new
+// access token for this application installation with the requested
+// permissions and all granted repositories.
+func (g *GitHubApp) AccessTokenAllRepos(ctx context.Context, request *TokenRequestAllRepos) (string, error) {
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return "", fmt.Errorf("error marshalling request data: %w", err)
+	}
+
+	return g.githubAccessToken(ctx, requestJSON)
+}
+
+// githubAccessToken calls the GitHub API to generate a new
+// access token with provided JSON payload bytes.
+func (g *GitHubApp) githubAccessToken(ctx context.Context, requestJSON []byte) (string, error) {
 	appJWT, err := g.AppToken()
 	if err != nil {
 		return "", fmt.Errorf("error generating app jwt: %w", err)
 	}
 	requestURL := fmt.Sprintf(g.config.accessTokenURLPattern, g.config.InstallationID)
-	requestJSON, err := json.Marshal(request)
-	if err != nil {
-		return "", fmt.Errorf("error marshalling request data: %w", err)
-	}
 
 	requestReader := bytes.NewReader(requestJSON)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, requestReader)

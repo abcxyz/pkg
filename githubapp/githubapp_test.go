@@ -146,6 +146,7 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 		appID       string
 		installID   string
 		options     []ConfigOption
+		request     *TokenRequest
 		want        string
 		expErr      string
 		handlerFunc http.HandlerFunc
@@ -155,6 +156,7 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 			appID:       "test-app-id",
 			installID:   "test-install-id",
 			options:     []ConfigOption{},
+			request:     &TokenRequest{Repositories: []string{"test"}, Permissions: map[string]string{"test": "test"}},
 			want:        `{"token":"this-is-the-token-from-github"}`,
 			expErr:      "",
 			handlerFunc: nil,
@@ -164,6 +166,7 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 			appID:     "test-app-id",
 			installID: "test-install-id",
 			options:   []ConfigOption{},
+			request:   &TokenRequest{Repositories: []string{"test"}, Permissions: map[string]string{"test": "test"}},
 			expErr:    "failed to retrieve token from GitHub - Status: 500 Internal Server Error - Body: ",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(500)
@@ -174,6 +177,7 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 			appID:     "test-app-id",
 			installID: "test-install-id",
 			options:   []ConfigOption{},
+			request:   &TokenRequest{Repositories: []string{"test"}, Permissions: map[string]string{"test": "test"}},
 			expErr:    "invalid access token from GitHub - Body: not json",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
@@ -185,7 +189,29 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 			appID:     "test-app-id",
 			installID: "test-install-id",
 			options:   []ConfigOption{},
+			request:   &TokenRequest{Repositories: []string{"test"}, Permissions: map[string]string{"test": "test"}},
 			expErr:    "invalid access token from GitHub - Body:",
+			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+			},
+		},
+		{
+			name:        "allow_empty_repositories",
+			appID:       "test-app-id",
+			installID:   "test-install-id",
+			options:     []ConfigOption{},
+			request:     &TokenRequest{Repositories: []string{}, Permissions: map[string]string{"test": "test"}},
+			want:        `{"token":"this-is-the-token-from-github"}`,
+			expErr:      "",
+			handlerFunc: nil,
+		},
+		{
+			name:      "missing_repositories",
+			appID:     "test-app-id",
+			installID: "test-install-id",
+			options:   []ConfigOption{},
+			request:   &TokenRequest{Permissions: map[string]string{"test": "test"}},
+			expErr:    "requested repositories cannot be nil, did you mean to use AccessTokenAllRepos to request all repos?",
 			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
 			},
@@ -221,7 +247,7 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 			tc.options = append(tc.options, WithAccessTokenURLPattern(fakeGitHub.URL+"/%s/access_tokens"))
 
 			app := New(NewConfig(tc.appID, tc.installID, rsaPrivateKey, tc.options...))
-			got, err := app.AccessToken(context.Background(), &TokenRequest{})
+			got, err := app.AccessToken(context.Background(), tc.request)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
 				t.Errorf(diff)
 			}
