@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Instructions for integrating with this workflow:
-#
-# Audience: you are an engineer working within the abcxyz GitHub org and
-# you want to call this workflow to create tags within your repo.
-#
 # Steps:
 #   - Parallel task 1:
 #
@@ -42,7 +37,13 @@
 #       than the .yaml file extension in the previous step.
 #     - Send this PR for approval and merge it when approved.
 #
-#   - After both of the above parallel tasks are complete, you can now run the
+#   - Parallel task 3: in your repo, create a new environment named "tag", where
+#       - the required reviewers are "abcxyz/infrastructure-team"
+#       - "Allow administrators to bypass configured protection rules" is
+#         checked
+#       - "Deployment branches and tags" is "Protected branches only"
+#
+#   - After all of the above parallel tasks are complete, you can now run the
 #     create-tag workflow in your github repo, and a tag will be created. The
 #     assumption is that there will be another workflow that is waiting to be
 #     triggered by a tag creation event.
@@ -64,7 +65,9 @@ on:
       # as the default values in here may not be considered when the calling
       # workflow provided a none input, likely a bug: https://github.com/actions/runner/issues/2907.
       branch:
-        description: 'The branch of the head commit to create tag on. Default is the default branch of the calling repository.'
+        description:
+          'The branch of the head commit to create tag on. Default is the
+          default branch of the calling repository.'
         type: 'string'
         required: false
       message:
@@ -72,19 +75,26 @@ on:
         type: 'string'
         required: false
       deployment_environment:
-        description: 'The environment with protection rules, see reference https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment.'
+        description:
+          'The environment with protection rules, see reference
+          https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment.'
         type: 'string'
         required: true
       token_minter_wif_provider:
-        description: 'The full identifier of the Workload Identity Provider, including the project number, pool name, and provider name.'
+        description:
+          'The full identifier of the Workload Identity Provider, including the
+          project number, pool name, and provider name.'
         type: 'string'
         required: true
       token_minter_wif_service_account:
-        description: 'Email address or unique identifier of the Google Cloud service account for which to generate credentials.'
+        description:
+          'Email address or unique identifier of the Google Cloud service
+          account for which to generate credentials.'
         type: 'string'
         required: true
       token_minter_service_audience:
-        description: 'Cloud Run audience for the production github-token-minter service.'
+        description:
+          'Cloud Run audience for the production github-token-minter service.'
         type: 'string'
         required: true
       token_minter_service_url:
