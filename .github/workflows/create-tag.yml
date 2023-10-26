@@ -12,6 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Instructions for integrating with this workflow:
+#
+# Audience: you are an engineer working within the abcxyz GitHub org and
+# you want to call this workflow to create tags within your repo.
+#
+# Steps:
+#   - Parallel task 1:
+#
+#     - In the abcxyz/abcxyz-services repo, create a new file in the
+#       deployments/configs/abcxyz directory. Copy one of the existing files
+#       (say pmap.yaml) and customize it by replacing eg "pmap" with your own
+#       repo name (not including the abcxyz/ prefix).
+#     - Send this PR for approval and merge it when approved. You can continue
+#       with the next step while you wait for approval.
+#     - After the PR is merged, watch for a GitHub action in this repo that will
+#       deploy your change to the live token instance. Wait for the deployment
+#       to complete.
+#
+#   - Parallel task 2:
+#
+#     - In your own repo, create a new workflow by copying an create-tag.yaml
+#       file from another repo (e.g. pmap). Run this command in the root of the
+#       repo:
+#
+#       $ wget -O .github/workflows/create-tag.yml https://raw.githubusercontent.com/abcxyz/pmap/main/.github/workflows/create-tag.yml
+#
+#       Note: for this step you use the .yml file extension, which is different
+#       than the .yaml file extension in the previous step.
+#     - Send this PR for approval and merge it when approved.
+#
+#   - After both of the above parallel tasks are complete, you can now run the
+#     create-tag workflow in your github repo, and a tag will be created. The
+#     assumption is that there will be another workflow that is waiting to be
+#     triggered by a tag creation event.
+
 name: 'create-tag'
 on:
   workflow_call:
