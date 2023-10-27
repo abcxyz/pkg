@@ -12,9 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# reusable workflow to call scancode action to scan licenses and copyrights and
+# Reusable workflow to call scancode action to scan licenses and copyrights and
 # upload the results.
-# TODO: add more usage guide here.
+# Example usage:
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         branch:
+#           description: 'branch'
+#           required: false
+#           type: 'string'
+#           default: 'main'
+
+#   permissions:
+#     contents: 'read'
+
+#   jobs:
+#     scancode:
+#       uses: 'abcxyz/pkg/.github/workflows/scancode.yml@main' # pin tag or sha here.
+#       with:
+#         branch: '${{ inputs.branch }}'
 name: 'scancode'
 on:
   workflow_call:
