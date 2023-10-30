@@ -14,7 +14,10 @@
 
 # Reusable workflow to call scancode action to scan licenses and copyrights and
 # upload the results.
+#
 # Example usage:
+#   name: scancode
+
 #   on:
 #     workflow_dispatch:
 #       inputs:
@@ -32,6 +35,15 @@
 #       uses: 'abcxyz/pkg/.github/workflows/scancode.yml@main' # pin tag or sha here.
 #       with:
 #         branch: '${{ inputs.branch }}'
+
+# After install the workflow in your repository, to scan both the repository and
+# all transitive dependencies:
+#   1, checkout a branch to include the dependencies (i.e. run `go mod vendor`
+#   for Go) and push the change.
+#   2, use the branch in 1 as the input branch and run the workflow follow
+#   https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow.
+# To download the results, follow https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts.
+
 name: 'scancode'
 on:
   workflow_call:
