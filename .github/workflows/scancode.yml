@@ -48,6 +48,10 @@ name: 'scancode'
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
+        type: 'string'
+        default: '"ubuntu-latest"'
       branch:
         description: 'Which branch to scan.'
         required: false
@@ -57,7 +61,7 @@ env:
   REPO_ROOT: '${{ github.repository }}'
 jobs:
   scancode:
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     name: 'Scan code for licenses and copyrights'
     permissions:
       contents: 'read'

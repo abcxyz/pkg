@@ -15,6 +15,32 @@ which encapsulate common CI/CD logic to reduce repetition. For security, the
 reusable workflows are pinned to specific references using
 [ratchet](https://github.com/sethvargo/ratchet).
 
+The reusable workflows use a default runner image of `ubuntu-latest`, since this
+works for most use cases. We do not recommend customizing the runner image
+unless you need additional performance. To customize the runner image, set the
+`runs-on` key as an input to the reusable workflow to a **valid JSON string**
+representing the [GitHub `runs-on`
+configuration](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on).
+Because GitHub Actions reusable workflows do not support complex input types,
+these values must be a valid JSON-encoded string.
+
+```yaml
+# Example of using a different runner
+uses: 'abcxyz/pkg/.github/workflows/workflow.yml@main'
+with:
+  runs-on: '"macos-latest"' # double quoting is required
+
+# Example of using a self-hosted runner
+uses: 'abcxyz/pkg/.github/workflows/workflow.yml@main'
+with:
+  runs-on: '["self-hosted", "ubuntu-22.04"]'
+
+# Example of using a label
+uses: 'abcxyz/pkg/.github/workflows/workflow.yml@main'
+with:
+  runs-on: '{"label": "4-core"}'
+```
+
 
 #### go-lint.yml
 

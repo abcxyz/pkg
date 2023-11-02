@@ -52,6 +52,10 @@ name: 'create-tag'
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
+        type: 'string'
+        default: '"ubuntu-latest"'
       tag:
         description: 'The name of the tag to be created.'
         type: 'string'
@@ -110,7 +114,7 @@ env:
 
 jobs:
   print-inputs:
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'job summary'
         run: |
@@ -121,7 +125,7 @@ jobs:
           echo "- message: ${MESSAGE}" >> $GITHUB_STEP_SUMMARY
 
   create-tag:
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     needs: 'print-inputs'
     # Only running the job when the triggering branch is the default branch.
     if: '${{ github.ref_name == github.event.repository.default_branch }}'
@@ -204,7 +208,7 @@ jobs:
             return `Created lightweight tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
 
   print-outputs:
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     needs: 'create-tag'
     steps:
       - name: 'job summary'
