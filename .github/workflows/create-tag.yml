@@ -53,15 +53,19 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
+        description: |-
+          The GitHub runner on which to execute. This must be a valid JSON but
+          can represent a string, array of strings, or object.
         type: 'string'
         default: '"ubuntu-latest"'
       tag:
-        description: 'The name of the tag to be created.'
+        description: |-
+          The name of the tag to be created.
         type: 'string'
         required: true
       annotated_tag:
-        description: 'Whether it will be an annotated tag in Git.'
+        description: |-
+          Whether it will be an annotated tag in Git.
         type: 'boolean'
         default: true
         required: false
@@ -69,40 +73,42 @@ on:
       # as the default values in here may not be considered when the calling
       # workflow provided a none input, likely a bug: https://github.com/actions/runner/issues/2907.
       branch:
-        description:
-          'The branch of the head commit to create tag on. Default is the
-          default branch of the calling repository.'
+        description: |-
+          The branch of the head commit to create tag on. Default is the default
+          branch of the calling repository.
         type: 'string'
         required: false
       message:
-        description: 'Message for the tag. Default is the tag name.'
+        description: |-
+          Message for the tag. Default is the tag name.
         type: 'string'
         required: false
       deployment_environment:
-        description:
-          'The environment with protection rules, see reference
-          https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment.'
+        description: |-
+          The environment with protection rules, see reference
+          https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment.
         type: 'string'
         required: true
       token_minter_wif_provider:
-        description:
-          'The full identifier of the Workload Identity Provider, including the
-          project number, pool name, and provider name.'
+        description: |-
+          The full identifier of the Workload Identity Provider, including the
+          project number, pool name, and provider name.
         type: 'string'
         required: true
       token_minter_wif_service_account:
-        description:
-          'Email address or unique identifier of the Google Cloud service
-          account for which to generate credentials.'
+        description: |-
+          Email address or unique identifier of the Google Cloud service account
+          for which to generate credentials.
         type: 'string'
         required: true
       token_minter_service_audience:
-        description:
-          'Cloud Run audience for the production github-token-minter service.'
+        description: |-
+          Cloud Run audience for the production github-token-minter service.
         type: 'string'
         required: true
       token_minter_service_url:
-        description: 'URL for the production github-token-minter service.'
+        description: |-
+          URL for the production github-token-minter service.
         type: 'string'
         required: true
 
@@ -137,7 +143,7 @@ jobs:
     steps:
       - name: 'Mint Token'
         id: 'mint-token'
-        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@af661f898c6b0cda46dcaadd8299fb1eab264975' # ratchet:abcxyz/github-token-minter/.github/actions/mint-token@main
+        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@4cdad179cc950bd35ed940bd4affeaa9cc95a4bc' # ratchet:abcxyz/github-token-minter/.github/actions/mint-token@main
         with:
           wif_provider: '${{ inputs.token_minter_wif_provider }}'
           wif_service_account: '${{ inputs.token_minter_wif_service_account }}'
@@ -152,7 +158,7 @@ jobs:
             }
       - id: 'create-tag'
         name: 'Create Tag'
-        uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
         with:
           github-token: '${{ steps.mint-token.outputs.token }}'
           retries: '3'
