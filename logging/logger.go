@@ -165,6 +165,7 @@ func cloudLoggingAttrsEncoder() func([]string, slog.Attr) slog.Attr {
 		keySeverity = "severity"
 		keyError    = "error"
 		keyMessage  = "message"
+		keySource   = "logging.googleapis.com/sourceLocation"
 	)
 
 	return func(groups []string, a slog.Attr) slog.Attr {
@@ -186,6 +187,12 @@ func cloudLoggingAttrsEncoder() func([]string, slog.Attr) slog.Attr {
 		// https://cloud.google.com/logging/docs/structured-logging#special-payload-fields
 		if a.Key == slog.MessageKey {
 			a.Key = keyMessage
+		}
+
+		// Google Cloud Logging uses "logging.google..." instead of "source":
+		// https://cloud.google.com/logging/docs/structured-logging#special-payload-fields
+		if a.Key == slog.SourceKey {
+			a.Key = keySource
 		}
 
 		// Re-format durations to be their string format.
