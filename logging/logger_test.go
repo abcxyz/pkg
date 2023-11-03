@@ -72,7 +72,7 @@ func TestNew(t *testing.T) {
 		if got, want := b.String(), "very low level"; !strings.Contains(got, want) {
 			t.Errorf("expected %q to contain %q", got, want)
 		}
-		if got, want := b.String(), "source="; !strings.Contains(got, want) {
+		if got, want := b.String(), "logging.googleapis.com/sourceLocation="; !strings.Contains(got, want) {
 			t.Errorf("expected %q to contain %q", got, want)
 		}
 	})
