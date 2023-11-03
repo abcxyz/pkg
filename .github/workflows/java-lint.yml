@@ -17,6 +17,10 @@ name: 'java-lint'
 on:
   workflow_call:
     inputs:
+      runs-on:
+        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
+        type: 'string'
+        default: '"ubuntu-latest"'
       java_version:
         description: 'The version of Java to install and use.'
         type: 'string'
@@ -42,7 +46,7 @@ jobs:
   # Do not change this job name. Job names are used as identifiers in status
   # checks, and changing this name will cause status checks to fail.
   format:
-    runs-on: 'ubuntu-latest'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9' # ratchet:actions/checkout@v3

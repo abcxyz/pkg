@@ -17,10 +17,10 @@ name: 'go-test'
 on:
   workflow_call:
     inputs:
-      os:
-        description: 'Operating system on which to run tests.'
+      runs-on:
+        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
         type: 'string'
-        default: 'ubuntu-latest'
+        default: '"ubuntu-latest"'
       go_version:
         description: 'The version of Go to install and use.'
         type: 'string'
@@ -53,7 +53,7 @@ jobs:
   # Do not change this job name. Job names are used as identifiers in status
   # checks, and changing this name will cause status checks to fail.
   test:
-    runs-on: '${{ inputs.os }}'
+    runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Configure environment variables'
         if: '${{ inputs.env != ''{}'' }}'
