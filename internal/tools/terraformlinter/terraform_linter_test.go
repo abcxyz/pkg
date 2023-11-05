@@ -15,7 +15,6 @@
 package terraformlinter
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,11 +24,10 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name      string
-		content   string
-		filename  string
-		expect    []*ViolationInstance
-		wantError bool
+		name     string
+		content  string
+		filename string
+		expect   []*ViolationInstance
 	}{
 		{
 			name: "no_special_attributes",
@@ -39,9 +37,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "for_each_correct",
@@ -53,9 +50,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "for_each_missing_newline",
@@ -69,12 +65,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "for_each_out_of_order",
@@ -88,17 +83,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrForEach),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "for_each" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "count_correct",
@@ -110,9 +104,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "count_missing_newline",
@@ -126,12 +119,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "count_out_of_order",
@@ -145,17 +137,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrCount),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "count" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "provider_correct",
@@ -167,9 +158,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "provider_missing_newline",
@@ -183,14 +173,12 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
-
 		{
 			name: "provider_out_of_order",
 			content: `
@@ -203,17 +191,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "provider" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "project_correct_no_meta_block",
@@ -225,9 +212,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "project_correct_meta_block",
@@ -241,9 +227,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "project_missing_newline",
@@ -257,12 +242,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: violationProviderNewline,
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The provider specific attributes must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "project_out_of_order",
@@ -276,17 +260,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderProject),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "project" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationProviderNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The provider specific attributes must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "depends_on_correct",
@@ -299,9 +282,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					]
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "depends_on_out_of_order",
@@ -317,12 +299,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "depends_on" must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "lifecycle_correct",
@@ -335,9 +316,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					}
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "lifecycle_out_of_order",
@@ -353,12 +333,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "lifecycle" must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "trailing_mix_correct",
@@ -374,9 +353,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					}
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "trailing_mix_out_of_order",
@@ -395,17 +373,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The attribute "lifecycle" must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 				{
-					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrDependsOn),
-					Path:          "/test/test.tf",
-					Line:          8,
+					Message: `The attribute "depends_on" must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`,
+					Path:    "/test/test.tf",
+					Line:    8,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "source_correct",
@@ -417,9 +394,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					disable_on_destroy = true
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "source_missing_newline",
@@ -433,12 +409,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "source_out_of_order",
@@ -452,17 +427,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrSource),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "source" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "all_correct",
@@ -487,9 +461,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					}
 				}
 				`,
-			filename:  "/test/test.tf",
-			expect:    nil,
-			wantError: false,
+			filename: "/test/test.tf",
+			expect:   nil,
 		},
 		{
 			name: "mixed_out_of_order",
@@ -514,42 +487,41 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrProvider),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "provider" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 				{
-					ViolationType: fmt.Sprintf(violationLeadingMetaBlockAttribute, attrForEach),
-					Path:          "/test/test.tf",
-					Line:          6,
+					Message: `The attribute "for_each" must be in the meta block at the top of the definition.`,
+					Path:    "/test/test.tf",
+					Line:    6,
 				},
 				{
-					ViolationType: violationMetaBlockNewline,
-					Path:          "/test/test.tf",
-					Line:          7,
+					Message: `The meta block must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    7,
 				},
 				{
-					ViolationType: violationProviderNewline,
-					Path:          "/test/test.tf",
-					Line:          8,
+					Message: `The provider specific attributes must have an additional newline separating it from the next section.`,
+					Path:    "/test/test.tf",
+					Line:    8,
 				},
 				{
-					ViolationType: fmt.Sprintf(violationTrailingMetaBlockAttribute, attrLifecycle),
-					Path:          "/test/test.tf",
-					Line:          9,
+					Message: `The attribute "lifecycle" must be at the bottom of the resource definition and in the order "depends_on" then "lifecycle."`,
+					Path:    "/test/test.tf",
+					Line:    9,
 				},
 				{
-					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderOrganization),
-					Path:          "/test/test.tf",
-					Line:          12,
+					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Path:    "/test/test.tf",
+					Line:    12,
 				},
 			},
-			wantError: false,
 		},
 		// Terraform AST treats comments on a line differently than any other token.
 		// Comments absorb the newline character instead of treating it as a separate token.
@@ -562,7 +534,6 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					c = var.d # e
 				}
 			`,
-			wantError: false,
 		},
 		{
 			name: "resource with hyphen in name",
@@ -575,12 +546,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "run-api"),
-					Path:          "/test/test.tf",
-					Line:          2,
+					Message: `The resource "run-api" must not contain a "-" in its name.`,
+					Path:    "/test/test.tf",
+					Line:    2,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "module with hyphen in name",
@@ -592,12 +562,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "my-cool-module"),
-					Path:          "/test/test.tf",
-					Line:          2,
+					Message: `The resource "my-cool-module" must not contain a "-" in its name.`,
+					Path:    "/test/test.tf",
+					Line:    2,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "variable with hyphen in name",
@@ -610,12 +579,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "billing-account"),
-					Path:          "/test/test.tf",
-					Line:          2,
+					Message: `The resource "billing-account" must not contain a "-" in its name.`,
+					Path:    "/test/test.tf",
+					Line:    2,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "output with hyphen in name",
@@ -627,12 +595,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationHyphenInResouceName, "my-output"),
-					Path:          "/test/test.tf",
-					Line:          2,
+					Message: `The resource "my-output" must not contain a "-" in its name.`,
+					Path:    "/test/test.tf",
+					Line:    2,
 				},
 			},
-			wantError: false,
 		},
 		{
 			name: "provider_project_at_top",
@@ -646,17 +613,16 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderFolder),
-					Path:          "/test/test.tf",
-					Line:          4,
+					Message: `The attribute "folder" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Path:    "/test/test.tf",
+					Line:    4,
 				},
 				{
-					ViolationType: fmt.Sprintf(violationProviderAttributes, attrProviderOrganization),
-					Path:          "/test/test.tf",
-					Line:          5,
+					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Path:    "/test/test.tf",
+					Line:    5,
 				},
 			},
-			wantError: false,
 		},
 		// Issue #87 - source and for_each are both valid at the top and shouldn't
 		// cause violations if both are present.
@@ -673,7 +639,6 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					source = "git://https://github.com/abc/def"
 				}
 			`,
-			wantError: false,
 		},
 		{
 			// linter is detecting the "module" ident token in the trimprefix call and starting a new
@@ -688,12 +653,11 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 				  "AUDIT_CLIENT_CONDITION_REGEX_PRINCIPAL_INCLUDE" : ".*",
 				}
 			  }
-			  
+
 			  resource "google_cloud_run_service" "ingestion_backend_client_services" {
 				for_each = var.client_images
 			  }
 			`,
-			wantError: false,
 		},
 		{
 			name: "allows_import_blocks",
@@ -703,7 +667,6 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			  id = "project-id-with-hyphens"
 			}
 			`,
-			wantError: false,
 		},
 	}
 
@@ -714,8 +677,8 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			t.Parallel()
 
 			results, err := findViolations([]byte(tc.content), tc.filename)
-			if tc.wantError != (err != nil) {
-				t.Errorf("expected error want: %#v, got: %#v - error: %v", tc.wantError, err != nil, err)
+			if err != nil {
+				t.Fatal(err)
 			}
 			if diff := cmp.Diff(tc.expect, results); diff != "" {
 				t.Errorf("results (-want,+got):\n%s", diff)
