@@ -169,12 +169,6 @@ jobs:
             const annotatedTag = process.env.ANNOTATED_TAG
             const message = process.env.MESSAGE
 
-            // TODO(#215): Once prevent self-review is supported by GitHub, we can remove this condition.
-            if (branch != '${{ github.event.repository.default_branch }}') {
-              core.setFailed(`branch (${branch}) is not the repository default branch (${{ github.event.repository.default_branch }}).`)
-              return
-            }
-
             let sha = '${{ github.sha }}'
             // If the input branch is not the branch of the calling workflow,
             // get the sha of input branch instead.
