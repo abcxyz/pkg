@@ -169,6 +169,11 @@ jobs:
             const annotatedTag = process.env.ANNOTATED_TAG
             const message = process.env.MESSAGE
 
+            if (branch != '${{ github.event.repository.default_branch }}') {
+              core.warning(`branch (${branch}) is not the repository default ` +
+              `branch (${{ github.event.repository.default_branch }}).`)
+            }
+
             let sha = '${{ github.sha }}'
             // If the input branch is not the branch of the calling workflow,
             // get the sha of input branch instead.
