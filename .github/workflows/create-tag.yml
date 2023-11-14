@@ -16,9 +16,9 @@
 #   - Parallel task 1:
 #
 #     - In the abcxyz/abcxyz-services repo, create a new file in the
-#       deployments/configs/abcxyz directory. Copy one of the existing files
-#       (say pmap.yaml) and customize it by replacing eg "pmap" with your own
-#       repo name (not including the abcxyz/ prefix).
+#       github-token-minter/deployments/configs/abcxyz directory.
+#       Copy one of the existing files (say pmap.yaml) and customize it by
+#       replacing eg "pmap" with your own repo name (not including the abcxyz/ prefix).
 #     - Send this PR for approval and merge it when approved. You can continue
 #       with the next step while you wait for approval.
 #     - After the PR is merged, watch for a GitHub action in this repo that will
