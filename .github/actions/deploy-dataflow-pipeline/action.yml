@@ -114,8 +114,8 @@ runs:
             --region="${REGION}" \
             --pipeline-type="${PIPELINE_TYPE}" \
             --template-file-gcs-location="${GCS_TEMPLATE_FILE}" \
-            --network "${NETWORK_NAME}" \
-            --subnetwork "https://www.googleapis.com/compute/v1/projects/${PROJECT}/regions/${REGION}/subnetworks/${SUBNET_NAME}" \
+            --network="${NETWORK_NAME}" \
+            --subnetwork="https://www.googleapis.com/compute/v1/projects/${PROJECT}/regions/${REGION}/subnetworks/${SUBNET_NAME}" \
             --schedule="${PIPELINE_SCHEDULE}" \
             --worker-region="${REGION}" \
             --disable-public-ips \
