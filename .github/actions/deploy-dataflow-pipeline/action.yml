@@ -20,7 +20,7 @@ inputs:
     description: 'The WIF provider to use when authenticating with GCP'
     required: true
   wif_service_account:
-    description: ' The WIF service account to use when authenticating with GCP'
+    description: 'The WIF service account to use when authenticating with GCP'
     required: true
   image:
     description: 'The container image that contains the pipeline to execute.'
