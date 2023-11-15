@@ -102,7 +102,9 @@ runs:
 
         gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" --image "${IMAGE}" --sdk-language "{PIPELINE_SDK}" --metadata-file "${TEMPLATE_METADATA_FILE}"
 
-        gcloud beta datapipelines pipeline delete "${PIPELINE_NAME}" --project="${PROJECT}" --region "${REGION}"
+        gcloud beta datapipelines pipeline delete "${PIPELINE_NAME}" \
+          --project="${PROJECT}" \
+          --region "${REGION}"
 
         gcloud beta datapipelines pipeline create "${PIPELINE_NAME}" \
             --project="${PROJECT}" \
