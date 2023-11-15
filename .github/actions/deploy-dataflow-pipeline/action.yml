@@ -100,9 +100,9 @@ runs:
       run: |-
         GCS_TEMPLATE_FILE="gs://${BUCKET_NAME}/templates/${TEMPLATE_FILE_NAME}"
 
-        gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" 
+        gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" \
           --image "${IMAGE}" \
-          --sdk-language "{PIPELINE_SDK}" \
+          --sdk-language "${PIPELINE_SDK}" \
           --metadata-file "${TEMPLATE_METADATA_FILE}"
 
         gcloud beta datapipelines pipeline delete "${PIPELINE_NAME}" \
