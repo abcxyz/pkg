@@ -101,6 +101,7 @@ runs:
         GCS_TEMPLATE_FILE="gs://${BUCKET_NAME}/templates/${TEMPLATE_FILE_NAME}"
 
         gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" \
+          --project "${PROJECT}" \
           --image "${IMAGE}" \
           --sdk-language "${PIPELINE_SDK}" \
           --metadata-file "${TEMPLATE_METADATA_FILE}"
