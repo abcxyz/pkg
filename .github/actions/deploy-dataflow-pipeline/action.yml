@@ -47,7 +47,7 @@ inputs:
     description: 'Then name of the subnet to use.'
     required: false
   pipeline_name:
-    description: 'The name of pipeline.'
+    description: 'The name of the pipeline.'
     required: true
   pipline_sdk:
     description: 'SDK language of the pipeline. Must be one of: JAVA, PYTHON, GO.'
