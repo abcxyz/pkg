@@ -38,7 +38,7 @@ inputs:
     description: 'The GCP region to use.'
     required: true
   bucket_name:
-    description: 'The gsc bucket to store the template file.'
+    description: 'The gcs bucket to store the template file.'
     required: true
   network_name:
     description: 'The name of GCP network to use.'
