@@ -58,6 +58,10 @@ inputs:
   pipeline_schedule:
     description: 'The cron formatted schedule for the pipeline.'
     required: true
+  pipeline_experiments:
+    description: 'Experiment flags that should be enabled for the pipeline. Default: use_prime'
+    default: 'use_prime'
+    required: false
   pipeline_parameters:
     description: 'The command line parameters for the pipeline.'
     required: false
@@ -96,6 +100,7 @@ runs:
         PIPELINE_SDK: '${{ inputs.pipeline_sdk }}'
         PIPELINE_TYPE: '${{ inputs.pipeline_type }}'
         PIPELINE_SCHEDULE: '${{ inputs.pipeline_schedule }}'
+        PIPELINE_EXPERIMENTS: '${{ inputs.pipeline_experiments }}'
         PIPELINE_PARAMETERS: '${{ inputs.pipeline_parameters }}'
       run: |-
         GCS_TEMPLATE_FILE="gs://${BUCKET_NAME}/templates/${TEMPLATE_FILE_NAME}"
@@ -120,5 +125,5 @@ runs:
             --schedule="${PIPELINE_SCHEDULE}" \
             --worker-region="${REGION}" \
             --disable-public-ips \
-            --additional-experiments=use_prime \
+            --additional-experiments=${PIPELINE_EXPERIMENTS} \
             --parameters="${PIPELINE_PARAMETERS}"
