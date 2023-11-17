@@ -106,24 +106,24 @@ runs:
         GCS_TEMPLATE_FILE="gs://${BUCKET_NAME}/templates/${TEMPLATE_FILE_NAME}"
 
         gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" \
-          --project "${PROJECT}" \
-          --image "${IMAGE}" \
-          --sdk-language "${PIPELINE_SDK}" \
-          --metadata-file "${TEMPLATE_METADATA_FILE}"
+          --project="${PROJECT}" \
+          --image="${IMAGE}" \
+          --sdk-language="${PIPELINE_SDK}" \
+          --metadata-file="${TEMPLATE_METADATA_FILE}"
 
         gcloud beta datapipelines pipeline delete "${PIPELINE_NAME}" \
           --project="${PROJECT}" \
-          --region "${REGION}"
+          --region="${REGION}" || echo "no pipeline with ${PIPELINE_NAME} to delete"
 
         gcloud beta datapipelines pipeline create "${PIPELINE_NAME}" \
-            --project="${PROJECT}" \
-            --region="${REGION}" \
-            --pipeline-type="${PIPELINE_TYPE}" \
-            --template-file-gcs-location="${GCS_TEMPLATE_FILE}" \
-            --network="${NETWORK_NAME}" \
-            --subnetwork="https://www.googleapis.com/compute/v1/projects/${PROJECT}/regions/${REGION}/subnetworks/${SUBNET_NAME}" \
-            --schedule="${PIPELINE_SCHEDULE}" \
-            --worker-region="${REGION}" \
-            --disable-public-ips \
-            --additional-experiments=${PIPELINE_EXPERIMENTS} \
-            --parameters="${PIPELINE_PARAMETERS}"
+          --project="${PROJECT}" \
+          --region="${REGION}" \
+          --pipeline-type="${PIPELINE_TYPE}" \
+          --template-file-gcs-location="${GCS_TEMPLATE_FILE}" \
+          --network="${NETWORK_NAME}" \
+          --subnetwork="https://www.googleapis.com/compute/v1/projects/${PROJECT}/regions/${REGION}/subnetworks/${SUBNET_NAME}" \
+          --schedule="${PIPELINE_SCHEDULE}" \
+          --worker-region="${REGION}" \
+          --disable-public-ips \
+          --additional-experiments=${PIPELINE_EXPERIMENTS} \
+          --parameters="${PIPELINE_PARAMETERS}"
