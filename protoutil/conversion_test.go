@@ -18,10 +18,11 @@ package protoutil
 import (
 	"testing"
 
-	"github.com/abcxyz/pkg/testutil"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"github.com/abcxyz/pkg/testutil"
 )
 
 func TestToProtoStruct(t *testing.T) {

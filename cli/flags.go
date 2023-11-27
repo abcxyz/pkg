@@ -27,12 +27,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abcxyz/pkg/logging"
-	"github.com/abcxyz/pkg/timeutil"
-
 	"github.com/kr/text"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
+
+	"github.com/abcxyz/pkg/logging"
+	"github.com/abcxyz/pkg/timeutil"
 )
 
 const maxLineLength = 80

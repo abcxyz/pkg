@@ -132,7 +132,6 @@ linters-settings:
       - 'standard'
       - 'default'
       - 'prefix(github.com/abcxyz)'
-      - 'alias'
       - 'blank'
       - 'dot'
 
