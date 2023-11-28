@@ -25,9 +25,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/abcxyz/pkg/workerpool"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+
+	"github.com/abcxyz/pkg/workerpool"
 )
 
 // Top level terraform types to validate.

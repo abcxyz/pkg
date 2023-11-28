@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/compute/metadata"
+
 	"github.com/abcxyz/pkg/logging"
 )
 

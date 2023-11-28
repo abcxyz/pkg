@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/abcxyz/pkg/logging"
 	"github.com/abcxyz/pkg/testutil"
-
-	"google.golang.org/grpc"
 )
 
 func TestNew(t *testing.T) {

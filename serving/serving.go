@@ -30,8 +30,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/abcxyz/pkg/logging"
 	"google.golang.org/grpc"
+
+	"github.com/abcxyz/pkg/logging"
 )
 
 // Server provides a gracefully-stoppable http server implementation.

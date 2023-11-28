@@ -22,8 +22,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/abcxyz/pkg/serving"
 	"google.golang.org/grpc"
+
+	"github.com/abcxyz/pkg/serving"
 )
 
 func Example_hTTP() {

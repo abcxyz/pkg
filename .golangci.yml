@@ -52,6 +52,7 @@ linters:
     - 'exhaustive'
     - 'exportloopref'
     - 'forcetypeassert'
+    - 'gci'
     - 'gocheckcompilerdirectives'
     - 'godot'
     - 'gofmt'
@@ -125,6 +126,17 @@ linters-settings:
             desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
           - pkg: 'github.com/stretchr/testify'
             desc: 'use the standard library for tests'
+
+  gci:
+    sections:
+      - 'standard'
+      - 'default'
+      - 'prefix(github.com/abcxyz)'
+      - 'blank'
+      - 'dot'
+
+    skip-generated: true
+    custom-order: true
 
   gofumpt:
     # default: false

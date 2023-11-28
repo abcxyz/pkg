@@ -21,9 +21,10 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/abcxyz/pkg/logging"
 	"github.com/sethvargo/go-retry"
 	"google.golang.org/api/iterator"
+
+	"github.com/abcxyz/pkg/logging"
 )
 
 // Query is the interface to execute a query.

@@ -19,9 +19,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/abcxyz/pkg/cli"
 	"github.com/posener/complete/v2"
 	"github.com/posener/complete/v2/predict"
+
+	"github.com/abcxyz/pkg/cli"
 )
 
 type SingCommand struct {

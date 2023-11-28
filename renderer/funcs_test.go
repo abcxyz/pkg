@@ -19,8 +19,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/abcxyz/pkg/testutil"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/abcxyz/pkg/testutil"
 )
 
 func TestToStringSlice(t *testing.T) {

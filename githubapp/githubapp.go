@@ -26,10 +26,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/abcxyz/pkg/cache"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"golang.org/x/oauth2"
+
+	"github.com/abcxyz/pkg/cache"
 )
 
 // URL used to retrieve access tokens. The pattern must contain a single '%s' which represents where in the url
