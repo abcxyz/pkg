@@ -668,6 +668,15 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			}
 			`,
 		},
+		{
+			name: "allows_moved_blocks",
+			content: `
+				moved {
+					from = google_bigquery_table_iam_member.editors["serviceAccount:service-123456789@dataflow-service-producer-prod.iam.gserviceaccount.com"]
+					to   = module.project.google_bigquery_table_iam_member.editors["serviceAccount:service-123456789@dataflow-service-producer-prod.iam.gserviceaccount.com"]
+				}
+			`,
+		},
 	}
 
 	for _, tc := range cases {
