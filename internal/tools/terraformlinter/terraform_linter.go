@@ -39,6 +39,7 @@ const (
 	tokenTypeOutput   = "output"
 	tokenTypeLocals   = "locals"
 	tokenTypeImport   = "import"
+	tokenTypeMoved    = "moved"
 )
 
 // List of valid extensions that can be linted.
@@ -193,14 +194,15 @@ func findViolations(content []byte, path string) ([]*ViolationInstance, error) {
 			continue
 		}
 		contents := string(token.Bytes)
-		// Each Ident token starts a new object, we are only looking for resource, module, output and variable types
+		// Each Ident token starts a new object, we are only looking for resource, module, output, variable and moved types
 		if !inBlock && token.Type == hclsyntax.TokenIdent &&
 			(contents == tokenTypeResource ||
 				contents == tokenTypeModule ||
 				contents == tokenTypeOutput ||
 				contents == tokenTypeVariable ||
 				contents == tokenTypeLocals ||
-				contents == tokenTypeImport) {
+				contents == tokenTypeImport ||
+				contents == tokenTypeMoved) {
 			inBlock = true
 			start = idx
 			depth = 0
