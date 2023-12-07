@@ -75,6 +75,7 @@ linters:
     - 'prealloc'
     - 'predeclared'
     - 'rowserrcheck'
+    - 'sloglint'
     - 'sqlclosecheck'
     - 'staticcheck'
     - 'stylecheck'
@@ -162,6 +163,16 @@ linters-settings:
       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       See the License for the specific language governing permissions and
       limitations under the License.
+
+  sloglint:
+    # default: false
+    context-only: true
+    # default: false
+    static-msg: true
+    # default: '' (snake, kebab, camel, pascal)
+    key-naming-case: 'snake'
+    # default: false
+    args-on-sep-lines: true
 
   wrapcheck:
     ignoreSigRegexps:
