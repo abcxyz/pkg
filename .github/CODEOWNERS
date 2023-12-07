@@ -1,5 +1,12 @@
 # Default fallback
 *    @abcxyz/breakglass
 
-# Infrastructure team owns all files
+# infrastructure owns all files
 *    @abcxyz/infrastructure-team
+
+# readability
+*.go      @abcxyz/go-readability
+*.tf      @abcxyz/terraform-readability
+*.js      @abcxyz/typescript-readability
+*.ts      @abcxyz/typescript-readability
+*.java    @abcxyz/java-readability
