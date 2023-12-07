@@ -531,7 +531,7 @@ func ExampleFlagSet_AfterParse_checkIfError() {
 		// Do not run this function if flag parsing or other AfterParse functions
 		// have failed.
 		if existingErr != nil {
-			return nil
+			return nil // nolint:nilerr
 		}
 
 		// Logic
