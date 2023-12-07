@@ -109,7 +109,9 @@ func (s *Server) StartHTTP(ctx context.Context, srv *http.Server) error {
 	go func() {
 		defer close(doneCh)
 
-		logger.InfoContext(ctx, "server is starting", "ip", s.ip, "port", s.port)
+		logger.InfoContext(ctx, "server is starting",
+			"ip", s.ip,
+			"port", s.port)
 		defer logger.InfoContext(ctx, "server is stopped")
 
 		if err := srv.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -180,7 +182,9 @@ func (s *Server) StartGRPC(ctx context.Context, srv *grpc.Server) error {
 	go func() {
 		defer close(doneCh)
 
-		logger.InfoContext(ctx, "server is starting", "ip", s.ip, "port", s.port)
+		logger.InfoContext(ctx, "server is starting",
+			"ip", s.ip,
+			"port", s.port)
 		defer logger.InfoContext(ctx, "server is stopped")
 
 		if err := srv.Serve(s.listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
