@@ -125,7 +125,7 @@ func toStringSlice(i any) ([]string, error) {
 func joinStrings(i any, sep string) (string, error) {
 	l, err := toStringSlice(i)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return strings.Join(l, sep), nil
 }
@@ -134,7 +134,7 @@ func joinStrings(i any, sep string) (string, error) {
 func toSentence(i any, joiner string) (string, error) {
 	l, err := toStringSlice(i)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	switch len(l) {
