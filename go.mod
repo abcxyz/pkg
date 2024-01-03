@@ -5,10 +5,12 @@ go 1.21
 require (
 	cloud.google.com/go/bigquery v1.53.0
 	cloud.google.com/go/compute/metadata v0.2.3
+	github.com/fullstorydev/grpcurl v1.8.9
 	github.com/go-sql-driver/mysql v1.7.1
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/jackc/pgx/v5 v5.4.3
+	github.com/jhump/protoreflect v1.15.4
 	github.com/kr/text v0.2.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/mattn/go-isatty v0.0.19
@@ -17,11 +19,11 @@ require (
 	github.com/sethvargo/go-envconfig v0.9.0
 	github.com/sethvargo/go-retry v0.2.4
 	golang.org/x/oauth2 v0.11.0
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.5.0
 	golang.org/x/text v0.14.0
 	google.golang.org/api v0.135.0
 	google.golang.org/grpc v1.57.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -37,6 +39,7 @@ require (
 	github.com/apache/arrow/go/v12 v12.0.1 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/bufbuild/protocompile v0.7.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package test;
+option go_package = "github.com/abcxyz/pkg/reflectionclient/testing";
+
+message GetConfigVersionRequest {
+  optional string id = 1;
+}
+
+message GetConfigVersionResponse {
+  optional string version = 1;
+}
+
+service ExampleService {
+  rpc GetConfigVersion(GetConfigVersionRequest)
+      returns (GetConfigVersionResponse);
+}
