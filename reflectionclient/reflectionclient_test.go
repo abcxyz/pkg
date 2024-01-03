@@ -26,13 +26,13 @@ import (
 	api "github.com/abcxyz/pkg/reflectionclient/testing"
 )
 
-// FakeServer is a mocked version of a tidal endpoint.
+// FakeServer is a mocked version of an endpoint.
 type FakeServer struct {
 	resp string
 	api.UnimplementedExampleServiceServer
 }
 
-// GetConfigVersion implements a function to return a device config version.
+// GetConfigVersion implements a function to return a config version.
 func (f *FakeServer) GetConfigVersion(context.Context, *api.GetConfigVersionRequest) (*api.GetConfigVersionResponse, error) {
 	return &api.GetConfigVersionResponse{
 		Version: &f.resp,
