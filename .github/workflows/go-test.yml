@@ -58,7 +58,7 @@ jobs:
       - name: 'Configure environment variables'
         if: '${{ inputs.env != ''{}'' }}'
         run: |-
-          echo "${{ inputs.env }}" | jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" >> $GITHUB_ENV
+          echo '${{ inputs.env }}' | jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" >> $GITHUB_ENV
 
       - name: 'Checkout'
         uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
