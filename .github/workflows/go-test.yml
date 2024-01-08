@@ -57,6 +57,7 @@ jobs:
     steps:
       - name: 'Configure environment variables'
         if: '${{ inputs.env != ''{}'' }}'
+        shell: 'bash'
         run: |-
           echo '${{ inputs.env }}' | jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" >> $GITHUB_ENV
 
