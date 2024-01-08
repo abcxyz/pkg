@@ -57,6 +57,7 @@ jobs:
     steps:
       - name: 'Configure environment variables'
         if: '${{ inputs.env != ''{}'' }}'
+        # Use bash shell here to make it work with Windows host runner.
         shell: 'bash'
         run: |-
           jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> $GITHUB_ENV

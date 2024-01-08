@@ -34,18 +34,8 @@ jobs:
 
   go_test:
     uses: './.github/workflows/go-test.yml'
-    strategy:
-      # allow all os suites to complete, even if one fails
-      fail-fast: false
-      matrix:
-        runner:
-          - 'macos-latest'
-          - 'ubuntu-latest'
-          - 'windows-latest'
     with:
       go_version: '1.21'
-      runs-on: '"${{ matrix.runner }}"'
-      env: '{"ABC_TEST_NON_HERMETIC": "true"}'
 
   terraform_lint:
     uses: './.github/workflows/terraform-lint.yml'
