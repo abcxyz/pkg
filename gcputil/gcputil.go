@@ -19,8 +19,7 @@ import (
 	"context"
 	"os"
 
-	"cloud.google.com/go/compute/metadata"
-
+	"github.com/abcxyz/pkg/gcpmetadata"
 	"github.com/abcxyz/pkg/logging"
 )
 
@@ -42,7 +41,7 @@ func ProjectID(ctx context.Context) string {
 		}
 	}
 
-	v, err := metadata.ProjectID()
+	v, err := gcpmetadata.NewClient().ProjectID(ctx)
 	if err != nil {
 		logging.FromContext(ctx).ErrorContext(ctx, "failed to get project id", "error", err)
 		return ""

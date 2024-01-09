@@ -3,7 +3,6 @@ module github.com/abcxyz/pkg
 go 1.21
 
 require (
-	cloud.google.com/go/compute/metadata v0.2.3
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/hcl/v2 v2.17.0
@@ -14,6 +13,7 @@ require (
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/posener/complete/v2 v2.1.0
 	github.com/sethvargo/go-envconfig v0.9.0
+	github.com/sethvargo/go-retry v0.2.4
 	golang.org/x/oauth2 v0.11.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/text v0.14.0
@@ -23,7 +23,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.23.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
