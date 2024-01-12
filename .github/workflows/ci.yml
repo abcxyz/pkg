@@ -29,13 +29,9 @@ concurrency:
 jobs:
   go_lint:
     uses: './.github/workflows/go-lint.yml'
-    with:
-      go_version: '1.21'
 
   go_test:
     uses: './.github/workflows/go-test.yml'
-    with:
-      go_version: '1.21'
 
   terraform_lint:
     uses: './.github/workflows/terraform-lint.yml'
