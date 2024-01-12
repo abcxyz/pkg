@@ -86,9 +86,7 @@ jobs:
     name: Go Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-go@v4
-      with:
-        go-version: '1.21' # Optional
+    - uses: actions/setup-go@v5
 ```
 
 ... and *don't* do this:
