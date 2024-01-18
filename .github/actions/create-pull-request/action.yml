@@ -1,0 +1,364 @@
+# Copyright 2024 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This action is required to generate a pull request with signed commits using a bot or PAT
+# This is required to allow automation to pass organizational rulesets which include signed commits.
+# The commits will show signed by github.com.
+#
+# Alternatives to this solution were deemed infeasible:
+#  - Add exceptions for bots to the signed commits rulesets or use a certificate per bot identity, this is
+#    not ideal because then we have to maange secrets
+#  - Add exceptions for bots to the Google CLA, this would show status checks as failed which is not desirable
+
+name: 'Create Pull Request'
+description: |-
+  Use this action to create a pull request from a GitHub workflow.
+
+inputs:
+  token:
+    description: 'The GitHub PAT or app installation token to use for calling GitHub APIs. NOTE: This cannot be the default GitHub token as workflows will not run for pull requests using that token.'
+    required: true
+  head_branch:
+    description: 'The pull request head branch name.'
+    required: true
+  base_branch:
+    description: 'The pull request base branch name. Defaults to `main`.'
+    required: false
+    default: 'main'
+  title:
+    description: 'The pull request title.'
+    required: true
+  body:
+    description: 'The pull request body. Defaults to ``.'
+    required: false
+    default: ''
+  changed_paths:
+    description: 'JSON array of the relative file paths added or changed in the pull request. Defaults to `[]`.'
+    required: false
+    default: '[]'
+  deleted_paths:
+    description: 'JSON array of the relative file paths deleted in the pull request. Defaults to `[]`.'
+    required: false
+    default: '[]'
+  max_retries:
+    description: 'The maxiumum number of retries when handling failures. Defaults to `3`.'
+    required: false
+    default: '3'
+
+runs:
+  using: 'composite'
+  steps:
+    # Get base ref
+    - name: 'Get Base Ref SHA'
+      id: 'base-branch-ref'
+      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      env:
+        HEAD_BRANCH: '${{ inputs.head_branch }}'
+        BASE_BRANCH: '${{ inputs.base_branch }}'
+        PR_TITLE: '${{ inputs.title }}'
+        PR_BODY: '${{ inputs.body }}'
+      with:
+        github-token: '${{ inputs.token }}'
+        result-encoding: 'string'
+        retries: '${{ inputs.max_retries }}'
+        script: |-
+          const pullRequestPartialRef = `heads/${process.env.BASE_BRANCH}`;
+
+          try {
+            core.info(`Get base branch reference:
+              owner: ${context.repo.owner}
+              repo:  ${context.repo.repo}
+              ref:   ${pullRequestPartialRef}
+            `);
+
+            const { data: existingRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequestPartialRef,
+            });
+
+            return existingRef.object.sha;
+          } catch (err) {
+            core.error(err);
+            core.setFailed(`Failed to get base branch reference: ${err}`);
+            process.exit(1);
+          }
+
+    # Create a pull request branch using the GitHub API
+    - name: 'Create/Update Pull Request Branch'
+      id: 'head-branch-ref'
+      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      env:
+        HEAD_BRANCH: '${{ inputs.head_branch }}'
+        BASE_BRANCH: '${{ inputs.base_branch }}'
+        PR_TITLE: '${{ inputs.title }}'
+        PR_BODY: '${{ inputs.body }}'
+      with:
+        github-token: '${{ inputs.token }}'
+        result-encoding: 'string'
+        retries: '${{ inputs.max_retries }}'
+        script: |-
+          const pullRequestPartialRef = `heads/${process.env.HEAD_BRANCH}`;
+          const pullRequestFullRef = `refs/${pullRequestPartialRef}`;
+
+          try {
+            core.info(`Get refer request reference:
+              owner: ${context.repo.owner}
+              repo:  ${context.repo.repo}
+              ref:   ${pullRequestPartialRef}
+            `);
+
+            const { data: existingRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequestPartialRef,
+            });
+
+            return existingRef.object.sha;
+          } catch (err) {
+            if (err.status !== 404) {
+              core.setFailed(`Failed to get existing pull request reference: ${err}`);
+              core.error(err);
+              process.exit(1);
+            }
+            core.info("Existing pull request reference not found");
+          }
+
+          try {
+            core.info(`Checking for existing pull request reference:
+              owner: ${context.repo.owner}
+              repo:  ${context.repo.repo}
+              ref:   ${pullRequestPartialRef}
+            `);
+
+            const { data: existingRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequestPartialRef,
+            });
+
+            return existingRef.object.sha;
+          } catch (err) {
+            if (err.status !== 404) {
+              core.setFailed(`Failed to get existing pull request reference: ${err}`);
+              core.error(err);
+              process.exit(1);
+            }
+            core.info("Existing pull request reference not found");
+          }
+
+          try {
+            core.info(`Creating new pull request reference:
+              owner: ${context.repo.owner}
+              repo:  ${context.repo.repo}
+              ref:   ${pullRequestFullRef}
+              sha:   ${context.sha}
+            `);
+
+            const { data: newRef } = await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequestFullRef,
+              sha: context.sha,
+            });
+
+            return newRef.object.sha;
+          } catch (err) {
+            core.setFailed(
+              `Failed to create/update pull request branch reference: ${err}`
+            );
+            core.error(err);
+          }
+
+    # Commit files using the GitHub API to ensure commits are signed
+    - name: 'Create Commits'
+      id: 'create-commits'
+      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      env:
+        HEAD_BRANCH: '${{ inputs.head_branch }}'
+        BASE_BRANCH: '${{ inputs.base_branch }}'
+        PR_TITLE: '${{ inputs.title }}'
+        PR_BODY: '${{ inputs.body }}'
+        CHANGED_PATHS: '${{ inputs.changed_paths }}'
+        DELETED_PATHS: '${{ inputs.deleted_paths }}'
+      with:
+        github-token: '${{ inputs.token }}'
+        retries: '${{ inputs.max_retries }}'
+        script: |-
+          try {
+            const fs = require("fs/promises");
+
+            const parentSHA = "${{ steps.base-branch-ref.outputs.result }}";
+            const pullRequestPartialRef = `heads/${process.env.HEAD_BRANCH}`;
+
+            // documented here: https://docs.github.com/en/rest/git/trees?apiVersion=2022-11-28#create-a-tree
+            const FILE_MODE = "100644";
+            const EXEC_MODE = "100755";
+
+            const prCommitTree = [];
+
+            const changedPaths = JSON.parse(process.env.CHANGED_PATHS);
+            const deletedPaths = JSON.parse(process.env.DELETED_PATHS);
+
+            // iterate the files loading their content into each object
+            await Promise.all(
+              changedPaths.map(async (file) => {
+                const content = await fs.readFile(file, { encoding: "utf8" });
+                const isExec = !!((await fs.stat(file).mode) & fs.constants.S_IXUSR);
+                prCommitTree.push({
+                  path: file,
+                  mode: isExec ? EXEC_MODE : FILE_MODE,
+                  type: "blob",
+                  content: content,
+                });
+              })
+            );
+
+            // iterate the files loading their content into each object
+            await Promise.all(
+              deletedPaths.map(async (file) => {
+                const isExec = !!((await fs.stat(file).mode) & fs.constants.S_IXUSR);
+                prCommitTree.push({
+                  path: file,
+                  mode: isExec ? EXEC_MODE : FILE_MODE,
+                  type: "blob",
+                  sha: null,
+                });
+              })
+            );
+
+            core.info(`Creating new tree:
+              owner:     ${context.repo.owner}
+              repo:      ${context.repo.repo}
+              base_tree: ${context.sha}
+            `);
+
+            // create new git tree from the pr branch
+            const { data: tree } = await github.rest.git.createTree({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base_tree: context.sha,
+              tree: prCommitTree,
+            });
+
+            core.debug("tree: ", tree);
+
+            core.info(`Creating new commit:
+              owner:   ${context.repo.owner}
+              repo:    ${context.repo.repo}
+              parents: ${parentSHA}
+              tree:    ${tree.sha}
+            `);
+
+            // create a commit from on the git tree
+            const { data: commit } = await github.rest.git.createCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              message: process.env.PR_TITLE,
+              parents: [parentSHA],
+              tree: tree.sha,
+            });
+
+            core.debug("commit: ", commit);
+
+            core.info(`Updating PR branch ref
+              owner: ${context.repo.owner}
+              repo:  ${context.repo.repo}
+              ref:   ${pullRequestPartialRef}
+              sha:   ${commit.sha}
+            `);
+
+            // update the pr branch reference with the new git tree
+            await github.rest.git.updateRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequestPartialRef,
+              sha: commit.sha,
+              force: true
+            });
+          } catch (err) {
+            core.error(err);
+            core.setFailed(`Failed to create commits for pull request branch: ${err}`);
+          }
+
+    # Create a pull request for review
+    - name: 'Create/Update Pull Request'
+      id: 'create-update-pull-request'
+      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      env:
+        HEAD_BRANCH: '${{ inputs.head_branch }}'
+        BASE_BRANCH: '${{ inputs.base_branch }}'
+        PR_TITLE: '${{ inputs.title }}'
+        PR_BODY: '${{ inputs.body }}'
+      with:
+        github-token: '${{ inputs.token }}'
+        retries: '${{ inputs.max_retries }}'
+        script: |-
+          try {
+            const headRef = process.env.HEAD_BRANCH;
+            const baseRef = process.env.BASE_BRANCH;;
+
+            const listResponse = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              head: process.env.HEAD_BRANCH,
+              base: process.env.BASE_BRANCH,
+            });
+
+            core.debug(`listResponse: ${listResponse}`);
+
+            if (!listResponse.data.length) {
+              core.info(`Creating pull request:
+                owner: ${context.repo.owner}
+                repo:  ${context.repo.repo}
+                head:  ${headRef}
+                base:  ${baseRef}
+              `);
+
+              const createResponse = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: headRef,
+                base: baseRef,
+                title: process.env.PR_TITLE,
+                body: process.env.PR_BODY,
+              });
+
+              core.info(
+                `Created PR #${createResponse.data.number} at ${createResponse.data.html_url}`
+              );
+            } else {
+              core.info(`Updating pull request:
+                owner:       ${context.repo.owner}
+                repo:        ${context.repo.repo}
+                pull_number: ${listResponse.data[0].number}
+              `);
+
+              const updateResponse = await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: listResponse.data[0].number,
+                title: process.env.PR_TITLE,
+                body: process.env.PR_BODY,
+              });
+
+              core.info(
+                `Updated PR #${updateResponse.data.number} at ${updateResponse.data.html_url}`
+              );
+            }
+          } catch (err) {
+            core.error(err);
+            core.setFailed(`Failed to create/update pull request: ${err}`);
+          }
