@@ -603,3 +603,80 @@ func TestLogLevelVar(t *testing.T) {
 		})
 	}
 }
+
+type orderTestCommand struct {
+	BaseCommand
+
+	boolFlag         bool
+	positionalString string
+}
+
+func (o *orderTestCommand) Flags() *FlagSet {
+	fs := NewFlagSet()
+
+	sec := fs.NewSection("my-section")
+	sec.BoolVar(&BoolVar{
+		Name:   "my-bool",
+		Usage:  "One usage.",
+		Target: &o.boolFlag,
+	})
+
+	fs.AfterParse(func(existingErr error) error {
+		o.positionalString = fs.Arg(0)
+		return nil
+	})
+
+	return fs
+}
+
+func (o *orderTestCommand) Desc() string {
+	return "my description"
+}
+
+func (o *orderTestCommand) Help() string {
+	return "my help"
+}
+
+func (o *orderTestCommand) Run(_ context.Context, args []string) error {
+	return o.Flags().Parse(args)
+}
+
+func TestFlagWithPositional(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "flag_before_positional",
+			args: []string{"test", "--my-bool", "true", "my-positional-value"},
+		},
+		{
+			name: "positional_before_flag",
+			args: []string{"test", "my-positional-value", "--my-bool", "true"},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+
+			otc := &orderTestCommand{}
+			rootCmd := &RootCommand{
+				Name: "test",
+				Commands: map[string]CommandFactory{
+					"test": func() Command { return otc },
+				},
+			}
+
+			if err := rootCmd.Run(ctx, tc.args); err != nil {
+				t.Fatal(err)
+			}
+
+			if !otc.boolFlag {
+				t.Fatal("bool flag got false, want true")
+			}
+		})
+	}
+}
