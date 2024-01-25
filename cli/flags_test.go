@@ -617,49 +617,49 @@ func TestFlagSet_Parse(t *testing.T) {
 	}{
 		{
 			name:       "before_one",
-			args:       []string{"{{slash}}fruit", "apple", "arg1"},
+			args:       []string{"{{dash}}fruit", "apple", "arg1"},
 			wantArgs:   []string{"arg1"},
 			wantFruits: []string{"apple"},
 		},
 		{
 			name:       "before_two",
-			args:       []string{"{{slash}}fruit=apple", "{{slash}}fruit", "banana", "arg1"},
+			args:       []string{"{{dash}}fruit=apple", "{{dash}}fruit", "banana", "arg1"},
 			wantArgs:   []string{"arg1"},
 			wantFruits: []string{"apple", "banana"},
 		},
 		{
 			name:       "after_one",
-			args:       []string{"arg1", "{{slash}}fruit", "apple"},
+			args:       []string{"arg1", "{{dash}}fruit", "apple"},
 			wantArgs:   []string{"arg1"},
 			wantFruits: []string{"apple"},
 		},
 		{
 			name:       "after_two",
-			args:       []string{"arg1", "{{slash}}fruit=apple", "{{slash}}fruit", "banana"},
+			args:       []string{"arg1", "{{dash}}fruit=apple", "{{dash}}fruit", "banana"},
 			wantArgs:   []string{"arg1"},
 			wantFruits: []string{"apple", "banana"},
 		},
 		{
 			name:       "sandwich_arg",
-			args:       []string{"{{slash}}fruit=apple", "arg1", "{{slash}}fruit", "banana"},
+			args:       []string{"{{dash}}fruit=apple", "arg1", "{{dash}}fruit", "banana"},
 			wantArgs:   []string{"arg1"},
 			wantFruits: []string{"apple", "banana"},
 		},
 		{
 			name:       "zipper",
-			args:       []string{"{{slash}}fruit=apple", "arg1", "{{slash}}fruit", "banana", "arg2"},
+			args:       []string{"{{dash}}fruit=apple", "arg1", "{{dash}}fruit", "banana", "arg2"},
 			wantArgs:   []string{"arg1", "arg2"},
 			wantFruits: []string{"apple", "banana"},
 		},
 		{
 			name:       "singleton_double_dash",
-			args:       []string{"{{slash}}fruit=apple", "arg1", "--", "-fruit", "banana", "--fruit=pineapple"},
+			args:       []string{"{{dash}}fruit=apple", "arg1", "--", "-fruit", "banana", "--fruit=pineapple"},
 			wantFruits: []string{"apple"},
 			wantArgs:   []string{"arg1", "-fruit", "banana", "--fruit=pineapple"},
 		},
 		{
 			name:      "error",
-			args:      []string{"{{slash}}invalid", "arg1"},
+			args:      []string{"{{dash}}invalid", "arg1"},
 			wantArgs:  []string{"arg1"},
 			wantError: "flag provided but not defined: -invalid",
 		},
@@ -668,13 +668,13 @@ func TestFlagSet_Parse(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 
-		for slashName, slash := range map[string]string{
-			"single_slash": "-",
-			"double_slash": "--",
+		for dashName, dash := range map[string]string{
+			"single_dash": "-",
+			"double_dash": "--",
 		} {
-			slash, slashName := slash, slashName
+			dash, dashName := dash, dashName
 
-			t.Run(slashName+"/"+tc.name, func(t *testing.T) {
+			t.Run(dashName+"/"+tc.name, func(t *testing.T) {
 				t.Parallel()
 
 				fs := NewFlagSet()
@@ -688,7 +688,7 @@ func TestFlagSet_Parse(t *testing.T) {
 				})
 
 				for i := range tc.args {
-					tc.args[i] = strings.ReplaceAll(tc.args[i], "{{slash}}", slash)
+					tc.args[i] = strings.ReplaceAll(tc.args[i], "{{dash}}", dash)
 				}
 
 				err := fs.Parse(tc.args)
