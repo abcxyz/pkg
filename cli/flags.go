@@ -79,10 +79,12 @@ type AfterParseFunc func(existingErr error) error
 
 // FlagSet is the root flag set for creating and managing flag sections.
 type FlagSet struct {
-	flagSet         *flag.FlagSet
-	sections        []*FlagSection
-	lookupEnv       LookupEnvFunc
+	flagSet   *flag.FlagSet
+	sections  []*FlagSection
+	lookupEnv LookupEnvFunc
+
 	afterParseFuncs []AfterParseFunc
+	args            []string
 }
 
 // Option is an option to the flagset.
@@ -165,12 +167,16 @@ func (f *FlagSet) AfterParse(fn AfterParseFunc) {
 
 // Arg implements flag.FlagSet#Arg.
 func (f *FlagSet) Arg(i int) string {
-	return f.flagSet.Arg(i)
+	if i < 0 || i >= len(f.args) {
+		return ""
+	}
+	return f.args[i]
 }
 
 // Args implements flag.FlagSet#Args.
 func (f *FlagSet) Args() []string {
-	return f.flagSet.Args()
+	cp := append([]string{}, f.args...)
+	return cp
 }
 
 // Lookup implements flag.FlagSet#Lookup.
@@ -183,6 +189,22 @@ func (f *FlagSet) Parse(args []string) error {
 	// Call the normal parse function first, so that Args and everything are
 	// properly set for any after functions.
 	merr := f.flagSet.Parse(args)
+
+	// "Recursively" parse flags. By default, Go stops parsing after the first
+	// non-flag argument.
+	var finalArgs []string
+	for i := len(args) - len(f.flagSet.Args()) + 1; i < len(args); {
+		// Stop parsing if we hit an actual "stop parsing"
+		if i > 1 && args[i-2] == "--" {
+			break
+		}
+		finalArgs = append(finalArgs, f.flagSet.Arg(0))
+		merr = errors.Join(merr, f.flagSet.Parse(args[i:]))
+		i += 1 + len(args[i:]) - len(f.flagSet.Args())
+	}
+	finalArgs = append(finalArgs, f.flagSet.Args()...)
+
+	f.args = finalArgs
 
 	for _, fn := range f.afterParseFuncs {
 		func() {

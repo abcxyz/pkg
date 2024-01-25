@@ -604,41 +604,105 @@ func TestLogLevelVar(t *testing.T) {
 	}
 }
 
-func TestFlagWithPositional(t *testing.T) {
+func TestFlagSet_Parse(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		name string
 		args []string
+
+		wantArgs   []string
+		wantFruits []string
+		wantError  string
 	}{
 		{
-			name: "flag_before_positional", // passes
-			args: []string{"--my-bool", "true", "my-positional-value"},
+			name:       "before_one",
+			args:       []string{"{{slash}}fruit", "apple", "arg1"},
+			wantArgs:   []string{"arg1"},
+			wantFruits: []string{"apple"},
 		},
 		{
-			name: "positional_before_flag", // fails
-			args: []string{"my-positional-value", "--my-bool", "true"},
+			name:       "before_two",
+			args:       []string{"{{slash}}fruit=apple", "{{slash}}fruit", "banana", "arg1"},
+			wantArgs:   []string{"arg1"},
+			wantFruits: []string{"apple", "banana"},
+		},
+		{
+			name:       "after_one",
+			args:       []string{"arg1", "{{slash}}fruit", "apple"},
+			wantArgs:   []string{"arg1"},
+			wantFruits: []string{"apple"},
+		},
+		{
+			name:       "after_two",
+			args:       []string{"arg1", "{{slash}}fruit=apple", "{{slash}}fruit", "banana"},
+			wantArgs:   []string{"arg1"},
+			wantFruits: []string{"apple", "banana"},
+		},
+		{
+			name:       "sandwich_arg",
+			args:       []string{"{{slash}}fruit=apple", "arg1", "{{slash}}fruit", "banana"},
+			wantArgs:   []string{"arg1"},
+			wantFruits: []string{"apple", "banana"},
+		},
+		{
+			name:       "zipper",
+			args:       []string{"{{slash}}fruit=apple", "arg1", "{{slash}}fruit", "banana", "arg2"},
+			wantArgs:   []string{"arg1", "arg2"},
+			wantFruits: []string{"apple", "banana"},
+		},
+		{
+			name:       "singleton_double_dash",
+			args:       []string{"{{slash}}fruit=apple", "arg1", "--", "-fruit", "banana", "--fruit=pineapple"},
+			wantFruits: []string{"apple"},
+			wantArgs:   []string{"arg1", "-fruit", "banana", "--fruit=pineapple"},
+		},
+		{
+			name:      "error",
+			args:      []string{"{{slash}}invalid", "arg1"},
+			wantArgs:  []string{"arg1"},
+			wantError: "flag provided but not defined: -invalid",
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			fs := NewFlagSet()
-			sec := fs.NewSection("my-section")
-			var b bool
-			sec.BoolVar(&BoolVar{
-				Name:   "my-bool",
-				Usage:  "One usage.",
-				Target: &b,
+
+		for slashName, slash := range map[string]string{
+			"single_slash": "-",
+			"double_slash": "--",
+		} {
+			slash, slashName := slash, slashName
+
+			t.Run(slashName+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				fs := NewFlagSet()
+				sec := fs.NewSection("my-section")
+
+				var fruits []string
+				sec.StringSliceVar(&StringSliceVar{
+					Name:   "fruit",
+					Usage:  "Pick a fruit.",
+					Target: &fruits,
+				})
+
+				for i := range tc.args {
+					tc.args[i] = strings.ReplaceAll(tc.args[i], "{{slash}}", slash)
+				}
+
+				err := fs.Parse(tc.args)
+				if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
+					t.Error(diff)
+				}
+
+				if got, want := fs.Args(), tc.wantArgs; !reflect.DeepEqual(got, want) {
+					t.Errorf("args: expected %q to be %q", got, want)
+				}
+				if got, want := fruits, tc.wantFruits; !reflect.DeepEqual(got, want) {
+					t.Errorf("fruits: expected %q to be %q", got, want)
+				}
 			})
-
-			if err := fs.Parse(tc.args); err != nil {
-				t.Fatal(err)
-			}
-
-			if !b {
-				t.Fatal("bool flag got false, want true")
-			}
-		})
+		}
 	}
 }
