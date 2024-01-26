@@ -104,7 +104,10 @@ func Load(ctx context.Context, cfg any, opt ...Option) error {
 		lookuper = envconfig.PrefixLookuper(opts.envPrefix, lookuper)
 	}
 
-	if err := envconfig.ProcessWith(ctx, cfg, lookuper); err != nil {
+	if err := envconfig.ProcessWith(ctx, &envconfig.Config{
+		Target:   cfg,
+		Lookuper: lookuper,
+	}); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
