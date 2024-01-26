@@ -687,11 +687,12 @@ func TestFlagSet_Parse(t *testing.T) {
 					Target: &fruits,
 				})
 
-				for i := range tc.args {
-					tc.args[i] = strings.ReplaceAll(tc.args[i], "{{dash}}", dash)
+				args := make([]string, 0, len(tc.args))
+				for _, v := range tc.args {
+					args = append(args, strings.ReplaceAll(v, "{{dash}}", dash))
 				}
 
-				err := fs.Parse(tc.args)
+				err := fs.Parse(args)
 				if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
 					t.Error(diff)
 				}
