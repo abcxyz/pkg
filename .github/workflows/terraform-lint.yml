@@ -34,6 +34,11 @@ on:
         type: 'boolean'
         required: false
         default: true
+      ignored_walk_dirs:
+        description: 'The newline delimited list of directories to ignore when recursively iterating child modules. This input accepts bash globbing.'
+        type: 'string'
+        required: false
+        default: ''
 
 env:
   TF_IN_AUTOMATION: 'true'
@@ -76,10 +81,25 @@ jobs:
         if: '${{ inputs.walk_dirs }}'
         shell: 'bash'
         working-directory: '${{ inputs.directory }}'
+        env:
+          IGNORE_DIRS: '${{ inputs.ignored_walk_dirs }}'
         run: |-
           TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
 
           for DIR in ${TERRAFORM_DIRS}; do
+            IGNORE=false
+            for IGNORE_DIR in ${IGNORE_DIRS}; do
+              if [[ "${DIR}" == $IGNORE_DIR ]]; then
+                IGNORE=true
+                break
+              fi
+            done
+
+            if [[ "${IGNORE}" == "true" ]]; then
+              echo "IGNORE: ${DIR}"
+              continue
+            fi
+
             echo "::group::${DIR}"
 
             pushd "${DIR}" &>/dev/null
