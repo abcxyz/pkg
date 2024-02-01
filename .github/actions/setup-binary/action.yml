@@ -133,7 +133,7 @@ runs:
         "${GOGETTER_PATH}/go-getter" "${DOWNLOAD_URL}" "${INSTALL_PATH}"
 
         # Mark binary as executable
-        chmod +x ${INSTALL_PATH}
+        chmod +x ${INSTALL_PATH}/*
 
     - name: 'Save cache binary'
       if: |
