@@ -34,6 +34,9 @@ inputs:
     description: 'Add the install_path to the $PATH variable.'
     default: 'false'
     required: false
+  mark_executable:
+    description: 'Name of binary to mark as executable (chmod +x) in install_path. If this value is empty, no chmod will occur.'
+    required: false
 
 runs:
   using: 'composite'
@@ -132,9 +135,6 @@ runs:
 
         "${GOGETTER_PATH}/go-getter" "${DOWNLOAD_URL}" "${INSTALL_PATH}"
 
-        # Mark binary as executable
-        chmod +x ${INSTALL_PATH}/*
-
     - name: 'Save cache binary'
       if: |
         inputs.cache_key != '' && steps.cache-binary.outputs.cache-hit != 'true'
@@ -153,3 +153,13 @@ runs:
         # Add binary to path
         echo "Adding ${INSTALL_PATH} to PATH"
         echo "${INSTALL_PATH}" >> $GITHUB_PATH
+
+    - name: 'Mark binary as executable'
+      if: |
+        inputs.mark_executable != ''
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        MARK_EXECUTABLE: '${{ inputs.mark_executable }}'
+      run: |-
+        chmod +x ${INSTALL_PATH}/${MARK_EXECUTABLE}
