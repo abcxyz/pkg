@@ -34,8 +34,12 @@ inputs:
     description: 'Add the install_path to the $PATH variable.'
     default: 'false'
     required: false
-  mark_executable:
-    description: 'Name of binary to mark as executable (chmod +x) in install_path. If this value is empty, no chmod will occur.'
+  set_executable:
+    description: 'Whether or not to mark binary as executable (chmod +x) in install_path. Requires binary_subpath if set to true.'
+    default: 'false'
+    required: false
+  binary_subpath:
+    description: 'Name of binary to set as executable. Error if not provided when set_executable is true.'
     required: false
 
 runs:
@@ -156,10 +160,15 @@ runs:
 
     - name: 'Mark binary as executable'
       if: |
-        inputs.mark_executable != ''
+        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.set_executable)
       shell: 'bash'
       env:
         INSTALL_PATH: '${{ inputs.install_path }}'
-        MARK_EXECUTABLE: '${{ inputs.mark_executable }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |-
-        chmod +x ${INSTALL_PATH}/${MARK_EXECUTABLE}
+        if [[ -z "${BINARY_SUBPATH}" ]]; then
+          echo "::error ::binary_subpath is a required input when set_executable is true"
+          exit 1
+        fi
+
+        chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
