@@ -15,7 +15,7 @@
 name: 'Setup Binary'
 
 description: |-
-  Use this action to install and cache a binary for use within a GitHub workflow. This action wraps the functionality of go-getter to provide advanced donwload and checksum capabilities.
+  Use this action to install and cache a binary for use within a GitHub workflow. This action wraps the functionality of go-getter to provide advanced download and checksum capabilities.
 
 inputs:
   download_url:
@@ -131,6 +131,9 @@ runs:
         fi
 
         "${GOGETTER_PATH}/go-getter" "${DOWNLOAD_URL}" "${INSTALL_PATH}"
+
+        # Mark binary as executable
+        chmod +x ${INSTALL_PATH}
 
     - name: 'Save cache binary'
       if: |
