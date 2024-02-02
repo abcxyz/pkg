@@ -37,6 +37,9 @@ inputs:
     description: 'Add the install_path to the $PATH variable.'
     default: 'false'
     required: false
+  binary_rename:
+    description: 'New name of binary to rename to.'
+    required: false
 
 runs:
   using: 'composite'
@@ -161,3 +164,14 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |-
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
+
+   - name: 'Rename binary'
+      if: |
+        inputs.binary_rename != ''
+      shell: 'bash'
+      working-directory: '${{ inputs.install_path }}'
+      env:
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+        BINARY_RENAME: '${{ inputs.binary_rename }}'
+      run: |-
+        mv ${BINARY_SUBPATH} ${BINARY_RENAME}
