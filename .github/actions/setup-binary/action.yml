@@ -15,7 +15,7 @@
 name: 'Setup Binary'
 
 description: |-
-  Use this action to install and cache a binary for use within a GitHub workflow. This action wraps the functionality of go-getter to provide advanced donwload and checksum capabilities.
+  Use this action to install and cache a binary for use within a GitHub workflow. This action wraps the functionality of go-getter to provide advanced download and checksum capabilities.
 
 inputs:
   download_url:
@@ -23,6 +23,9 @@ inputs:
     required: true
   install_path:
     description: 'The path on disk in which to extract the binary, this cannot be equal to the current directory. Set `add_to_path` to true to add this to the $PATH.'
+    required: true
+  binary_subpath:
+    description: 'The subpath to the binary relative to the install path. This should include the binary name (e.g. dist/binary-name). Required to set the binary as executable.'
     required: true
   checksum:
     description: 'The checksum for the downloaded artifact. See https://github.com/hashicorp/go-getter#checksumming'
@@ -150,3 +153,11 @@ runs:
         # Add binary to path
         echo "Adding ${INSTALL_PATH} to PATH"
         echo "${INSTALL_PATH}" >> $GITHUB_PATH
+
+    - name: 'Mark binary as executable'
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+      run: |-
+        chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
