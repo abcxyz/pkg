@@ -25,7 +25,7 @@ inputs:
     description: 'The path on disk in which to extract the binary, this cannot be equal to the current directory. Set `add_to_path` to true to add this to the $PATH.'
     required: true
   binary_subpath:
-    description: 'The subpath to the binary relative to the install path. This should include the binary name (e.g. dist/binary-name). Required to set the binary as executable.'
+    description: 'The subpath to the binary relative to the install path. This should include the binary name (e.g. dist/binary-name). Required to set the binary as executable and for renaming.'
     required: true
   checksum:
     description: 'The checksum for the downloaded artifact. See https://github.com/hashicorp/go-getter#checksumming'
@@ -37,6 +37,9 @@ inputs:
     description: 'Add the install_path to the $PATH variable.'
     default: 'false'
     required: false
+  destination_subpath:
+    description: 'The destination subpath of the binary relative to the install path. This should include the binary name (e.g. dist/binary-name) and is useful for renaming the binary after download.'
+    required: false
 
 runs:
   using: 'composite'
@@ -46,6 +49,7 @@ runs:
       env:
         DOWNLOAD_URL: '${{ inputs.download_url }}'
         INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |
         # Validate inputs
         errors=false
@@ -61,6 +65,11 @@ runs:
         elif [[ "${INSTALL_PATH}" == "." || "${INSTALL_PATH}" == "${GITHUB_WORKSPACE}" ]]; then
           errors=true
           echo "::error ::install_path is a required input"
+        fi
+
+        if [[ -z "${BINARY_SUBPATH}" ]]; then
+          errors=true
+          echo "::error ::binary_subpath is a required input"
         fi
 
         if [ "$errors" = true ]; then
@@ -161,3 +170,14 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |-
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
+
+    - name: 'Change to destination subpath'
+      if: |
+        inputs.destination_subpath != ''
+      shell: 'bash'
+      working-directory: '${{ inputs.install_path }}'
+      env:
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+        DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
+      run: |-
+        mv ${BINARY_SUBPATH} ${DESTINATION_SUBPATH}
