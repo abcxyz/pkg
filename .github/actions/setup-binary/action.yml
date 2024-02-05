@@ -49,6 +49,7 @@ runs:
       env:
         DOWNLOAD_URL: '${{ inputs.download_url }}'
         INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |
         # Validate inputs
         errors=false
@@ -64,6 +65,11 @@ runs:
         elif [[ "${INSTALL_PATH}" == "." || "${INSTALL_PATH}" == "${GITHUB_WORKSPACE}" ]]; then
           errors=true
           echo "::error ::install_path is a required input"
+        fi
+
+        if [[ -z "${BINARY_SUBPATH}" ]]; then
+          errors=true
+          echo "::error ::binary_subpath is a required input"
         fi
 
         if [ "$errors" = true ]; then
