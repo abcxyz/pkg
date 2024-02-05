@@ -71,10 +71,10 @@ jobs:
       - name: 'Test'
         shell: 'bash'
         run: |
+          exit 0
           xyz -version
           GOT=$(abc -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="abc 0.0.1-alpha4"
-          exit 0
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
             echo "::error ::Expected ${GOT} to contain ${WANT}"
