@@ -38,7 +38,7 @@ inputs:
     default: 'false'
     required: false
   destination_subpath:
-    description: 'New destination of binary subpath (i.e. renaming).'
+    description: 'The destination subpath of the binary relative to the install path. This should include the binary name (e.g. dist/binary-name) and is useful for renaming the binary after download.'
     required: false
 
 runs:
