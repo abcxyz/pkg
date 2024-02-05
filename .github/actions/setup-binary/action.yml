@@ -25,7 +25,7 @@ inputs:
     description: 'The path on disk in which to extract the binary, this cannot be equal to the current directory. Set `add_to_path` to true to add this to the $PATH.'
     required: true
   binary_subpath:
-    description: 'Name of binary. Needed to set as executable.'
+    description: 'The subpath to the binary relative to the install path. This should include the binary name (e.g. dist/binary-name). Required to set the binary as executable and for renaming.'
     required: true
   checksum:
     description: 'The checksum for the downloaded artifact. See https://github.com/hashicorp/go-getter#checksumming'
@@ -165,7 +165,7 @@ runs:
       run: |-
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
 
-   - name: 'Rename binary'
+    - name: 'Rename binary'
       if: |
         inputs.binary_rename != ''
       shell: 'bash'

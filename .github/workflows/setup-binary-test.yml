@@ -55,6 +55,7 @@ jobs:
           download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          binary_subpath: 'abc'
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
@@ -64,6 +65,7 @@ jobs:
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
           add_to_path: true
+          binary_subpath: 'abc'
 
       - name: 'Test'
         shell: 'bash'
