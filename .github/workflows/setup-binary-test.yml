@@ -47,7 +47,7 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
-          echo "path=${HOME}/.abc" >> $GITHUB_OUTPUT
+          echo "path=${HOME}/.ratchet" >> $GITHUB_OUTPUT
 
       - name: 'Setup binary (save cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
@@ -56,7 +56,7 @@ jobs:
           download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
-          binary_subpath: 'abc'
+          binary_subpath: 'ratchet'
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
