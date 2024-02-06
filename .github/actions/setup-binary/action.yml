@@ -189,7 +189,3 @@ runs:
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
-
-    - name: 'what'
-      shell: 'bash'
-      run: renamed_ratchet -version
