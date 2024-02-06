@@ -67,14 +67,14 @@ jobs:
           cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
-          destination_subpath: 'renamed_ratchet'
+          # destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
         shell: 'bash'
         run: |
           echo $GITHUB_PATH
-          renamed_ratchet -version
-          GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
+          ratchet -version
+          GOT=$(ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
