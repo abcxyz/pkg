@@ -175,8 +175,9 @@ runs:
         if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
-        echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
-        echo "${INSTALL_PATH}/${BINARY_SUBPATH}" >> $GITHUB_PATH
+        BINARY_DIR=$(dirname ${INSTALL_PATH}/${BINARY_SUBPATH})
+        echo "Adding ${BINARY_DIR} to PATH"
+        echo "${BINARY_DIR}" >> $GITHUB_PATH
 
     - name: 'Mark binary as executable'
       shell: 'bash'
