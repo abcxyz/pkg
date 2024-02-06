@@ -152,26 +152,6 @@ runs:
         path: '${{ inputs.install_path }}'
         key: 'setup-binary-${{ inputs.cache_key }}'
 
-    - name: 'Add binary to path'
-      if: |
-        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.add_to_path)
-      shell: 'bash'
-      env:
-        INSTALL_PATH: '${{ inputs.install_path }}'
-        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
-      run: |-
-        # Add binary to path
-        echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
-        echo "${INSTALL_PATH}/${BINARY_SUBPATH}" >> $GITHUB_PATH
-
-    - name: 'Mark binary as executable'
-      shell: 'bash'
-      env:
-        INSTALL_PATH: '${{ inputs.install_path }}'
-        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
-      run: |-
-        chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
-
     - name: 'Change to destination subpath'
       if: |
         inputs.destination_subpath != ''
@@ -182,3 +162,30 @@ runs:
         DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
       run: |-
         mv ${BINARY_SUBPATH} ${DESTINATION_SUBPATH}
+
+    - name: 'Add binary to path'
+      if: |
+        contains(fromJSON('["true", "True", "TRUE", "1", "T", "t"]'), inputs.add_to_path)
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+        DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
+      run: |-
+        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+          BINARY_SUBPATH=${DESTINATION_SUBPATH}
+        fi
+        echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
+        echo "${INSTALL_PATH}/${BINARY_SUBPATH}" >> $GITHUB_PATH
+
+    - name: 'Mark binary as executable'
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+        DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
+      run: |-
+        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+          BINARY_SUBPATH=${DESTINATION_SUBPATH}
+        fi
+        chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
