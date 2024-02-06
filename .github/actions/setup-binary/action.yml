@@ -187,6 +187,8 @@ runs:
       run: |-
         if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
-          echo ${BINARY_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
+
+    - name: 'what'
+      run: renamed_ratchet -version
