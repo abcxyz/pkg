@@ -173,7 +173,7 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
         DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
       run: |-
-        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+        if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
         echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
@@ -186,8 +186,7 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
         DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
       run: |-
-        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+        if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
-          echo ${BINARY_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
