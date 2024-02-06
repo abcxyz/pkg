@@ -72,7 +72,7 @@ jobs:
         shell: 'bash'
         run: |
           ratchet -version
-          GOT=$(ratchet -version)
+          GOT=$(ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
