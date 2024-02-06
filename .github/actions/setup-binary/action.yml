@@ -158,10 +158,11 @@ runs:
       shell: 'bash'
       env:
         INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
       run: |-
         # Add binary to path
-        echo "Adding ${INSTALL_PATH} to PATH"
-        echo "${INSTALL_PATH}" >> $GITHUB_PATH
+        echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
+        echo "${INSTALL_PATH}/${BINARY_SUBPATH}" >> $GITHUB_PATH
 
     - name: 'Mark binary as executable'
       shell: 'bash'
