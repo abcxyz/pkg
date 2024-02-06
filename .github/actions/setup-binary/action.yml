@@ -188,5 +188,6 @@ runs:
       run: |-
         if [[ -z "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
+          echo ${BINARY_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
