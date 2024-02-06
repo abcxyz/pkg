@@ -67,12 +67,12 @@ jobs:
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
-          destination_subpath: 'definitely_not_ratchet'
+          destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
         shell: 'bash'
         run: |
-          definitely_not_ratchet -version
+          renamed_ratchet -version
           GOT=$(ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
 
