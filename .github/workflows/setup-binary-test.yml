@@ -55,7 +55,7 @@ jobs:
           install_path: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           binary_subpath: 'ratchet'
 
       - name: 'Setup binary (restore cache)'
@@ -64,7 +64,7 @@ jobs:
           install_path: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
           destination_subpath: 'renamed_ratchet'
