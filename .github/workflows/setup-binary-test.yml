@@ -57,6 +57,7 @@ jobs:
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
           binary_subpath: 'ratchet'
+          destination_subpath: 'renamed_ratchet'
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
