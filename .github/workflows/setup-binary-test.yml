@@ -43,6 +43,12 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
 
+      - name: 'Path'
+        id: 'path'
+        shell: 'bash'
+        run: |
+          echo "path=${HOME}/.ratchet" >> $GITHUB_OUTPUT
+
       - name: 'Setup binary (save cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
