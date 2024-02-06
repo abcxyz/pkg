@@ -67,7 +67,7 @@ jobs:
         shell: 'bash'
         run: |
           renamed_ratchet -version
-          GOT=$(renamed_ratchet -version 2>&1)
+          GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
