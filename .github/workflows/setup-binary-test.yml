@@ -73,7 +73,7 @@ jobs:
       - name: 'Test'
         shell: 'bash'
         run: |
-          echo $GITHUB_PATH
+          echo $PATH
           ratchet -version
           GOT=$(ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
