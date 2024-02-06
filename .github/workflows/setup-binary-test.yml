@@ -25,18 +25,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # checksums generated from sha512sum
           - os: 'ubuntu-latest'
             name: 'linux'
             ext: 'tar.gz'
-            checksum: '1b0ac92898af5a853dc6f8e4432e9241d6efb22eda48253424236e2e5bc6ccd0b5d18d8c5a46ea096a27bba0027c359396736b83b729b6b51852f71eb1a17702'
+            checksum: '952a9b7bb8b044f5229207f173dfc2e25134781e0470bc7fcfb1eae914bebfc84ac25287f0fa2fb696c7c19526fe02e70c86434adb8d5a969c78912b5ad155b3'
           - os: 'windows-latest'
             name: 'windows'
             ext: 'zip'
-            checksum: 'e64c57fb786d1fc5949542e21903dc4e15ab083a7d0b533a1cb115b689a4f72e5d76af50848c937f103264130913fb974dec9afea7f311897d7f776f6423268a'
+            checksum: '52d965a26c1300a54ed66ceb9037b141f2af5f3ffdc91a3613dad2c51941bd0aa222d220681d114fd5d2baec3f068ec88acfe96cff65d383b26ea73b52f02406'
           - os: 'macos-latest'
             name: 'darwin'
             ext: 'tar.gz'
-            checksum: '5ee5467091c7058c018cd83fbae8295b18c710135a8bb197eda6705b0562b9849df8519e82e09d79895a7bd7fadd60f3cad01f1509a8de2bcd8638f9b057a476'
+            checksum: '3ad1258d5ad844ca29101916d07b428eaa6bb9400cb9dcd4d016e63b278ca85446115d45b0ea87678a4eb00c6eb7b8e63c9f29860a39aa6bb51af1b52dd59b04'
     runs-on: '${{ matrix.os }}'
     steps:
       - name: 'Checkout'
@@ -52,7 +53,7 @@ jobs:
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
           binary_subpath: 'abc'
@@ -61,18 +62,18 @@ jobs:
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: 'https://github.com/abcxyz/abc/releases/download/v0.0.1-alpha4/abc_0.0.1-alpha4_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
           add_to_path: true
-          binary_subpath: 'abc'
+          binary_subpath: 'ratchet'
 
       - name: 'Test'
         shell: 'bash'
         run: |
-          abc -version
-          GOT=$(abc -version 2>&1) # abcxyz/pkg/cli writes help to stderr
-          WANT="abc 0.0.1-alpha4"
+          ratchet -version
+          GOT=$(ratchet -version)
+          WANT="ratchet 0.6.0"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
             echo "::error ::Expected ${GOT} to contain ${WANT}"
