@@ -50,9 +50,10 @@ jobs:
       - name: 'Path'
         id: 'path'
         shell: 'pwsh'
+        # bash
+        # echo "path=${HOME}/ratchet_dir" >> $GITHUB_OUTPUT
         run: |
-          echo "path=${HOME}/ratchet_dir"
-          echo "path=${HOME}/ratchet_dir" >> $GITHUB_OUTPUT
+          Add-Content $env:GITHUB_PATH "${HOME}\ratchet_dir"
 
       - name: 'Setup binary (save cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
