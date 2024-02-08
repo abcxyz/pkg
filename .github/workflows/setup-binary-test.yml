@@ -62,12 +62,6 @@ jobs:
           cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           binary_subpath: 'ratchet'
 
-      - name: 'debug'
-        shell: 'bash'
-        run: |
-          echo $PATH
-          ls ${HOME}/ratchet_dir
-
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
@@ -77,7 +71,7 @@ jobs:
           cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
-          # destination_subpath: 'renamed_ratchet'
+          destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
         shell: 'bash'
