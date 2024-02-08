@@ -193,6 +193,5 @@ runs:
 
     - name: 'debug'
       shell: 'pwsh'
-      working-directory: '${{ inputs.install_path }}'
       run: |-
         tree /F
