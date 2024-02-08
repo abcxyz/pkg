@@ -19,6 +19,10 @@ on:
     paths:
       - '.github/actions/setup-binary/**'
 
+env:
+  ACTIONS_RUNNER_DEBUG: true
+  ACTIONS_STEP_DEBUG: true
+
 jobs:
   setup-binary-test:
     strategy:
