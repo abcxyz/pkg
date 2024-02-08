@@ -47,7 +47,13 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
-          echo "path=${HOME}/.ratchet" >> $GITHUB_OUTPUT
+          # A Powershell path export is needed due to Git Bash on Windows not keeping PATH changes persistent.
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            powershell 'echo "path=${HOME}\.ratchet" >> $env:GITHUB_OUTPUT'
+          else
+            echo "path=${HOME}/.ratchet" >> $GITHUB_OUTPUT
+          fi
+          echo "install_path: ${HOME}/.ratchet"
 
       - name: 'Setup binary (save cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
@@ -55,7 +61,7 @@ jobs:
           install_path: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           binary_subpath: 'ratchet'
 
       - name: 'Setup binary (restore cache)'
@@ -64,15 +70,16 @@ jobs:
           install_path: '${{ steps.path.outputs.path }}'
           download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_abc_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
+          destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
         shell: 'bash'
         run: |
-          ratchet -version
-          GOT=$(ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
+          renamed_ratchet -version
+          GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
           WANT="ratchet 0.6.0"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then

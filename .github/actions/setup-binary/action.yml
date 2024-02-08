@@ -172,11 +172,12 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
         DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
       run: |-
-        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+        if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
-        echo "Adding ${INSTALL_PATH}/${BINARY_SUBPATH} to PATH"
-        echo "${INSTALL_PATH}/${BINARY_SUBPATH}" >> $GITHUB_PATH
+        BINARY_DIR=$(dirname ${INSTALL_PATH}/${BINARY_SUBPATH})
+        echo "Adding ${BINARY_DIR} to PATH"
+        echo "${BINARY_DIR}" >> $GITHUB_PATH
 
     - name: 'Mark binary as executable'
       shell: 'bash'
@@ -185,7 +186,7 @@ runs:
         BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
         DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
       run: |-
-        if [[ -z "${DESTINATION_SUBPATH}" ]]; then
+        if [[ -n "${DESTINATION_SUBPATH}" ]]; then
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
