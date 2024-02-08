@@ -49,7 +49,7 @@ jobs:
 
       - name: 'Path'
         id: 'path'
-        shell: 'bash'
+        shell: 'pwsh'
         run: |
           echo "path=${HOME}/ratchet_dir" >> $GITHUB_OUTPUT
 
