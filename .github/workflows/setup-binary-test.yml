@@ -70,7 +70,7 @@ jobs:
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
-          binary_subpath: 'ratchet'
+          binary_subpath: 'ratchet.exe'
           destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
