@@ -51,6 +51,7 @@ jobs:
         id: 'path'
         shell: 'pwsh'
         run: |
+          echo "path=${HOME}/ratchet_dir"
           echo "path=${HOME}/ratchet_dir" >> $GITHUB_OUTPUT
 
       - name: 'Setup binary (save cache)'
