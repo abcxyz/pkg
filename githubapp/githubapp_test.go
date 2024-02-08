@@ -16,8 +16,11 @@ package githubapp
 
 import (
 	"context"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -256,5 +259,54 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestGenerateAppJWT(t *testing.T) {
+	t.Parallel()
+
+	base64Decode := func(tb testing.TB, i string) []byte {
+		tb.Helper()
+
+		b, err := base64.RawURLEncoding.DecodeString(i)
+		if err != nil {
+			tb.Fatal(err)
+		}
+		return b
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, err := generateAppJWT(key, "my-iss", 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parts := strings.Split(string(token), ".")
+	if exp := 3; len(parts) != exp {
+		t.Fatalf("expected %d items, got %q", exp, parts)
+	}
+
+	header := base64Decode(t, parts[0])
+	if got, want := string(header), `{"alg":"RS256","typ":"JWT"}`; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	body := base64Decode(t, parts[1])
+	if got, want := string(body), `"iss":"my-iss"`; !strings.Contains(got, want) {
+		t.Errorf("expected %q to contain %q", got, want)
+	}
+
+	signature := base64Decode(t, parts[2])
+
+	h := sha256.New()
+	h.Write([]byte(parts[0] + "." + parts[1]))
+	digest := h.Sum(nil)
+
+	if err := rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature); err != nil {
+		t.Fatal(err)
 	}
 }
