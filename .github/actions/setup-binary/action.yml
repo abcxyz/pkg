@@ -142,7 +142,6 @@ runs:
           DOWNLOAD_URL="${DOWNLOAD_URL}${SEPARATOR}checksum=${CHECKSUM}"
         fi
 
-        mkdir -p ${INSTALL_PATH}
         "${GOGETTER_PATH}/go-getter" "${DOWNLOAD_URL}" "${INSTALL_PATH}"
 
     - name: 'Save cache binary'
