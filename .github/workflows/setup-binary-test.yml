@@ -74,7 +74,7 @@ jobs:
           destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
-        shell: 'pwsh'
+        shell: 'bash'
         run: |
           renamed_ratchet -version
           GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr

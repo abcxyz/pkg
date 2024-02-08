@@ -190,3 +190,12 @@ runs:
           BINARY_SUBPATH=${DESTINATION_SUBPATH}
         fi
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
+
+    - name: 'debug'
+      shell: 'bash'
+      env:
+        INSTALL_PATH: '${{ inputs.install_path }}'
+        BINARY_SUBPATH: '${{ inputs.binary_subpath }}'
+        DESTINATION_SUBPATH: '${{ inputs.destination_subpath }}'
+      run: |-
+        tree ${INSTALL_PATH}
