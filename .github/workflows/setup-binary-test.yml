@@ -54,6 +54,7 @@ jobs:
         id: 'path'
         shell: 'bash'
         run: |
+          echo "install_path: ${HOME}${{ matrix.filepath_separator}}ratchet_dir"
           echo "path=${HOME}${{ matrix.filepath_separator}}ratchet_dir" >> $GITHUB_OUTPUT
 
       - name: 'Setup binary (save cache)'
