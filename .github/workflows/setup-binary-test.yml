@@ -48,6 +48,8 @@ jobs:
         shell: 'bash'
         run: |
           mkdir -p ${HOME}/.ratchet
+          cd ${HOME}/.ratchet
+          pwd
           echo "path=${HOME}/.ratchet" >> $GITHUB_OUTPUT
 
       - name: 'Setup binary (save cache)'
