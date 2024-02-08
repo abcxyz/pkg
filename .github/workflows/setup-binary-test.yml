@@ -70,11 +70,11 @@ jobs:
           checksum: '${{ matrix.checksum }}'
           cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
-          binary_subpath: 'ratchet.exe'
+          binary_subpath: 'ratchet'
           destination_subpath: 'renamed_ratchet'
 
       - name: 'Test'
-        shell: 'bash'
+        shell: 'pwsh'
         run: |
           renamed_ratchet -version
           GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
