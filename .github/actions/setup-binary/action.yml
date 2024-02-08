@@ -192,8 +192,9 @@ runs:
         chmod +x ${INSTALL_PATH}/${BINARY_SUBPATH}
 
     - name: 'debug'
-      shell: 'pwsh'
+      shell: 'bash'
       env:
         INSTALL_PATH: '${{ inputs.install_path }}'
       run: |-
-        dir ${INSTALL_PATH}
+        ls ${INSTALL_PATH}
+        tree ${INSTALL_PATH}
