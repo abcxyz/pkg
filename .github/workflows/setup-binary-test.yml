@@ -66,8 +66,7 @@ jobs:
         shell: 'bash'
         run: |
           echo $PATH
-          ls  ${HOME}/ratchet_dir
-          ratchet -version
+          ls ${HOME}/ratchet_dir
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
