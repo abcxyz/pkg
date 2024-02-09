@@ -19,15 +19,16 @@ package githubapp
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwt"
 	"golang.org/x/oauth2"
 
 	"github.com/abcxyz/pkg/cache"
@@ -157,55 +158,60 @@ func New(config *Config) *GitHubApp {
 // AppToken creates a signed JWT to authenticate a GitHub app
 // so that it can make API calls to GitHub.
 func (g *GitHubApp) AppToken() ([]byte, error) {
-	var token []byte
 	// If token caching is enabled, look first in the cache
 	if g.jwtCache != nil {
-		// Check for a valid JWT in the cache
-		signedJwt, ok := g.jwtCache.Lookup(cacheKey)
-		if !ok {
-			// Create a JWT for reading instance information from GitHub
-			signedJwt, err := g.generateAppJWT()
-			if err != nil {
-				return nil, fmt.Errorf("error generating the JWT for GitHub app access: %w", err)
-			}
-			g.jwtCache.Set(cacheKey, signedJwt)
+		token, ok := g.jwtCache.Lookup(cacheKey)
+		if ok {
+			return token, nil
 		}
-		token = signedJwt
 	}
-	if token == nil {
-		// Create a JWT for reading instance information from GitHub
-		signedJwt, err := g.generateAppJWT()
-		if err != nil {
-			return nil, fmt.Errorf("error generating the JWT for GitHub app access: %w", err)
-		}
-		token = signedJwt
+
+	token, err := generateAppJWT(g.config.PrivateKey, g.config.AppID, g.config.jwtTokenExpiration)
+	if err != nil {
+		return nil, fmt.Errorf("error generating the JWT for GitHub app access: %w", err)
 	}
+
+	if g.jwtCache != nil {
+		g.jwtCache.Set(cacheKey, token)
+	}
+
 	return token, nil
 }
 
-// generateAppJWT builds a signed JWT that can be used to
-// communicate with GitHub as an application.
-func (g *GitHubApp) generateAppJWT() ([]byte, error) {
+// generateAppJWT builds a signed JWT that can be used to communicate with
+// GitHub as an application.
+func generateAppJWT(privateKey *rsa.PrivateKey, iss string, ttl time.Duration) ([]byte, error) {
 	// Make the current time 30 seconds in the past to combat clock
 	// skew issues where the JWT we issue looks like it is coming
 	// from the future when it gets to GitHub
 	iat := time.Now().Add(-30 * time.Second)
-	exp := iat.Add(g.config.jwtTokenExpiration)
-	iss := g.config.AppID
+	exp := iat.Add(ttl)
 
-	token, err := jwt.NewBuilder().
-		Expiration(exp).
-		IssuedAt(iat).
-		Issuer(iss).
-		Build()
+	b64Encode := base64.RawURLEncoding.EncodeToString
+
+	headers := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" // {"alg":"RS256", "typ":"JWT"}
+
+	token, err := json.Marshal(map[string]any{
+		"exp": exp.Unix(),
+		"iat": iat.Unix(),
+		"iss": iss,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error building JWT: %w", err)
 	}
-	signed, err := jwt.Sign(token, jwt.WithKey(jwa.RS256, g.config.PrivateKey))
+
+	unsigned := headers + "." + b64Encode(token)
+
+	h := sha256.New()
+	h.Write([]byte(unsigned))
+	digest := h.Sum(nil)
+
+	signature, err := rsa.SignPKCS1v15(nil, privateKey, crypto.SHA256, digest)
 	if err != nil {
 		return nil, fmt.Errorf("error signing JWT: %w", err)
 	}
-	return signed, nil
+
+	return []byte(unsigned + "." + b64Encode(signature)), nil
 }
 
 // AccessToken calls the GitHub API to generate a new
