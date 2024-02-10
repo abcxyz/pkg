@@ -270,9 +270,9 @@ func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string
 	return string(b), nil
 }
 
-// Token adheres to the oauth2 TokenSource interface and returns a oauth2 token
+// OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
 // by creating a JWT token.
-func (g *App) OAuthTokenSource() oauth2.TokenSource {
+func (g *App) OAuthAppTokenSource() oauth2.TokenSource {
 	return oauth2TokenSource(func() (*oauth2.Token, error) {
 		jwt, err := g.AppToken()
 		if err != nil {
