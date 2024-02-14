@@ -404,8 +404,8 @@ func (c *BaseCommand) Outf(format string, a ...any) {
 
 // Stdout returns the stdout stream.
 func (c *BaseCommand) Stdout() io.Writer {
-	if c.stdout != nil {
-		return c.stdout
+	if v := c.stdout; v != nil {
+		return v
 	}
 	return os.Stdout
 }
@@ -422,8 +422,8 @@ func (c *BaseCommand) Errf(format string, a ...any) {
 
 // Stderr returns the stderr stream.
 func (c *BaseCommand) Stderr() io.Writer {
-	if c.stderr != nil {
-		return c.stderr
+	if v := c.stderr; v != nil {
+		return v
 	}
 	return os.Stderr
 }
@@ -435,8 +435,8 @@ func (c *BaseCommand) SetStderr(w io.Writer) {
 
 // Stdin returns the stdin stream.
 func (c *BaseCommand) Stdin() io.Reader {
-	if c.stdin != nil {
-		return c.stdin
+	if v := c.stdin; v != nil {
+		return v
 	}
 	return os.Stdin
 }
@@ -462,8 +462,8 @@ func (c *BaseCommand) Pipe() (stdin, stdout, stderr *bytes.Buffer) {
 // LookupEnv returns the value from the environment at the given key. The second
 // return value indicates whether the value was set.
 func (c *BaseCommand) LookupEnv(key string) (string, bool) {
-	if c.lookupEnv != nil {
-		return c.lookupEnv(key)
+	if v := c.lookupEnv; v != nil {
+		return v(key)
 	}
 	return os.LookupEnv(key)
 }
