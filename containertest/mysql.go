@@ -15,80 +15,13 @@
 package containertest
 
 import (
-	"database/sql"
-	"fmt"
-	"net"
+	"github.com/abcxyz/containertest"
 
 	_ "github.com/go-sql-driver/mysql" // Force mysql service to be included.
 )
 
-const (
-	// It's OK to hardcode the root password because only boilerplate test data is stored. Also,
-	// having a well-known password can help with human inspection for debugging. The value chosen for
-	// the password is arbitrary. It can be changed without breaking anything; it's not hardcoded into
-	// the docker image or anything like that.
-	password = "8mo5lfYKjy6ebTK" //nolint:gosec
-
-	mysqlPort = "3306/tcp"
-)
-
 // MySQL satisfies [Service], defining a MySQL server container.
-type MySQL struct {
-	Version string
-}
-
-// Environment satisfies [Service.Environment].
-func (m *MySQL) Environment() []string {
-	return []string{"MYSQL_ROOT_PASSWORD=" + password}
-}
-
-// ImageRepository satisfies [Service.ImageRepository].
-func (m *MySQL) ImageRepository() string {
-	return "mysql"
-}
-
-// ImageTag satisfies [Service.ImageTag].
-func (m *MySQL) ImageTag() string {
-	// Version is the ImageTag that will be returned by the Service interface.
-	return m.Version
-}
-
-// TestConn satisfies [Service.TestConn].
-func (m *MySQL) TestConn(progressLogger TestLogger, connInfo *ConnInfo) error {
-	port := connInfo.PortMapper(m.Port())
-	// Disabling TLS is OK because we're connecting to localhost, and it's just test data.
-	addr := fmt.Sprintf("%s:%s@tcp(%s)/mysql?tls=false", m.Username(), m.Password(), net.JoinHostPort(connInfo.Host, port))
-
-	progressLogger.Logf(`Checking if MySQL is up yet on %s. It's normal to see "unexpected EOF" output while it's starting.`, net.JoinHostPort(connInfo.Host, port))
-	db, err := sql.Open("mysql", addr)
-	if err != nil {
-		return fmt.Errorf("sql.Open(): %w", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("db.Ping(): %w", err)
-	}
-
-	progressLogger.Logf("MySQL is up on port %v", port)
-	return nil
-}
-
-// Port returns the internal port the MySQL container exposes.
-func (m *MySQL) Port() string {
-	return mysqlPort
-}
-
-// StartupPorts satisfies [Service.StartupPorts].
-func (m *MySQL) StartupPorts() []string {
-	return []string{m.Port()}
-}
-
-// Username returns the username for the MySQL database.
-func (m *MySQL) Username() string {
-	return "root"
-}
-
-// Password returns the password for the MySQL database.
-func (m *MySQL) Password() string {
-	return password
-}
+//
+// Deprecated: This has moved to a new package. Use
+// [github.com/abcxyz/containertest.MySQL] instead.
+type MySQL = containertest.MySQL
