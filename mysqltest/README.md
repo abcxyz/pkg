@@ -1,10 +1,11 @@
 # Mysqltest library
 
-## Introduction
+> [!CAUTION]
+>
+> This library is deprecated and will be removed in a future version. Use the
+> standalone version at https://github.com/abcxyz/containertest instead.
 
-[Deprecated for new use] This used to be its own package, but now
-is implemented as a wrapper around the more generic `pkg/containertest`. Please
-use that for any new projects.
+## Introduction
 
 This is a Go library for starting an ephemeral MySQL Docker container. It is used to test
 integration between Go code and MySQL.

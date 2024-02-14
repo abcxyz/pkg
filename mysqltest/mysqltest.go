@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysqltest is a legacy compatibility layer for the more generic databasetest
+// Package mysqltest is a legacy compatibility layer for the more generic
+// containertest.
+//
+// Deprecated: Use the standalone [github.com/abcxyz/containertest] package
+// instead.
 package mysqltest
 
 import (
 	"io"
 
-	"github.com/abcxyz/pkg/containertest"
+	"github.com/abcxyz/containertest"
 )
 
 // ConnInfo specifies how to connect to the MySQL server that is created by this package.
