@@ -463,7 +463,7 @@ func (c *BaseCommand) Pipe() (stdin, stdout, stderr *bytes.Buffer) {
 // return value indicates whether the value was set.
 func (c *BaseCommand) LookupEnv(key string) (string, bool) {
 	if v := c.lookupEnv; v != nil {
-		return c.lookupEnv(key)
+		return v(key)
 	}
 	return os.LookupEnv(key)
 }
