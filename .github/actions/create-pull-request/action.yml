@@ -51,6 +51,10 @@ inputs:
     description: 'JSON array of the relative file paths deleted in the pull request. Defaults to `[]`.'
     required: false
     default: '[]'
+  disable_automerge:
+    description: 'Disable auto-merge on the target pull request.'
+    required: false
+    default: false
   max_retries:
     description: 'The maxiumum number of retries when handling failures. Defaults to `3`.'
     required: false
@@ -307,7 +311,7 @@ runs:
         script: |-
           try {
             const headRef = process.env.HEAD_BRANCH;
-            const baseRef = process.env.BASE_BRANCH;;
+            const baseRef = process.env.BASE_BRANCH;
 
             const listResponse = await github.rest.pulls.list({
               owner: context.repo.owner,
@@ -319,6 +323,7 @@ runs:
 
             core.debug(`listResponse: ${listResponse}`);
 
+            let pullRequestNodeID;
             if (!listResponse.data.length) {
               core.info(`Creating pull request:
                 owner: ${context.repo.owner}
@@ -335,6 +340,8 @@ runs:
                 title: process.env.PR_TITLE,
                 body: process.env.PR_BODY,
               });
+
+              pullRequestNodeID = createResponse.data.node_id
 
               core.info(
                 `Created PR #${createResponse.data.number} at ${createResponse.data.html_url}`
@@ -354,11 +361,51 @@ runs:
                 body: process.env.PR_BODY,
               });
 
+              pullRequestNodeID = updateResponse.data.node_id
+
               core.info(
                 `Updated PR #${updateResponse.data.number} at ${updateResponse.data.html_url}`
               );
             }
+
+            core.setOutput('node_id', pullRequestNodeID)
           } catch (err) {
             core.error(err);
             core.setFailed(`Failed to create/update pull request: ${err}`);
+          }
+
+
+    # Enable auto-merge if requested
+    - name: 'Enable auto-merge'
+      id: 'enable-automerge'
+      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      if: '${{ !inputs.disable_automerge }}'
+      env:
+        PULL_REQUEST_NODE_ID: '${{ steps.create-update-pull-request.outputs.node_id }}'
+      with:
+        github-token: '${{ inputs.token }}'
+        retries: '${{ inputs.max_retries }}'
+        script: |-
+          try {
+            const query = `mutation enableAutoMerge($pullId: ID!, $mergeMethod: PullRequestMergeMethod) {
+              enablePullRequestAutoMerge(input: {
+                pullRequestId: $pullId,
+                mergeMethod: $mergeMethod,
+              }) {
+                pullRequest {
+                  id,
+                  autoMergeRequest {
+                    enabledAt
+                  }
+                }
+              }
+            }`
+
+            await github.graphql(query, {
+              pullId: process.env.PULL_REQUEST_NODE_ID,
+              mergeMethod: 'SQUASH',
+            })
+          } catch (err) {
+            core.error(err);
+            core.setFailed(`Failed to enable auto-merge for pull request: ${err}`);
           }
