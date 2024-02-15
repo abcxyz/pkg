@@ -46,7 +46,7 @@ jobs:
     steps:
       - id: 'want-lgtm'
         name: 'Validate PR Body'
-        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           result-encoding: 'string'
           script: |-
@@ -68,7 +68,7 @@ jobs:
       - id: 'validate-reviews'
         name: 'Validate Reviews'
         if: '${{ steps.want-lgtm.outputs.result == ''true'' }}'
-        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
           script: |-
@@ -153,7 +153,7 @@ jobs:
       - id: 'rerun-status-checks'
         name: 'Re-run Status Checks'
         if: '${{ steps.want-lgtm.outputs.result == ''true'' && github.event_name == ''pull_request_review'' }}'
-        uses: 'actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410' # ratchet:actions/github-script@v6
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
           script: |-
