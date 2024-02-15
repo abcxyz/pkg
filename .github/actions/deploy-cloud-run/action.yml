@@ -1,0 +1,80 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Deploy Dataflow Pipeline'
+description: 'Deploys a Dataflow pipeline to GCP'
+
+inputs:
+  wif_provider:
+    description: 'The WIF provider to use when authenticating with GCP'
+    required: true
+  wif_service_account:
+    description: 'The WIF service account to use when authenticating with GCP'
+    required: true
+  image:
+    description: 'The container image that contains the pipeline to execute.'
+    required: true
+  project:
+    description: 'The GCP Project to use.'
+    required: true
+  region:
+    description: 'The GCP region to use.'
+    required: true
+  service_name:
+    description: 'The the name of the cloud run service.'
+    required: true
+  tag:
+    description: 'The optional traffic tag for the cloud run service.'
+    required: false
+
+
+runs:
+  using: 'composite'
+  steps:
+  - name: 'Checkout'
+    uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+
+  - id: 'auth'
+    name: 'Authenticate to Google Cloud'
+    uses: 'google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033' # ratchet:google-github-actions/auth@v1
+    with:
+      workload_identity_provider: '${{ inputs.wif_provider }}'
+      service_account: '${{ inputs.wif_service_account }}'
+
+  - name: 'Setup gcloud'
+    uses: 'google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b' # ratchet:google-github-actions/setup-gcloud@v1
+    with:
+      install_components: 'beta'
+
+  - name: 'Deploy To Cloud Run'
+    shell: 'bash'
+    env:
+      IMAGE: '{{ inputs.image }}'
+      PROJECT: '{{ inputs.project }}'
+      REGION: '{{ inputs.region }}'
+      SERVICE_NAME: '${{ inputs.service_name }}'
+      TAG: '${{ inputs.tag }}'
+    run: |-
+      if [ "${TAG}" == "" ]]; then
+        gcloud run services update ${SERVICE_NAME} \
+              --project="${PROJECT}" \
+              --region="${REGION}" \
+              --image="${IMAGE}"
+      else
+        gcloud run services update ${SERVICE_NAME} \
+                      --project="${PROJECT}" \
+                      --region="${REGION}" \
+                      --image="${IMAGE}" \
+                      --tag="${TAG}"
+      fi
