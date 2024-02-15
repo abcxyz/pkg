@@ -66,7 +66,7 @@ runs:
     # Get base ref
     - name: 'Get Base Ref SHA'
       id: 'base-branch-ref'
-      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -102,7 +102,7 @@ runs:
     # Create a pull request branch using the GitHub API
     - name: 'Create/Update Pull Request Branch'
       id: 'head-branch-ref'
-      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -188,7 +188,7 @@ runs:
     # Commit files using the GitHub API to ensure commits are signed
     - name: 'Create Commits'
       id: 'create-commits'
-      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -299,7 +299,7 @@ runs:
     # Create a pull request for review
     - name: 'Create/Update Pull Request'
       id: 'create-update-pull-request'
-      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -378,7 +378,7 @@ runs:
     # Enable auto-merge if requested
     - name: 'Enable auto-merge'
       id: 'enable-automerge'
-      uses: 'actions/github-script@98814c53be79b1d30f795b907e553d8679345975' # ratchet:actions/github-script@v6
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       if: '${{ !inputs.disable_automerge }}'
       env:
         PULL_REQUEST_NODE_ID: '${{ steps.create-update-pull-request.outputs.node_id }}'
