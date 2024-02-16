@@ -379,7 +379,7 @@ runs:
     - name: 'Enable auto-merge'
       id: 'enable-automerge'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
-      if: '${{ !inputs.disable_automerge }}'
+      if: '${{ !fromJSON(inputs.disable_automerge) }}'
       env:
         PULL_REQUEST_NODE_ID: '${{ steps.create-update-pull-request.outputs.node_id }}'
       with:
