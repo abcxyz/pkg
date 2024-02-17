@@ -24,12 +24,12 @@
 #         runs-on: 'ubuntu-latest'
 #
 #         # The following line is super super super important! This ensures the
-#         # job only runs when the commit matches the expected author and
-#         # message. There are additional checks in the action itself, including
-#         # commit signature verification, but adding this line prevents the
-#         # workflow from running at all, saving your previous GitHub Actions
-#         # usage minutes.
-#         if: '${{ startsWith(github.event.head_commit.message, ''Release: v'') && github.event.head_commit.author.email == ''user_or_bot@company.com'' }}'
+#         # job only runs when the commit matches the expected message. There
+#         # are additional checks in the action itself, including commit
+#         # signature verification, but adding this line prevents the workflow
+#         # from running at all, saving your previous GitHub Actions usage
+#         #minutes.
+#         if: '${{ startsWith(github.event.head_commit.message, ''Release: v'')
 #
 #         steps:
 #           - name: 'Create release'
@@ -37,6 +37,7 @@
 #             uses: 'abcxyz/pkg/.github/actions/create-release@main'
 #             with:
 #               github_token: '${{ secrets.GITHUB_TOKEN }}' # Or an organization PAT
+#               expected_email: 'user_or_bot@company.com'
 #
 #           # Example using go-releaser
 #           - uses: 'actions/checkout@v4'
@@ -64,6 +65,12 @@ inputs:
     type: 'string'
     required: true
 
+  expected_email:
+    description: |-
+      Email address expected for the commit.
+    type: 'string'
+    required: true
+
   draft:
     description: |-
       Create the release as a draft.
@@ -84,6 +91,7 @@ runs:
       id: 'create-release'
       env:
         DRAFT: '${{ inputs.draft }}'
+        EXPECTED_EMAIL: '${{ inputs.expected_email }}'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       with:
         github-token: '${{ inputs.github_token }}'
@@ -96,6 +104,16 @@ runs:
           })
           if (!commitResult.data.commit.verification.verified) {
             core.setFailed(`Commit is not signed`)
+            return;
+          }
+
+          const expectedEmail = process.env.EXPECTED_EMAIL;
+          if (commitResult.data.commit.author.email !== expectedEmail) {
+            core.setFailed(`Commit author is not ${expectedEmail}, got ${commitResult.data.commit.author.email}`);
+            return;
+          }
+          if (commitResult.data.commit.committer.email !== expectedEmail) {
+            core.setFailed(`Commiter is not ${expectedEmail}, got ${commitResult.data.commit.committer.email}`);
             return;
           }
 

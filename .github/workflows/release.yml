@@ -23,7 +23,8 @@ on:
 jobs:
   release:
     runs-on: 'ubuntu-latest'
-    if: '${{ startsWith(github.event.head_commit.message, ''Release: v'') && github.event.head_commit.author.email == vars.TOKEN_MINTER_GITHUB_EMAIL }}'
+    if: |-
+      startsWith(github.event.head_commit.message, 'Release: v')
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -46,6 +47,7 @@ jobs:
 
       - name: 'Create release'
         id: 'create-release'
-        uses: 'abcxyz/pkg/.github/actions/release@main' # ratchet:exclude
+        uses: 'abcxyz/pkg/.github/actions/create-release@main' # ratchet:exclude
         with:
           github_token: '${{ steps.mint-token.outputs.token }}'
+          expected_email: '${{ vars.TOKEN_MINTER_GITHUB_EMAIL }}'
