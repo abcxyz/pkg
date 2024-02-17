@@ -1,0 +1,99 @@
+# Copyright 2024 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# This GitHub Action increments a VERSION file at the root of the repository by
+# the given semver strategy. If no VERSION file exists, it uses "0.0.0". It does
+# not commit the resulting file.
+#
+# It includes two outputs: the "current_version" and the "next_version".
+#
+# Example usage:
+#
+#     jobs:
+#       draft-release:
+#         runs-on: 'ubuntu-latest'
+#         steps:
+#           - name: 'Increment version'
+#             id: 'increment-version'
+#             uses: 'abcxyz/pkg/.github/actions/increment-version@main'
+#             with:
+#               version_strategy: 'patch' # Likely from "workflow_call" input
+#
+#           - name: 'Update npm version'
+#             env:
+#               NEXT_VERSION: '${{ steps.increment-version.outputs.next_version }}'
+#             run: |-
+#               npm version ${NEXT_VERSION} --no-git-tag-version
+#
+
+name: 'increment-version'
+
+inputs:
+  version_strategy:
+    description: |-
+      Strategy to update the version based on semantic versioning.
+    default: 'patch'
+    type: 'string'
+    required: true
+
+  prerelease_identifier:
+    description: |-
+      String to use to identify pre-releases.
+    type: 'string'
+    default: 'alpha'
+    required: false
+
+outputs:
+  current_version:
+    description: |-
+      Existing version prior to incrementing, without any leading "v" prefixes.
+    value: '${{ steps.increment-version.outputs.current_version }}'
+
+  next_version:
+    description: |-
+      Incremented version, without any leading "v" prefixes.
+    value: '${{ steps.increment-version.outputs.next_version }}'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+
+    - name: 'Increment version'
+      id: 'increment-version'
+      env:
+        PRERELEASE_IDENTIFIER: '${{ inputs.prerelease_identifier }}'
+        VERSION_STRATEGY: '${{ inputs.version_strategy }}'
+      shell: 'bash'
+      run: |-
+        npm install -g --silent --quiet --no-progress semver@7.6.0
+
+        CURRENT_VERSION="0.0.0"
+        if [ -f "${GITHUB_WORKSPACE}/VERSION" ]; then
+          CURRENT_VERSION="$(< "${GITHUB_WORKSPACE}/VERSION")"
+        fi
+        echo "CURRENT_VERSION: ${CURRENT_VERSION}"
+        echo "current_version=${CURRENT_VERSION}" >> "${GITHUB_OUTPUT}"
+        echo "CURRENT_VERSION=${CURRENT_VERSION}" >> "${GITHUB_ENV}"
+
+        NEXT_VERSION="$(semver "${CURRENT_VERSION}" \
+          --increment "${VERSION_STRATEGY}" \
+          --preid "${PRERELEASE_IDENTIFIER}" \
+          -n 1)"
+        echo "NEXT_VERSION: ${NEXT_VERSION}"
+
+        echo "next_version=${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
+        echo "NEXT_VERSION=${NEXT_VERSION}" >> "${GITHUB_ENV}"
+        echo "${NEXT_VERSION}" > "${GITHUB_WORKSPACE}/VERSION"
