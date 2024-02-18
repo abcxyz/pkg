@@ -20,6 +20,9 @@ on:
       - 'main'
       - 'release/**/*'
 
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+
 jobs:
   release:
     runs-on: 'ubuntu-latest'
