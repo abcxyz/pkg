@@ -317,7 +317,7 @@ runs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: "open",
-              head: process.env.HEAD_BRANCH,
+              head: `${context.repo.owner}:${process.env.HEAD_BRANCH}`,
               base: process.env.BASE_BRANCH,
             });
 
@@ -373,7 +373,6 @@ runs:
             core.error(err);
             core.setFailed(`Failed to create/update pull request: ${err}`);
           }
-
 
     # Enable auto-merge if requested
     - name: 'Enable auto-merge'
