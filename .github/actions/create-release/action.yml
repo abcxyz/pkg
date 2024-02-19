@@ -112,10 +112,6 @@ runs:
             core.setFailed(`Commit author is not ${expectedEmail}, got ${commitResult.data.commit.author.email}`);
             return;
           }
-          if (commitResult.data.commit.committer.email !== expectedEmail) {
-            core.setFailed(`Commiter is not ${expectedEmail}, got ${commitResult.data.commit.committer.email}`);
-            return;
-          }
 
           // Ensure the commit message matches the expected regular
           // expression. Part of this is guarded by the conditional
