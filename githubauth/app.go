@@ -29,8 +29,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/abcxyz/pkg/cache"
 	"golang.org/x/oauth2"
+
+	"github.com/abcxyz/pkg/cache"
 )
 
 // URL used to retrieve access tokens. The pattern must contain a single '%s'
@@ -197,6 +198,21 @@ func (g *App) AppToken() ([]byte, error) {
 	return token, nil
 }
 
+// OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
+// by creating a JWT token.
+func (g *App) OAuthAppTokenSource() oauth2.TokenSource {
+	return oauth2TokenSource(func() (*oauth2.Token, error) {
+		jwt, err := g.AppToken()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate app token: %w", err)
+		}
+
+		return &oauth2.Token{
+			AccessToken: string(jwt),
+		}, nil
+	})
+}
+
 // AccessToken calls the GitHub API to generate a new access token for this
 // application installation with the requested permissions and repositories.
 func (g *App) AccessToken(ctx context.Context, request *TokenRequest) (string, error) {
@@ -212,6 +228,21 @@ func (g *App) AccessToken(ctx context.Context, request *TokenRequest) (string, e
 	return g.githubAccessToken(ctx, requestJSON)
 }
 
+// SelectedReposTokenSource returns a [TokenSource] that mints a GitHub token
+// with permissions on the selected repos.
+func (g *App) SelectedReposTokenSource(permissions map[string]string, repos ...string) TokenSource {
+	return TokenSourceFunc(func(ctx context.Context) (string, error) {
+		token, err := g.AccessToken(ctx, &TokenRequest{
+			Permissions:  permissions,
+			Repositories: repos,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to get github access token for repos %q: %w", repos, err)
+		}
+		return token, nil
+	})
+}
+
 // AccessTokenAllRepos calls the GitHub API to generate a new access token for
 // this application installation with the requested permissions and all granted
 // repositories.
@@ -222,6 +253,20 @@ func (g *App) AccessTokenAllRepos(ctx context.Context, request *TokenRequestAllR
 	}
 
 	return g.githubAccessToken(ctx, requestJSON)
+}
+
+// AllReposTokenSource returns a [TokenSource] that mints a GitHub token with
+// permissions on all repos.
+func (g *App) AllReposTokenSource(permissions map[string]string) TokenSource {
+	return TokenSourceFunc(func(ctx context.Context) (string, error) {
+		token, err := g.AccessTokenAllRepos(ctx, &TokenRequestAllRepos{
+			Permissions: permissions,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to get github access token for all repos: %w", err)
+		}
+		return token, nil
+	})
 }
 
 // githubAccessToken calls the GitHub API to generate a new access token with
@@ -268,50 +313,6 @@ func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string
 		return "", fmt.Errorf("failed to parse response as json: %w: %s", err, string(b))
 	}
 	return resp.Token, nil
-}
-
-// OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
-// by creating a JWT token.
-func (g *App) OAuthAppTokenSource() oauth2.TokenSource {
-	return oauth2TokenSource(func() (*oauth2.Token, error) {
-		jwt, err := g.AppToken()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate app token: %w", err)
-		}
-
-		return &oauth2.Token{
-			AccessToken: string(jwt),
-		}, nil
-	})
-}
-
-// AllReposTokenSource returns a [TokenSource] that mints a GitHub token with
-// permissions on all repos.
-func (g *App) AllReposTokenSource(permissions map[string]string) TokenSource {
-	return TokenSourceFunc(func(ctx context.Context) (string, error) {
-		token, err := g.AccessTokenAllRepos(ctx, &TokenRequestAllRepos{
-			Permissions: permissions,
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to get github access token for all repos: %w", err)
-		}
-		return token, nil
-	})
-}
-
-// SelectedReposTokenSource returns a [TokenSource] that mints a GitHub token
-// with permissions on the selected repos.
-func (g *App) SelectedReposTokenSource(permissions map[string]string, repos ...string) TokenSource {
-	return TokenSourceFunc(func(ctx context.Context) (string, error) {
-		token, err := g.AccessToken(ctx, &TokenRequest{
-			Permissions:  permissions,
-			Repositories: repos,
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to get github access token for repos %q: %w", repos, err)
-		}
-		return token, nil
-	})
 }
 
 // generateAppJWT builds a signed JWT that can be used to communicate with
