@@ -263,19 +263,34 @@ func TestApp_AppToken(t *testing.T) {
 	if got, want := string(token), string(cachedToken); got != want {
 		t.Errorf("expected %q to be %q (should have been cached)", got, want)
 	}
+}
 
-	t.Run("oauth_token_source", func(t *testing.T) {
-		t.Parallel()
+func TestApp_OAuthAppTokenSource(t *testing.T) {
+	t.Parallel()
 
-		oauthToken, err := app.OAuthAppTokenSource().Token()
-		if err != nil {
-			t.Fatal(err)
-		}
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		if got, want := oauthToken.AccessToken, string(token); got != want {
-			t.Errorf("expected %q to be %q", got, want)
-		}
-	})
+	app, err := NewApp("my-app-id", "my-install-id", privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, err := app.AppToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oauthToken, err := app.OAuthAppTokenSource().Token()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := oauthToken.AccessToken, string(token); got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
 }
 
 func TestApp_AccessToken(t *testing.T) {
