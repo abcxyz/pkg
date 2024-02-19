@@ -36,7 +36,7 @@ import (
 	"github.com/abcxyz/pkg/testutil"
 )
 
-func TestConfig_New(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
 	rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -211,98 +211,156 @@ func TestConfig_New(t *testing.T) {
 	}
 }
 
-func TestGitHubApp_AccessToken(t *testing.T) {
+func TestApp_AppToken(t *testing.T) {
 	t.Parallel()
 
-	rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app, err := NewApp("my-app-id", "my-install-id", privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token, err := app.AppToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parts := strings.Split(string(token), ".")
+	if exp := 3; len(parts) != exp {
+		t.Fatalf("expected %d items, got %q", exp, parts)
+	}
+
+	header := testBase64Decode(t, parts[0])
+	if got, want := string(header), `{"alg":"RS256","typ":"JWT"}`; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	body := testBase64Decode(t, parts[1])
+	if got, want := string(body), `"iss":"my-app-id"`; !strings.Contains(got, want) {
+		t.Errorf("expected %q to contain %q", got, want)
+	}
+
+	signature := testBase64Decode(t, parts[2])
+
+	h := sha256.New()
+	h.Write([]byte(parts[0] + "." + parts[1]))
+	digest := h.Sum(nil)
+
+	if err := rsa.VerifyPKCS1v15(&privateKey.PublicKey, crypto.SHA256, digest, signature); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the result is cached
+	cachedToken, err := app.AppToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := string(token), string(cachedToken); got != want {
+		t.Errorf("expected %q to be %q (should have been cached)", got, want)
+	}
+
+	t.Run("oauth_token_source", func(t *testing.T) {
+		t.Parallel()
+
+		oauthToken, err := app.OAuthAppTokenSource().Token()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got, want := oauthToken.AccessToken, string(token); got != want {
+			t.Errorf("expected %q to be %q", got, want)
+		}
+	})
+}
+
+func TestApp_AccessToken(t *testing.T) {
+	t.Parallel()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cases := []struct {
-		name        string
-		appID       string
-		installID   string
-		request     *TokenRequest
-		want        string
-		expErr      string
-		handlerFunc http.HandlerFunc
+		name     string
+		handler  http.HandlerFunc
+		req      *TokenRequest
+		expToken string
+		expErr   string
 	}{
 		{
-			name:      "basic_request",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
-				Repositories: []string{"test"},
-				Permissions:  map[string]string{"test": "test"},
-			},
-			want:        `{"token":"this-is-the-token-from-github"}`,
-			expErr:      "",
-			handlerFunc: nil,
-		},
-		{
-			name:      "non_201_response",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
-				Repositories: []string{"test"},
-				Permissions:  map[string]string{"test": "test"},
-			},
-			expErr: "failed to retrieve token from GitHub - Status: 500 Internal Server Error - Body: ",
-			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(500)
-			},
-		},
-		{
-			name:      "201_not_json",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
-				Repositories: []string{"test"},
-				Permissions:  map[string]string{"test": "test"},
-			},
-			expErr: "invalid access token from GitHub - Body: not json",
-			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
+			name: "success",
+			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
-				fmt.Fprintf(w, "not json")
+				fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
 			},
+			req: &TokenRequest{
+				Repositories: []string{"my-repo"},
+				Permissions:  map[string]string{"issues": "write"},
+			},
+			expToken: "ghs_expectedtoken",
 		},
 		{
-			name:      "201_no_body",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
-				Repositories: []string{"test"},
-				Permissions:  map[string]string{"test": "test"},
-			},
-			expErr: "invalid access token from GitHub - Body:",
-			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
+			name: "success_empty_repositories",
+			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
+				fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
 			},
-		},
-		{
-			name:      "allow_empty_repositories",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
+			req: &TokenRequest{
 				Repositories: []string{},
-				Permissions:  map[string]string{"test": "test"},
+				Permissions:  map[string]string{"issues": "write"},
 			},
-			want:        `{"token":"this-is-the-token-from-github"}`,
-			expErr:      "",
-			handlerFunc: nil,
+			expToken: "ghs_expectedtoken",
 		},
 		{
-			name:      "missing_repositories",
-			appID:     "test-app-id",
-			installID: "test-install-id",
-			request: &TokenRequest{
-				Permissions: map[string]string{"test": "test"},
-			},
-			expErr: "requested repositories cannot be nil, did you mean to use AccessTokenAllRepos to request all repos?",
-			handlerFunc: func(w http.ResponseWriter, r *http.Request) {
+			name: "fails_missing_repositories",
+			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(201)
 			},
+			req: &TokenRequest{
+				Repositories: nil,
+				Permissions:  map[string]string{"issues": "write"},
+			},
+			expErr: "requested repositories cannot be nil",
+		},
+		{
+			name: "not_201",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			},
+			req: &TokenRequest{
+				Repositories: []string{"my-repo"},
+				Permissions:  map[string]string{"issues": "write"},
+			},
+			expErr: "expected 200 to be 201",
+		},
+		{
+			name: "201_not_json",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				fmt.Fprint(w, `this is not json`)
+			},
+			req: &TokenRequest{
+				Repositories: []string{"my-repo"},
+				Permissions:  map[string]string{"issues": "write"},
+			},
+			expErr: "failed to parse response as json",
+		},
+		{
+			name: "201_empty_body",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+			},
+			req: &TokenRequest{
+				Repositories: []string{"my-repo"},
+				Permissions:  map[string]string{"issues": "write"},
+			},
+			expErr: "failed to parse response as json",
 		},
 	}
 
@@ -314,88 +372,178 @@ func TestGitHubApp_AccessToken(t *testing.T) {
 
 			ctx := context.Background()
 
-			fakeGitHub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if tc.handlerFunc != nil {
-					tc.handlerFunc(w, r)
-					return
-				}
+			srv := httptest.NewServer(tc.handler)
+			t.Cleanup(srv.Close)
 
-				if r.Header.Get("Accept") != "application/vnd.github+json" {
-					w.WriteHeader(500)
-					fmt.Fprintf(w, "missing accept header")
-					return
-				}
-				authHeader := r.Header.Get("Authorization")
-				if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-					w.WriteHeader(500)
-					fmt.Fprintf(w, "missing or malformed authorization header")
-					return
-				}
-				w.WriteHeader(201)
-				fmt.Fprintf(w, `{"token":"this-is-the-token-from-github"}`)
-			}))
-
-			app, err := NewApp(tc.appID, tc.installID, rsaPrivateKey, WithAccessTokenURLPattern(fakeGitHub.URL+"/%s/access_tokens"))
+			app, err := NewApp("my-app-id", "my-installation-id", privateKey,
+				WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			got, err := app.AccessToken(ctx, tc.request)
+			token, err := app.AccessToken(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
 				t.Errorf(diff)
 			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("mismatch (-want, +got):\n%s", diff)
+
+			if got, want := token, tc.expToken; got != want {
+				t.Errorf("expected %q to be %q", got, want)
 			}
 		})
 	}
 }
 
-func TestGenerateAppJWT(t *testing.T) {
+func TestApp_SelectedReposTokenSource(t *testing.T) {
 	t.Parallel()
 
-	base64Decode := func(tb testing.TB, i string) []byte {
-		tb.Helper()
+	ctx := context.Background()
 
-		b, err := base64.RawURLEncoding.DecodeString(i)
-		if err != nil {
-			tb.Fatal(err)
-		}
-		return b
-	}
-
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	token, err := generateAppJWT(key, "my-iss", 5*time.Second)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(201)
+		fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	app, err := NewApp("my-app-id", "my-installation-id", privateKey,
+		WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	parts := strings.Split(string(token), ".")
-	if exp := 3; len(parts) != exp {
-		t.Fatalf("expected %d items, got %q", exp, parts)
+	src := app.SelectedReposTokenSource(map[string]string{"issues": "write"}, "my-repo")
+	githubToken, err := src.GitHubToken(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	header := base64Decode(t, parts[0])
-	if got, want := string(header), `{"alg":"RS256","typ":"JWT"}`; got != want {
+	if got, want := githubToken, "ghs_expectedtoken"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
+}
 
-	body := base64Decode(t, parts[1])
-	if got, want := string(body), `"iss":"my-iss"`; !strings.Contains(got, want) {
-		t.Errorf("expected %q to contain %q", got, want)
-	}
+func TestApp_AccessTokenAllRepos(t *testing.T) {
+	t.Parallel()
 
-	signature := base64Decode(t, parts[2])
-
-	h := sha256.New()
-	h.Write([]byte(parts[0] + "." + parts[1]))
-	digest := h.Sum(nil)
-
-	if err := rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest, signature); err != nil {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
 		t.Fatal(err)
 	}
+
+	cases := []struct {
+		name     string
+		handler  http.HandlerFunc
+		req      *TokenRequestAllRepos
+		expToken string
+		expErr   string
+	}{
+		{
+			name: "success",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
+			},
+			req: &TokenRequestAllRepos{
+				Permissions: map[string]string{"issues": "write"},
+			},
+			expToken: "ghs_expectedtoken",
+		},
+		{
+			name: "not_201",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			},
+			expErr: "expected 200 to be 201",
+		},
+		{
+			name: "201_not_json",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+				fmt.Fprint(w, `this is not json`)
+			},
+			expErr: "failed to parse response as json",
+		},
+		{
+			name: "201_empty_body",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(201)
+			},
+			expErr: "failed to parse response as json",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			srv := httptest.NewServer(tc.handler)
+			t.Cleanup(srv.Close)
+
+			app, err := NewApp("my-app-id", "my-installation-id", privateKey,
+				WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			token, err := app.AccessTokenAllRepos(ctx, tc.req)
+			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
+				t.Errorf(diff)
+			}
+
+			if got, want := token, tc.expToken; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+		})
+	}
+}
+
+func TestApp_AllReposTokenSource(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(201)
+		fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	app, err := NewApp("my-app-id", "my-installation-id", privateKey,
+		WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src := app.AllReposTokenSource(map[string]string{"issues": "write"})
+	githubToken, err := src.GitHubToken(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := githubToken, "ghs_expectedtoken"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func testBase64Decode(tb testing.TB, s string) []byte {
+	tb.Helper()
+
+	b, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return b
 }
