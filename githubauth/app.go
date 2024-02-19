@@ -292,7 +292,7 @@ func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string
 	}
 	defer res.Body.Close()
 
-	b, err := io.ReadAll(io.LimitReader(res.Body, 64_000))
+	b, err := io.ReadAll(io.LimitReader(res.Body, 4_194_304)) // 4 MiB
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
