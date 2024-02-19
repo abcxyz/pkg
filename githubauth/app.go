@@ -27,12 +27,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
-	"golang.org/x/oauth2"
-
 	"github.com/abcxyz/pkg/cache"
+	"golang.org/x/oauth2"
 )
 
 // URL used to retrieve access tokens. The pattern must contain a single '%s'
@@ -202,7 +200,7 @@ func (g *App) AppToken() ([]byte, error) {
 // AccessToken calls the GitHub API to generate a new access token for this
 // application installation with the requested permissions and repositories.
 func (g *App) AccessToken(ctx context.Context, request *TokenRequest) (string, error) {
-	if request.Repositories == nil {
+	if request == nil || request.Repositories == nil {
 		return "", fmt.Errorf("requested repositories cannot be nil, did you mean to use AccessTokenAllRepos to request all repos?")
 	}
 
@@ -231,43 +229,45 @@ func (g *App) AccessTokenAllRepos(ctx context.Context, request *TokenRequestAllR
 func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string, error) {
 	appJWT, err := g.AppToken()
 	if err != nil {
-		return "", fmt.Errorf("error generating app jwt: %w", err)
+		return "", fmt.Errorf("failed to generate github app jws: %w", err)
 	}
 	requestURL := fmt.Sprintf(g.accessTokenURLPattern, g.InstallationID)
 
 	requestReader := bytes.NewReader(requestJSON)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, requestReader)
 	if err != nil {
-		return "", fmt.Errorf("error creating http request for GitHub installation information: %w", err)
+		return "", fmt.Errorf("failed to create http request: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", appJWT))
 
 	res, err := g.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error making http request for GitHub installation access token %w", err)
+		return "", fmt.Errorf("failed to make http request: %w", err)
 	}
 	defer res.Body.Close()
 
 	b, err := io.ReadAll(io.LimitReader(res.Body, 64_000))
 	if err != nil {
-		return "", fmt.Errorf("error reading http response for GitHub installation access token %w", err)
+		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if res.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("failed to retrieve token from GitHub - Status: %s - Body: %s", res.Status, string(b))
+	if got, want := res.StatusCode, http.StatusCreated; got != want {
+		return "", fmt.Errorf("invalid http response status (expected %d to be %d): %s", got, want, string(b))
 	}
 
-	// GitHub will respond with a 201 when you send a request for an invalid combination,
-	// e.g. 'issues':'write' for an empty repository list. This 201 comes with a response that is not actually JSON.
-	// Attempt to parse the JSON to see if this is a valid token, if it is not
-	// then respond with an error containing the
-	// actual response from GitHub.
-	tokenContent := map[string]any{}
-	if err := json.Unmarshal(b, &tokenContent); err != nil {
-		return "", fmt.Errorf("invalid access token from GitHub - Body: %s", string(b))
+	// GitHub will respond with a 201 when you send a request for an invalid
+	// combination, e.g. 'issues':'write' for an empty repository list. This 201
+	// comes with a response that is not actually JSON. Attempt to parse the JSON
+	// to see if this is a valid token, if it is not then respond with an error
+	// containing the actual response from GitHub.
+	var resp struct {
+		Token string `json:"token"`
 	}
-	return string(b), nil
+	if err := json.Unmarshal(b, &resp); err != nil {
+		return "", fmt.Errorf("failed to parse response as json: %w: %s", err, string(b))
+	}
+	return resp.Token, nil
 }
 
 // OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
@@ -289,13 +289,13 @@ func (g *App) OAuthAppTokenSource() oauth2.TokenSource {
 // permissions on all repos.
 func (g *App) AllReposTokenSource(permissions map[string]string) TokenSource {
 	return TokenSourceFunc(func(ctx context.Context) (string, error) {
-		resp, err := g.AccessTokenAllRepos(ctx, &TokenRequestAllRepos{
+		token, err := g.AccessTokenAllRepos(ctx, &TokenRequestAllRepos{
 			Permissions: permissions,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to get github access token for all repos: %w", err)
 		}
-		return parseAppTokenResponse(resp)
+		return token, nil
 	})
 }
 
@@ -303,14 +303,14 @@ func (g *App) AllReposTokenSource(permissions map[string]string) TokenSource {
 // with permissions on the selected repos.
 func (g *App) SelectedReposTokenSource(permissions map[string]string, repos ...string) TokenSource {
 	return TokenSourceFunc(func(ctx context.Context) (string, error) {
-		resp, err := g.AccessToken(ctx, &TokenRequest{
+		token, err := g.AccessToken(ctx, &TokenRequest{
 			Permissions:  permissions,
 			Repositories: repos,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to get github access token for repos %q: %w", repos, err)
 		}
-		return parseAppTokenResponse(resp)
+		return token, nil
 	})
 }
 
@@ -362,19 +362,4 @@ func parseRSAPrivateKeyPEM(data []byte) (*rsa.PrivateKey, error) {
 		return nil, fmt.Errorf("failed to parse private key pem: %w", err)
 	}
 	return key, nil
-}
-
-// parseAppTokenResponse parses the given JWT and returns the embedded token.
-func parseAppTokenResponse(data string) (string, error) {
-	var resp struct {
-		Token string `json:"token"`
-	}
-
-	if err := json.NewDecoder(strings.NewReader(data)).Decode(&resp); err != nil {
-		return "", fmt.Errorf("failed to parse json: %w", err)
-	}
-	if resp.Token == "" {
-		return "", fmt.Errorf("no token in json response")
-	}
-	return resp.Token, nil
 }
