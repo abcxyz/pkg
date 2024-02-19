@@ -77,6 +77,4 @@ jobs:
           title: 'Release: v${{ steps.increment-version.outputs.next_version }}'
           # TODO: switch to Mike's new solution
           changed_paths: |-
-            [
-              "VERSION",
-            ]
+            ["VERSION"]
