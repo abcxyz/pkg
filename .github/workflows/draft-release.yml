@@ -71,7 +71,7 @@ jobs:
         uses: 'abcxyz/pkg/.github/actions/create-pull-request@main' # ratchet:exclude
         with:
           token: '${{ steps.mint-token.outputs.token }}'
-          # draft: '${{ inputs.draft }}' # TODO: not yet supported
+          draft: '${{ inputs.draft }}'
           base_branch: '${{ github.event.repository.default_branch }}'
           head_branch: '${{ env.PR_BRANCH }}'
           title: 'Release: v${{ steps.increment-version.outputs.next_version }}'
