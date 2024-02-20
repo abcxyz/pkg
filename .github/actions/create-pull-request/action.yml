@@ -43,6 +43,10 @@ inputs:
     description: 'The pull request body. Defaults to ``.'
     required: false
     default: ''
+  draft:
+    description: 'Create pull request in draft status.'
+    required: false
+    default: 'false'
   changed_paths:
     description: 'JSON array of the relative file paths added or changed in the pull request. Defaults to `[]`.'
     required: false
@@ -54,7 +58,7 @@ inputs:
   disable_automerge:
     description: 'Disable auto-merge on the target pull request.'
     required: false
-    default: false
+    default: 'false'
   max_retries:
     description: 'The maxiumum number of retries when handling failures. Defaults to `3`.'
     required: false
@@ -346,6 +350,8 @@ runs:
               core.info(
                 `Created PR #${createResponse.data.number} at ${createResponse.data.html_url}`
               );
+
+              core.setOutput("number", createResponse.data.number)
             } else {
               core.info(`Updating pull request:
                 owner:       ${context.repo.owner}
@@ -366,6 +372,8 @@ runs:
               core.info(
                 `Updated PR #${updateResponse.data.number} at ${updateResponse.data.html_url}`
               );
+
+              core.setOutput("number", updateResponse.data.number)
             }
 
             core.setOutput('node_id', pullRequestNodeID)
@@ -374,37 +382,42 @@ runs:
             core.setFailed(`Failed to create/update pull request: ${err}`);
           }
 
-    # Enable auto-merge if requested
-    - name: 'Enable auto-merge'
-      id: 'enable-automerge'
-      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
-      if: '${{ !fromJSON(inputs.disable_automerge) }}'
+    # The gh cli masks logic to validate existing statuses and call the appropriate APIs
+    # This is significantly less code and more readability for one extra API call
+    - name: 'Toggle draft'
+      id: 'toggle-draft'
       env:
-        PULL_REQUEST_NODE_ID: '${{ steps.create-update-pull-request.outputs.node_id }}'
-      with:
-        github-token: '${{ inputs.token }}'
-        retries: '${{ inputs.max_retries }}'
-        script: |-
-          try {
-            const query = `mutation enableAutoMerge($pullId: ID!, $mergeMethod: PullRequestMergeMethod) {
-              enablePullRequestAutoMerge(input: {
-                pullRequestId: $pullId,
-                mergeMethod: $mergeMethod,
-              }) {
-                pullRequest {
-                  id,
-                  autoMergeRequest {
-                    enabledAt
-                  }
-                }
-              }
-            }`
+        GH_TOKEN: '${{ inputs.token }}'
+        DRAFT: '${{ fromJSON(inputs.draft) }}'
+        PR_NUMBER: '${{ steps.create-update-pull-request.outputs.number }}'
+      shell: 'bash'
+      run: |-
+        # Toggle draft
+        if [[ "${DRAFT}" == "true" ]]; then
+          echo "Setting PR #${PR_NUMBER} to draft"
+          gh pr ready $PR_NUMBER --undo
+        else
+          echo "Setting PR #${PR_NUMBER} to ready for review"
+          gh pr ready $PR_NUMBER
+        fi
 
-            await github.graphql(query, {
-              pullId: process.env.PULL_REQUEST_NODE_ID,
-              mergeMethod: 'SQUASH',
-            })
-          } catch (err) {
-            core.error(err);
-            core.setFailed(`Failed to enable auto-merge for pull request: ${err}`);
-          }
+    # The gh cli masks logic to validate existing statuses and call the appropriate APIs
+    # This is significantly less code and more readability for one extra API call
+    - name: 'Toggle auto-merge'
+      id: 'toggle-automerge'
+      # Skip if draft == true, draft PRs cannot modify auto-merge
+      if: '${{ !fromJSON(inputs.draft) }}'
+      env:
+        GH_TOKEN: '${{ inputs.token }}'
+        DISABLE_AUTO_MERGE: '${{ fromJSON(inputs.disable_automerge) }}'
+        PR_NUMBER: '${{ steps.create-update-pull-request.outputs.number }}'
+      shell: 'bash'
+      run: |-
+        # Toggle auto-merge
+        if [[ "${DISABLE_AUTO_MERGE}" == "true" ]]; then
+          echo "Disabling auto merge for PR #${PR_NUMBER}"
+          gh pr merge $PR_NUMBER --disable-auto
+        else
+          echo "Enabling auto merge for PR #${PR_NUMBER}"
+          gh pr merge $PR_NUMBER --auto --squash
+        fi
