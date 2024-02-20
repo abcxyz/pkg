@@ -1,0 +1,93 @@
+# Copyright 2024 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'cleanup'
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  remove-old-workflows:
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: 'Mint token'
+        id: 'mint-token'
+        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@main' # ratchet:exclude
+        with:
+          wif_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
+          wif_service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
+          service_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
+          requested_permissions: |-
+            {
+              "repositories": [],
+              "permissions": {
+                "actions": "write",
+                "workflows": "write"
+              }
+            }
+
+      - name: 'Remove old workflows'
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
+        with:
+          github-token: '${{ steps.mint-token.outputs.token }}'
+          script: |-
+            const today = new Date();
+            const cutoff = new Date(new Date().setDate(today.getDate() - 30));
+            const cutoffString = cutoff.toISOString().split('T')[0];
+
+            const repos = await github.paginate(github.rest.repos.listForOrg, {
+              org: context.repo.owner,
+              per_page: 100,
+            });
+
+            let workflowRuns = [];
+            for(const repo of repos) {
+              const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+                owner: context.repo.owner,
+                repo: repo.name,
+                created: `< ${cutoffString}`,
+                exclude_pull_requests: true,
+                per_page: 100,
+              });
+
+              for (const run of runs) {
+                if(['action_required', 'in_progress', 'queued', 'requested', 'waiting', 'pending'].includes(run.status)) {
+                  continue;
+                }
+
+                workflowRuns.push({
+                  repo_name: repo.name,
+                  run_id: run.id,
+                });
+              }
+            }
+
+            core.info(`Found ${workflowRuns.length} runs to delete...`)
+
+            for(const run of workflowRuns) {
+              core.info(`Deleting ${run.repo_name}/${run.run_id}`);
+
+              await github.rest.actions.deleteWorkflowRun({
+                owner: context.repo.owner,
+                repo: run.repo_name,
+                run_id: run.run_id,
+              })
+            }
