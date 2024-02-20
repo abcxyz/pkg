@@ -583,7 +583,7 @@ func TestLogLevelVar(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			logger := logging.DefaultLogger()
+			logger := logging.New(io.Discard, slog.LevelInfo, logging.FormatText, false)
 
 			set := NewFlagSet()
 			f := set.NewSection("FLAGS")
