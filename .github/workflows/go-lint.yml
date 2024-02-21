@@ -94,7 +94,8 @@ jobs:
 
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
-        if: '${{ hashFiles(''.golangci.yml'', ''.golangci.yaml'') == '''' }}'
+        if: |-
+          ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
         run: |-
           # Create a unique output file outside of the checkout.
           GOLANGCI_YML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.golangci.yml"
@@ -113,7 +114,8 @@ jobs:
           echo "output-file=${GOLANGCI_YML}" >> "${GITHUB_OUTPUT}"
 
       - name: 'Lint (default configuration)'
-        if: '${{ hashFiles(''.golangci.yml'', ''.golangci.yaml'') == '''' }}'
+        if: |-
+          ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
         uses: 'golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804' # ratchet:golangci/golangci-lint-action@v4
         with:
           args: |-
@@ -122,7 +124,8 @@ jobs:
           working-directory: '${{ inputs.directory }}'
 
       - name: 'Lint (custom configuration)'
-        if: '${{ hashFiles(''.golangci.yml'', ''.golangci.yaml'') != '''' }}'
+        if: |-
+          ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
         uses: 'golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804' # ratchet:golangci/golangci-lint-action@v4
         with:
           version: '${{ inputs.golangci_lint_version }}'
