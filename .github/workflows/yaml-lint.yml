@@ -56,7 +56,8 @@ jobs:
 
       - name: 'Lint (download default configuration)'
         id: 'load-default-config'
-        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
+        if: |-
+          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
         run: |-
           # Create a unique output file outside of the checkout.
           YAMLLINT_YAML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.yamllint.yml"
@@ -75,11 +76,13 @@ jobs:
           echo "output-file=${YAMLLINT_YAML}" >> "${GITHUB_OUTPUT}"
 
       - name: 'Lint (default configuration)'
-        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') == '''' }}'
+        if: |-
+          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
         run: |-
           yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
 
       - name: 'Lint (custom configuration)'
-        if: '${{ hashFiles(''.yamllint.yml'', ''.yamllint.yaml'') != '''' }}'
+        if: |-
+          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') != '' }}
         run: |-
           yamllint ${{ inputs.target }}
