@@ -15,7 +15,11 @@
 name: 'release'
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - 'ci'
+    types:
+      - 'completed'
     branches:
       - 'main'
       - 'release/**/*'
@@ -25,9 +29,9 @@ concurrency:
 
 jobs:
   release:
-    runs-on: 'ubuntu-latest'
     if: |-
-      startsWith(github.event.head_commit.message, 'Release: v')
+      startsWith(github.event.workflow_run.head_commit.message, 'Release: v')
+    runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
       id-token: 'write'
