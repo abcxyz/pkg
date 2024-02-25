@@ -59,7 +59,8 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Configure environment variables'
-        if: '${{ inputs.env != ''{}'' }}'
+        if: |-
+          ${{ inputs.env != '{}' }}
         # Use bash shell here to make it work with Windows host runner.
         shell: 'bash'
         run: |-

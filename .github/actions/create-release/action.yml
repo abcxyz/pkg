@@ -29,7 +29,8 @@
 #         # signature verification, but adding this line prevents the workflow
 #         # from running at all, saving your previous GitHub Actions usage
 #         #minutes.
-#         if: '${{ startsWith(github.event.head_commit.message, ''Release: v'')
+#         if: |-
+#           ${{ startsWith(github.event.head_commit.message, 'Release: v') }}
 #
 #         steps:
 #           - name: 'Create release'
