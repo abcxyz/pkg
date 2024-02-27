@@ -120,6 +120,7 @@ jobs:
         with:
           args: |-
             --config "${{ steps.load-default-config.outputs.output-file }}"
+          skip-cache: true
           version: '${{ inputs.golangci_lint_version }}'
           working-directory: '${{ inputs.directory }}'
 
@@ -128,5 +129,6 @@ jobs:
           ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
         uses: 'golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804' # ratchet:golangci/golangci-lint-action@v4
         with:
+          skip-cache: true
           version: '${{ inputs.golangci_lint_version }}'
           working-directory: '${{ inputs.directory }}'
