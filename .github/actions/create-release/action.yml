@@ -72,18 +72,20 @@ inputs:
     type: 'string'
     required: true
 
-  draft:
-    description: |-
-      Create the release as a draft.
-    type: 'boolean'
-    required: false
-    default: false
-
 outputs:
-  release_version:
+  version:
     description: |-
       Version that is being released, without a leading "v".
-    value: '${{ steps.create-release.outputs.release_version }}'
+    value: '${{ steps.create-release.outputs.version }}'
+  tag:
+    description: |-
+      Tag name (version with a leading "v").
+    value: '${{ steps.create-release.outputs.tag }}'
+  created:
+    description: |-
+      Whether the release actually created (false if there was a transient error).
+    value: '${{ steps.create-release.outputs.created }}'
+
 
 runs:
   using: 'composite'
@@ -91,65 +93,69 @@ runs:
     - name: 'Create release'
       id: 'create-release'
       env:
-        DRAFT: '${{ inputs.draft }}'
         EXPECTED_EMAIL: '${{ inputs.expected_email }}'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       with:
         github-token: '${{ inputs.github_token }}'
         script: |-
+          // Get the head commit from the API instead of the event, because
+          // signature status is not available in the webhook.
+          const headCommit = context.payload.head_commit;
+
           // Ensure the commit is signed.
           const commitResult = await github.rest.repos.getCommit({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            ref: context.payload.head_commit.id,
+            ref: headCommit.id,
           })
-          if (!commitResult.data.commit.verification.verified) {
-            core.setFailed(`Commit is not signed`)
-            return;
-          }
 
-          const expectedEmail = process.env.EXPECTED_EMAIL;
-          if (commitResult.data.commit.author.email !== expectedEmail) {
-            core.setFailed(`Commit author is not ${expectedEmail}, got ${commitResult.data.commit.author.email}`);
-            return;
-          }
-
-          // Ensure the commit message matches the expected regular
-          // expression. Part of this is guarded by the conditional
-          // entrypoint.
-          const matches = context.payload.head_commit.message.match(/Release: v(?<version>[^\ ]+)/i);
+          // Ensure the commit is a release commit.
+          const commitMessage = commitResult.data.commit.message;
+          const matches = commitMessage.match(/Release: v(?<version>[^\s]+)/i);
           if (!matches || !matches.groups) {
-            core.setFailed(`Commit message does not contain a version`)
+            core.setFailed(`❌ Commit "${commitMessage}" does not match version syntax`);
             return;
           }
-          let releaseVersion = matches.groups.version;
-          while(releaseVersion.charAt(0).toLowerCase() === 'v') {
-            releaseVersion = releaseVersion.substr(1);
+          let version = matches.groups.version;
+          while(version.charAt(0).toLowerCase() === 'v') {
+            version = version.substr(1);
+          }
+          core.info(`👾 Computed version as: "${version}"`)
+          core.setOutput('version', version)
+
+          // Set the tag (which has the leading "v") prefix.
+          const tag = `v${version}`;
+          core.info(`👾 Computed tag as: "${tag}"`)
+          core.setOutput('tag', tag)
+
+          // Verify the commit is signed.
+          if (!commitResult.data.commit.verification.verified) {
+            core.setFailed(`❌ Commit is not signed`)
+            return;
           }
 
-          // Compute variables.
-          const tag = `v${releaseVersion}`;
-          const draft = JSON.parse(process.env.DRAFT);
-          const prerelease = ['-', 'pre', 'alpha', 'beta', 'preview'].some((v) => tag.includes(v));
-
-          try {
-            const createReleaseRequest = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: tag,
-              target_commitish: context.sha,
-              name: tag,
-              generate_release_notes: true,
-              prerelease: prerelease,
-              draft: draft,
-            };
-
-            const response = await github.rest.repos.createRelease(createReleaseRequest);
-
-            core.setOutput('release_version', releaseVersion);
-            core.info(
-              `Created release ${response.data.name} at ${response.data.html_url}`
-            );
-          } catch (err) {
-            core.setFailed(`Failed to create release: ${err}`);
+          // Verify the email matches the expected committer.
+          const expectedEmail = process.env.EXPECTED_EMAIL;
+          const gotEmail = commitResult.data.commit.author.email;
+          if (gotEmail !== expectedEmail) {
+            core.setFailed(`❌ Commit author is "${gotEmail}", expected "${expectedEmail}"`);
+            return;
           }
+
+          // Compute prerelase.
+          const prerelease = ['-', 'pre', 'alpha', 'beta', 'preview'].some((v) => version.includes(v));
+
+          // Create the release.
+          const response = await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            target_commitish: headCommit.id,
+            name: tag,
+            generate_release_notes: true,
+            prerelease: prerelease,
+            draft: true,
+            make_latest: 'legacy',
+          });
+          core.setOutput('created', true);
+          core.info(`✅ Created release "${response.data.name}" at ${response.data.html_url}`);

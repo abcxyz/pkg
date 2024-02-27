@@ -15,26 +15,27 @@
 name: 'release'
 
 on:
-  workflow_run:
-    workflows:
-      - 'ci'
-    types:
-      - 'completed'
+  push:
     branches:
       - 'main'
       - 'release/**/*'
 
 concurrency:
-  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  group: '${{ github.workflow }}-${{ github.event_name}}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: false
 
 jobs:
-  release:
+  create-release:
     if: |-
-      startsWith(github.event.workflow_run.head_commit.message, 'Release: v')
+      ${{ startsWith(github.event.head_commit.message, 'Release: v') }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
       id-token: 'write'
+    outputs:
+      created: '${{ steps.create-release.outputs.created || false }}'
+      tag: '${{ steps.create-release.outputs.tag }}'
+      version: '${{ steps.create-release.outputs.version }}'
     steps:
       - name: 'Mint token'
         id: 'mint-token'
@@ -58,3 +59,74 @@ jobs:
         with:
           github_token: '${{ steps.mint-token.outputs.token }}'
           expected_email: '${{ vars.TOKEN_MINTER_GITHUB_EMAIL }}'
+
+  publish-release:
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    needs:
+      - 'create-release'
+    steps:
+      - name: 'Mint token'
+        id: 'mint-token'
+        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@main' # ratchet:exclude
+        with:
+          wif_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
+          wif_service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
+          service_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
+          requested_permissions: |-
+            {
+              "repositories": ["${{ github.event.repository.name }}"],
+              "permissions": {
+                "contents": "write"
+              }
+            }
+
+      - name: 'Publish release'
+        env:
+          GH_TOKEN: '${{ steps.mint-token.outputs.token }}'
+          RELEASE_VERSION: 'v${{ needs.create-release.outputs.version }}'
+          REPO: '${{ github.repository }}'
+        run: |-
+          gh release edit "${RELEASE_VERSION}" \
+            --repo "${REPO}" \
+            --draft=false
+
+  cleanup-failed-release:
+    if: |-
+      ${{ always() && needs.create-release.outputs.created == 'true' && contains(fromJSON('["failure", "cancelled", "skipped"]'), needs.publish-release.result) }}
+    runs-on: 'ubuntu-latest'
+    needs:
+      - 'create-release'
+      - 'publish-release'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: 'Mint token'
+        id: 'mint-token'
+        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@main' # ratchet:exclude
+        with:
+          wif_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
+          wif_service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
+          service_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
+          requested_permissions: |-
+            {
+              "repositories": ["${{ github.event.repository.name }}"],
+              "permissions": {
+                "contents": "write"
+              }
+            }
+
+      - name: 'Cleanup failed release'
+        env:
+          GH_TOKEN: '${{ steps.mint-token.outputs.token }}'
+          RELEASE_VERSION: 'v${{ needs.create-release.outputs.version }}'
+          REPO: '${{ github.repository }}'
+        run: |-
+          gh release delete "${RELEASE_VERSION}" \
+            --repo "${REPO}" \
+            --yes
