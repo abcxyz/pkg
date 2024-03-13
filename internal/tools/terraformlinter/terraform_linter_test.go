@@ -260,7 +260,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					Message: `The attribute "project" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "project" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    4,
 				},
@@ -517,7 +517,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					Line:    9,
 				},
 				{
-					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "organization" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    12,
 				},
@@ -613,12 +613,12 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					Message: `The attribute "folder" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "folder" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    4,
 				},
 				{
-					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "organization" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    5,
 				},
