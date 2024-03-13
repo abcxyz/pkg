@@ -18,7 +18,6 @@ import (
 	"testing"
 )
 
-//nolint:paralleltest // Can't be paralleled because of t.Setenv
 func TestIsIntegration(t *testing.T) {
 	if IsIntegration(t) {
 		t.Errorf("IsIntegration() got 'true' want 'false'")
