@@ -260,7 +260,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					Message: `The attribute "project" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "project" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    4,
 				},
@@ -517,7 +517,7 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					Line:    9,
 				},
 				{
-					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "organization" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    12,
 				},
@@ -613,12 +613,12 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 			filename: "/test/test.tf",
 			expect: []*ViolationInstance{
 				{
-					Message: `The attribute "folder" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "folder" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    4,
 				},
 				{
-					Message: `The attribute "organization" must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
+					Message: `The attribute "organization" must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`,
 					Path:    "/test/test.tf",
 					Line:    5,
 				},
@@ -676,6 +676,29 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 					to   = module.project.google_bigquery_table_iam_member.editors["serviceAccount:service-123456789@dataflow-service-producer-prod.iam.gserviceaccount.com"]
 				}
 			`,
+		},
+		{
+			name: "folder_project_as_object",
+			content: `
+				module "environment" {
+					source = "./my-module"
+
+					data_containers = concat(
+						[for cd_project_id in local.organization.common_data_project_ids :
+							{
+								folder_id  = local.organization.common_data_folder_id[0]
+								project_id = cd_project_id
+
+								is_shared = true
+								researchers = [for r in local.researchers : {
+									project_id = local.organization.researcher_vpe_project_ids[r.id]
+									email      = r.email
+								}]
+						}],
+					)
+				}
+			`,
+			filename: "/test/test.tf",
 		},
 	}
 
