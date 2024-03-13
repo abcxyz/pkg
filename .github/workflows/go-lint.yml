@@ -39,7 +39,7 @@ on:
       golangci_lint_version:
         description: 'Version of golangci linter to use'
         type: 'string'
-        default: 'v1.55'
+        default: 'v1.56'
 
 jobs:
   # modules checks if the go modules are all up-to-date. While rare with modern
