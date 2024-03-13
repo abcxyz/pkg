@@ -172,7 +172,7 @@ linters-settings:
     # default: false
     context-only: true
     # default: false
-    static-msg: true
+    static-msg: false
     # default: '' (snake, kebab, camel, pascal)
     key-naming-case: 'snake'
     # default: false
