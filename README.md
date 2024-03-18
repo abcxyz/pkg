@@ -173,4 +173,8 @@ jobs:
     uses: 'abcxyz/pkg/.github/workflows/want-lgtm-all.yml@main'
 ```
 
-When creating a pull request, include the text `want_lgtm=all` in the body to require an approval from all requested reviewers.
+When creating a pull request, include the text `want_lgtm=all` in the body to require an
+approval from all requested reviewers.
+
+An admin will need to create a new ruleset within the repo to add want_lgtm_all to be included
+as a required status check.
