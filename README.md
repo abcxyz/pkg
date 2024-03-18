@@ -47,6 +47,7 @@ with:
 Use this workflow to perform basic Go linting checks:
 
 ```yaml
+name: 'go_lint'
 on:
   push:
     branches:
@@ -75,6 +76,7 @@ settings. Otherwise, it uses a set of sane defaults.
 Use this workflow to perform basic Go tests:
 
 ```yaml
+name: 'go_test'
 on:
   push:
     branches:
@@ -106,6 +108,7 @@ Testing is done via the `go test` command with:
 Use this workflow to perform basic Terraform linting checks:
 
 ```yaml
+name: 'terraform_lint'
 on:
   push:
     branches:
@@ -140,6 +143,7 @@ directory. Linting is done in two steps:
 Use this workflow to require an approval from all requested reviewers:
 
 ```yaml
+name: 'want_lgtm_all'
 on:
   pull_request:
     types:
