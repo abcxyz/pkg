@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/abcxyz/pkg/logging"
+	"github.com/abcxyz/pkg/pointer"
 	"github.com/abcxyz/pkg/testutil"
 )
 
@@ -70,13 +71,13 @@ func TestFlagSet_Help(t *testing.T) {
 	sec1.BoolVar(&BoolVar{
 		Name:   "my-bool",
 		Usage:  "One usage.",
-		Target: ptrTo(true),
+		Target: pointer.To(true),
 	})
 	sec1.Int64Var(&Int64Var{
 		Name:   "my-int",
 		Usage:  "One usage.",
 		Hidden: true,
-		Target: ptrTo(int64(0)),
+		Target: pointer.To(int64(0)),
 	})
 
 	sec2 := fs.NewSection("child2")
@@ -85,7 +86,7 @@ func TestFlagSet_Help(t *testing.T) {
 		Usage:   "Two usage.",
 		Aliases: []string{"t", "at"},
 		Example: "example",
-		Target:  ptrTo(""),
+		Target:  pointer.To(""),
 	})
 
 	if got, want := fs.Help(), "One usage. The default value is"; !strings.Contains(got, want) {
@@ -537,10 +538,6 @@ func ExampleFlagSet_AfterParse_checkIfError() {
 		// Logic
 		return nil
 	})
-}
-
-func ptrTo[T any](v T) *T {
-	return &v
 }
 
 func TestLogLevelVar(t *testing.T) {

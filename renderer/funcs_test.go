@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/abcxyz/pkg/pointer"
 	"github.com/abcxyz/pkg/testutil"
 )
 
@@ -45,7 +46,7 @@ func TestToStringSlice(t *testing.T) {
 		},
 		{
 			name: "pointers",
-			in:   []*int{ptrTo(2), ptrTo(3), ptrTo(4)},
+			in:   []*int{pointer.To(2), pointer.To(3), pointer.To(4)},
 			exp:  []string{"2", "3", "4"},
 		},
 		{
@@ -297,8 +298,4 @@ func TestTrimSpace(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ptrTo[T any](in T) *T {
-	return &in
 }
