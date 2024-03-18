@@ -60,7 +60,7 @@ func newMetaBlockNewlineViolation(token hclsyntax.Token) *ViolationInstance {
 }
 
 func newProviderAttributesViolation(token hclsyntax.Token, attr string) *ViolationInstance {
-	message := fmt.Sprintf(`The attribute %q must me below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`, attr)
+	message := fmt.Sprintf(`The attribute %q must be below any meta attributes (e.g. "for_each", "count") but above all other attributes. Attributes must be ordered organization > folder > project.`, attr)
 	return newViolation(token, message)
 }
 
