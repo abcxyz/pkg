@@ -677,6 +677,29 @@ func TestTerraformLinter_FindViolations(t *testing.T) {
 				}
 			`,
 		},
+		{
+			name: "folder_project_as_object",
+			content: `
+				module "environment" {
+					source = "./my-module"
+
+					data_containers = concat(
+						[for cd_project_id in local.organization.common_data_project_ids :
+							{
+								folder_id  = local.organization.common_data_folder_id[0]
+								project_id = cd_project_id
+
+								is_shared = true
+								researchers = [for r in local.researchers : {
+									project_id = local.organization.researcher_vpe_project_ids[r.id]
+									email      = r.email
+								}]
+						}],
+					)
+				}
+			`,
+			filename: "/test/test.tf",
+		},
 	}
 
 	for _, tc := range cases {
