@@ -63,6 +63,8 @@ on:
           The name of the tag to be created.
         type: 'string'
         required: true
+      # Could be GitHub's limitation, it seems impossible to create annotated
+      # tags via GitHub API, see similar issue here: https://github.com/orgs/community/discussions/4924
       annotated_tag:
         description: |-
           Whether it will be an annotated tag in Git.
@@ -189,27 +191,28 @@ jobs:
               sha = branchToTag['data']['commit']['sha']
             }
 
-            await github.rest.git.createTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: tag,
-              object: sha,
-              type: 'commit',
-              message: message,
-            });
-
             if (annotatedTag === 'true') {
-              // Create a reference for annotated tag. See reference:
-              // https://docs.github.com/en/rest/git/tags?apiVersion=2022-11-28#create-a-tag-object
-              await github.rest.git.createRef({
+              // Create a tag object before creating a reference for annotated tag.
+              // See reference: https://docs.github.com/en/rest/git/tags?apiVersion=2022-11-28#create-a-tag-object
+              await github.rest.git.createTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: `refs/tags/${tag}`,
-                sha: sha,
-              })
-              return `Created annotated tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
+                tag: tag,
+                object: sha,
+                type: 'commit',
+                message: message,
+              });
             }
 
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tag}`,
+              sha: sha,
+            })
+            if (annotatedTag === 'true') {
+              return `Created annotated tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
+            }
             return `Created lightweight tag (${tag}), branch (${branch}), commit (${sha}), message(${message}).`
 
   print-outputs:
