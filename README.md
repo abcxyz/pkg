@@ -158,7 +158,6 @@ on:
     types:
       - 'submitted'
       - 'dismissed'
-      - 'edited'
 
 concurrency:
   group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}'
