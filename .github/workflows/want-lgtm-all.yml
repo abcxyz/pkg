@@ -28,7 +28,6 @@ on:
     types:
       - 'submitted'
       - 'dismissed'
-      - 'edited'
   workflow_call:
 
 concurrency:
@@ -42,34 +41,13 @@ permissions:
 jobs:
   want-lgtm-all:
     if: |-
-      ${{ contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name) }}
+      contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name)
     runs-on: 'ubuntu-latest'
     steps:
       - id: 'want-lgtm'
-        name: 'Validate PR Body'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
-        with:
-          result-encoding: 'string'
-          script: |-
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            const body = pullRequest.body || "";
-
-            // if PR body does not contain want_lgtm_all, exit gracefully
-            if (!body.toLowerCase().includes("want_lgtm=all")) {
-              core.info("PR body does not contain want_lgtm=all");
-              return "false";
-            }
-
-            return "true";
-
-      - id: 'validate-reviews'
         name: 'Validate Reviews'
         if: |-
-          ${{ steps.want-lgtm.outputs.result == 'true' }}
+          contains(github.event.pull_request.body, 'want_lgtm=all')
         uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
@@ -155,7 +133,7 @@ jobs:
       - id: 'rerun-status-checks'
         name: 'Re-run Status Checks'
         if: |-
-          ${{ steps.want-lgtm.outputs.result == 'true' && github.event_name == 'pull_request_review' }}
+          contains(github.event.pull_request.body, 'want_lgtm=all') && github.event_name == 'pull_request_review'
         uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
