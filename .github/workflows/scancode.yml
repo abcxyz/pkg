@@ -68,7 +68,7 @@ jobs:
     steps:
       - run: 'mkdir -p ${{ env.REPO_ROOT }}'
       # Checkout the repo branch to the given path.
-      - uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+      - uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
         with:
           path: '${{ env.REPO_ROOT }}'
           ref: '${{ inputs.branch }}'
@@ -79,7 +79,7 @@ jobs:
           directory-to-scan: '${{ env.REPO_ROOT }}'
       # Upload the scancode result artifacts to GitHub Action artifact, see
       # https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts.
-      - uses: 'actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3' # ratchet:actions/upload-artifact@v4
+      - uses: 'actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808' # ratchet:actions/upload-artifact@v4
         with:
           name: 'scancode output'
           path: |

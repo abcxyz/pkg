@@ -39,7 +39,7 @@ on:
       golangci_lint_version:
         description: 'Version of golangci linter to use'
         type: 'string'
-        default: 'v1.56'
+        default: 'v1.57'
 
 jobs:
   # modules checks if the go modules are all up-to-date. While rare with modern
@@ -52,10 +52,10 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
 
       - name: 'Setup Go'
-        uses: 'actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491' # ratchet:actions/setup-go@v5
+        uses: 'actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7' # ratchet:actions/setup-go@v5
         with:
           go-version: '${{ inputs.go_version }}'
           go-version-file: '${{ inputs.go_version_file }}'
@@ -83,10 +83,10 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
 
       - name: 'Setup Go'
-        uses: 'actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491' # ratchet:actions/setup-go@v5
+        uses: 'actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7' # ratchet:actions/setup-go@v5
         with:
           go-version: '${{ inputs.go_version }}'
           go-version-file: '${{ inputs.go_version_file }}'
@@ -116,7 +116,7 @@ jobs:
       - name: 'Lint (default configuration)'
         if: |-
           ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
-        uses: 'golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804' # ratchet:golangci/golangci-lint-action@v4
+        uses: 'golangci/golangci-lint-action@9d1e0624a798bb64f6c3cea93db47765312263dc' # ratchet:golangci/golangci-lint-action@v5
         with:
           args: |-
             --config "${{ steps.load-default-config.outputs.output-file }}"
@@ -127,7 +127,7 @@ jobs:
       - name: 'Lint (custom configuration)'
         if: |-
           ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
-        uses: 'golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804' # ratchet:golangci/golangci-lint-action@v4
+        uses: 'golangci/golangci-lint-action@9d1e0624a798bb64f6c3cea93db47765312263dc' # ratchet:golangci/golangci-lint-action@v5
         with:
           skip-cache: true
           version: '${{ inputs.golangci_lint_version }}'
