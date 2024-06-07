@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -34,9 +35,16 @@ import (
 	"github.com/abcxyz/pkg/cache"
 )
 
-// URL used to retrieve access tokens. The pattern must contain a single '%s'
-// which represents where in the url to insert the installation id.
-const defaultGitHubAccessTokenURLPattern = "https://api.github.com/app/installations/%s/access_tokens" //nolint
+const (
+	// URL used to retrieve access tokens. The pattern must contain a single '%s'
+	// which represents where in the url to insert the installation id.
+	defaultGitHubAccessTokenURLPattern = "https://api.github.com/app/installations/%s/access_tokens" //nolint
+
+	// URL used to retrieve GitHub App installation in an GitHub organization. The
+	// pattern must contain a single '%s' which represents where in the url to
+	// insert the GitHub organization name or id (not case sensitive).
+	defaultGitHubAppInstallationURLPattern = "https://api.github.com/orgs/%s/installation" //nolint
+)
 
 const cacheKey = "github-app-jwt"
 
@@ -47,7 +55,8 @@ type App struct {
 	InstallationID string
 	PrivateKey     *rsa.PrivateKey
 
-	accessTokenURLPattern string
+	accessTokenURLPattern        string
+	githubInstallationURLPattern string
 
 	jwtTokenExpiration time.Duration
 	jwtCacheDuration   time.Duration
@@ -69,6 +78,20 @@ type Option func(g *App) *App
 func WithAccessTokenURLPattern(pattern string) Option {
 	return func(g *App) *App {
 		g.accessTokenURLPattern = pattern
+		return g
+	}
+}
+
+// WithGithubInstallationURLPattern allows overriding of the GitHub api url that
+// is used when fetching the installation of the GitHub App on an given Github
+// organization. The default is the primary GitHub api url which should only be
+// overridden for private GitHub installations.
+//
+// The `pattern` parameter expects a single `%s` that represents the
+// GitHub organization name or id.
+func WithGithubInstallationURLPattern(pattern string) Option {
+	return func(g *App) *App {
+		g.githubInstallationURLPattern = pattern
 		return g
 	}
 }
@@ -135,7 +158,8 @@ func NewApp[T *rsa.PrivateKey | string | []byte](appID, installationID string, p
 		InstallationID: installationID,
 		PrivateKey:     privateKey,
 
-		accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
+		accessTokenURLPattern:        defaultGitHubAccessTokenURLPattern,
+		githubInstallationURLPattern: defaultGitHubAppInstallationURLPattern,
 
 		jwtTokenExpiration: 9 * time.Minute,
 		jwtCacheDuration:   0 * time.Nanosecond,
@@ -225,7 +249,7 @@ func (g *App) AccessToken(ctx context.Context, request *TokenRequest) (string, e
 		return "", fmt.Errorf("error marshalling request data: %w", err)
 	}
 
-	return g.githubAccessToken(ctx, requestJSON)
+	return g.githubAccessToken(ctx, requestJSON, "")
 }
 
 // SelectedReposTokenSource returns a [TokenSource] that mints a GitHub token
@@ -247,12 +271,19 @@ func (g *App) SelectedReposTokenSource(permissions map[string]string, repos ...s
 // this application installation with the requested permissions and all granted
 // repositories.
 func (g *App) AccessTokenAllRepos(ctx context.Context, request *TokenRequestAllRepos) (string, error) {
+	return g.AccessTokenAllReposForOrg(ctx, request, "")
+}
+
+// AccessTokenAllReposForOrg calls the GitHub API to generate a new access token
+// fo the application installation in the given org (name or id) with the
+// requested permissions and all granted repositories.
+func (g *App) AccessTokenAllReposForOrg(ctx context.Context, request *TokenRequestAllRepos, org string) (string, error) {
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return "", fmt.Errorf("error marshalling request data: %w", err)
 	}
 
-	return g.githubAccessToken(ctx, requestJSON)
+	return g.githubAccessToken(ctx, requestJSON, org)
 }
 
 // AllReposTokenSource returns a [TokenSource] that mints a GitHub token with
@@ -271,34 +302,36 @@ func (g *App) AllReposTokenSource(permissions map[string]string) TokenSource {
 
 // githubAccessToken calls the GitHub API to generate a new access token with
 // provided JSON payload bytes.
-func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string, error) {
+func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte, org string) (string, error) {
 	appJWT, err := g.AppToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate github app jws: %w", err)
 	}
-	requestURL := fmt.Sprintf(g.accessTokenURLPattern, g.InstallationID)
+	var requestURL string
+	if org == "" {
+		requestURL = fmt.Sprintf(g.accessTokenURLPattern, g.InstallationID)
+	} else {
+		// Get installation for org.
+		installationRequestURL := fmt.Sprintf(g.githubInstallationURLPattern, org)
+		res, err := g.githubResponse(ctx, installationRequestURL, http.MethodGet, nil, appJWT, http.StatusOK)
+		if err != nil {
+			return "", err
+		}
+
+		var resp struct {
+			ID int64 `json:"id"`
+		}
+		if err := json.Unmarshal(res, &resp); err != nil {
+			return "", fmt.Errorf("failed to parse installation response as json: %w: %s", err, string(res))
+		}
+
+		requestURL = fmt.Sprintf(g.accessTokenURLPattern, strconv.FormatInt(resp.ID, 10))
+	}
 
 	requestReader := bytes.NewReader(requestJSON)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, requestReader)
+	res, err := g.githubResponse(ctx, requestURL, http.MethodPost, requestReader, appJWT, http.StatusCreated)
 	if err != nil {
-		return "", fmt.Errorf("failed to create http request: %w", err)
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", appJWT))
-
-	res, err := g.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to make http request: %w", err)
-	}
-	defer res.Body.Close()
-
-	b, err := io.ReadAll(io.LimitReader(res.Body, 4_194_304)) // 4 MiB
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if got, want := res.StatusCode, http.StatusCreated; got != want {
-		return "", fmt.Errorf("invalid http response status (expected %d to be %d): %s", got, want, string(b))
+		return "", err
 	}
 
 	// GitHub will respond with a 201 when you send a request for an invalid
@@ -309,10 +342,36 @@ func (g *App) githubAccessToken(ctx context.Context, requestJSON []byte) (string
 	var resp struct {
 		Token string `json:"token"`
 	}
-	if err := json.Unmarshal(b, &resp); err != nil {
-		return "", fmt.Errorf("failed to parse response as json: %w: %s", err, string(b))
+	if err := json.Unmarshal(res, &resp); err != nil {
+		return "", fmt.Errorf("failed to parse token response as json: %w: %s", err, string(res))
 	}
 	return resp.Token, nil
+}
+
+// githubResponse returns the response for the given github request.
+func (g *App) githubResponse(ctx context.Context, reqURL, method string, requestBody io.Reader, appJWT []byte, wantStatus int) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create http request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", appJWT))
+
+	res, err := g.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make http request: %w", err)
+	}
+	defer res.Body.Close()
+
+	b, err := io.ReadAll(io.LimitReader(res.Body, 4_194_304)) // 4 MiB
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if got, want := res.StatusCode, wantStatus; got != want {
+		return nil, fmt.Errorf("invalid http response status (expected %d to be %d): %s", got, want, string(b))
+	}
+	return b, nil
 }
 
 // generateAppJWT builds a signed JWT that can be used to communicate with
