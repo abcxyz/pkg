@@ -43,7 +43,7 @@ const (
 	// URL used to retrieve GitHub App installation in an GitHub organization. The
 	// pattern must contain a single '%s' which represents where in the url to
 	// insert the GitHub organization name or id (not case sensitive).
-	defaultGitHubAppInstallationURLPattern = "https://api.github.com/orgs/%s/installation" //nolint
+	defaultGitHubAppInstallationURLPattern = "https://api.github.com/orgs/%s/installation"
 )
 
 const cacheKey = "github-app-jwt"
