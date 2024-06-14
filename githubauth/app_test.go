@@ -73,13 +73,10 @@ func TestNew(t *testing.T) {
 			installationID: "test-install-id",
 			privateKey:     rsaPrivateKey,
 			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
+				appID:      "test-app-id",
+				privateKey: rsaPrivateKey,
+				baseURL:    "https://api.github.com",
+				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
 		},
 		{
@@ -88,13 +85,10 @@ func TestNew(t *testing.T) {
 			installationID:   "test-install-id",
 			privateKeyString: rsaPrivateKeyString,
 			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
+				appID:      "test-app-id",
+				privateKey: rsaPrivateKey,
+				baseURL:    "https://api.github.com",
+				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
 		},
 		{
@@ -103,61 +97,23 @@ func TestNew(t *testing.T) {
 			installationID:  "test-install-id",
 			privateKeyBytes: rsaPrivateKeyBytes,
 			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
+				appID:      "test-app-id",
+				privateKey: rsaPrivateKey,
+				baseURL:    "https://api.github.com",
+				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
 		},
 		{
-			name:           "with_token_url_pattern",
+			name:           "with_base_url",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
 			privateKey:     rsaPrivateKey,
-			options:        []Option{WithAccessTokenURLPattern("test/%s")},
+			options:        []Option{WithBaseURL("https://foo.bar/")},
 			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: "test/%s",
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
-			},
-		},
-		{
-			name:           "with_token_expiration",
-			appID:          "test-app-id",
-			installationID: "test-install-id",
-			privateKey:     rsaPrivateKey,
-			options:        []Option{WithJWTTokenExpiration(3 * time.Minute)},
-			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    3 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
-			},
-		},
-		{
-			name:           "with_token_caching",
-			appID:          "test-app-id",
-			installationID: "test-install-id",
-			privateKey:     rsaPrivateKey,
-			options:        []Option{WithJWTTokenCaching(1 * time.Minute)},
-			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      8 * time.Minute,
-				httpClient:            &http.Client{Timeout: 10 * time.Second},
+				appID:      "test-app-id",
+				privateKey: rsaPrivateKey,
+				baseURL:    "https://foo.bar",
+				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
 		},
 		{
@@ -167,13 +123,10 @@ func TestNew(t *testing.T) {
 			privateKey:     rsaPrivateKey,
 			options:        []Option{WithHTTPClient(testClient)},
 			want: &App{
-				AppID:                 "test-app-id",
-				InstallationID:        "test-install-id",
-				PrivateKey:            rsaPrivateKey,
-				accessTokenURLPattern: defaultGitHubAccessTokenURLPattern,
-				jwtTokenExpiration:    9 * time.Minute,
-				jwtCacheDuration:      0 * time.Nanosecond,
-				httpClient:            testClient,
+				appID:      "test-app-id",
+				privateKey: rsaPrivateKey,
+				baseURL:    "https://api.github.com",
+				httpClient: testClient,
 			},
 		},
 	}
@@ -188,11 +141,11 @@ func TestNew(t *testing.T) {
 			var err error
 			switch {
 			case tc.privateKey != nil:
-				got, err = NewApp(tc.appID, tc.installationID, tc.privateKey, tc.options...)
+				got, err = NewApp(tc.appID, tc.privateKey, tc.options...)
 			case tc.privateKeyString != "":
-				got, err = NewApp(tc.appID, tc.installationID, tc.privateKeyString, tc.options...)
+				got, err = NewApp(tc.appID, tc.privateKeyString, tc.options...)
 			case tc.privateKeyBytes != nil:
-				got, err = NewApp(tc.appID, tc.installationID, tc.privateKeyBytes, tc.options...)
+				got, err = NewApp(tc.appID, tc.privateKeyBytes, tc.options...)
 			default:
 				t.Fatal("missing private key")
 			}
@@ -202,7 +155,7 @@ func TestNew(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmp.AllowUnexported(App{}),
-				cmpopts.IgnoreFields(App{}, "jwtCache"),
+				cmpopts.IgnoreFields(App{}),
 			}
 			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)
@@ -219,7 +172,7 @@ func TestApp_AppToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app, err := NewApp("my-app-id", "my-install-id", privateKey)
+	app, err := NewApp("my-app-id", privateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +182,7 @@ func TestApp_AppToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parts := strings.Split(string(token), ".")
+	parts := strings.Split(token, ".")
 	if exp := 3; len(parts) != exp {
 		t.Fatalf("expected %d items, got %q", exp, parts)
 	}
@@ -253,16 +206,6 @@ func TestApp_AppToken(t *testing.T) {
 	if err := rsa.VerifyPKCS1v15(&privateKey.PublicKey, crypto.SHA256, digest, signature); err != nil {
 		t.Fatal(err)
 	}
-
-	// Verify the result is cached
-	cachedToken, err := app.AppToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got, want := string(token), string(cachedToken); got != want {
-		t.Errorf("expected %q to be %q (should have been cached)", got, want)
-	}
 }
 
 func TestApp_OAuthAppTokenSource(t *testing.T) {
@@ -273,7 +216,7 @@ func TestApp_OAuthAppTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app, err := NewApp("my-app-id", "my-install-id", privateKey)
+	app, err := NewApp("my-app-id", privateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +231,7 @@ func TestApp_OAuthAppTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got, want := oauthToken.AccessToken, string(token); got != want {
+	if got, want := oauthToken.AccessToken, token; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -387,16 +330,25 @@ func TestApp_AccessToken(t *testing.T) {
 
 			ctx := context.Background()
 
-			srv := httptest.NewServer(tc.handler)
+			mux := http.NewServeMux()
+			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, `{"access_tokens_url": "http://%s/app/installations/123/access_tokens"}`, r.Host)
+			}))
+			mux.Handle("/app/installations/123/access_tokens", tc.handler)
+			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", "my-installation-id", privateKey,
-				WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+			app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			token, err := app.AccessToken(ctx, tc.req)
+			installation, err := app.InstallationForID(ctx, "123")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			token, err := installation.AccessToken(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
 				t.Errorf(diff)
 			}
@@ -418,19 +370,28 @@ func TestApp_SelectedReposTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"access_tokens_url": "http://%s/app/installations/123/access_tokens"}`, r.Host)
+	}))
+	mux.Handle("/app/installations/123/access_tokens", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 		fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
 	}))
+	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", "my-installation-id", privateKey,
-		WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+	app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	src := app.SelectedReposTokenSource(map[string]string{"issues": "write"}, "my-repo")
+	installation, err := app.InstallationForID(ctx, "123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src := installation.SelectedReposTokenSource(map[string]string{"issues": "write"}, "my-repo")
 	githubToken, err := src.GitHubToken(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -499,16 +460,25 @@ func TestApp_AccessTokenAllRepos(t *testing.T) {
 
 			ctx := context.Background()
 
-			srv := httptest.NewServer(tc.handler)
+			mux := http.NewServeMux()
+			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, `{"access_tokens_url": "http://%s/app/installations/123/access_tokens"}`, r.Host)
+			}))
+			mux.Handle("/app/installations/123/access_tokens", tc.handler)
+			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", "my-installation-id", privateKey,
-				WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+			app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			token, err := app.AccessTokenAllRepos(ctx, tc.req)
+			installation, err := app.InstallationForID(ctx, "123")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			token, err := installation.AccessTokenAllRepos(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
 				t.Errorf(diff)
 			}
@@ -530,19 +500,28 @@ func TestApp_AllReposTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"access_tokens_url": "http://%s/app/installations/123/access_tokens"}`, r.Host)
+	}))
+	mux.Handle("/app/installations/123/access_tokens", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(201)
 		fmt.Fprint(w, `{"token": "ghs_expectedtoken"}`)
 	}))
+	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", "my-installation-id", privateKey,
-		WithAccessTokenURLPattern(srv.URL+"/app/installations/%s/access_tokens"))
+	app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	src := app.AllReposTokenSource(map[string]string{"issues": "write"})
+	installation, err := app.InstallationForID(ctx, "123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src := installation.AllReposTokenSource(map[string]string{"issues": "write"})
 	githubToken, err := src.GitHubToken(ctx)
 	if err != nil {
 		t.Fatal(err)
