@@ -171,9 +171,9 @@ func (g *App) AppToken() (string, error) {
 
 // OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
 // by creating a JWT token.
-func (i *App) OAuthAppTokenSource() oauth2.TokenSource {
+func (a *App) OAuthAppTokenSource() oauth2.TokenSource {
 	return oauth2TokenSource(func() (*oauth2.Token, error) {
-		jwt, err := i.AppToken()
+		jwt, err := a.AppToken()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate app token: %w", err)
 		}
