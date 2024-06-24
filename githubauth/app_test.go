@@ -155,7 +155,9 @@ func TestNew(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmp.AllowUnexported(App{}),
-				cmpopts.IgnoreFields(App{}),
+				cmpopts.IgnoreFields(App{},
+					"installationCache",
+					"installationCacheLock"),
 			}
 			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)

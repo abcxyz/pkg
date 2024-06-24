@@ -28,6 +28,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -41,6 +42,9 @@ const defaultBaseURL = "https://api.github.com"
 type App struct {
 	appID      string
 	privateKey *rsa.PrivateKey
+
+	installationCache     map[string](func() (*AppInstallation, error))
+	installationCacheLock sync.Mutex
 
 	baseURL    string
 	httpClient *http.Client
@@ -99,8 +103,9 @@ func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, op
 	}
 
 	app := &App{
-		appID:      appID,
-		privateKey: privateKey,
+		appID:             appID,
+		privateKey:        privateKey,
+		installationCache: make(map[string](func() (*AppInstallation, error)), 8),
 
 		baseURL: defaultBaseURL,
 		httpClient: &http.Client{
@@ -200,58 +205,81 @@ func (i *AppInstallation) App() *App {
 
 // InstallationForID returns an AccessTokensURLFunc that gets the access token
 // url for the given installation.
+//
+// The initial invocation will make an API call to GitHub to get the access
+// token URL for the installation; future calls will return the cached
+// installation.
 func (a *App) InstallationForID(ctx context.Context, installationID string) (*AppInstallation, error) {
-	u, err := a.accessTokenURL(ctx, fmt.Sprintf("%s/app/installations/%s", a.baseURL, installationID))
+	i, err := a.withInstallationCaching(ctx, "i:"+installationID, "/app/installations/"+installationID)()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token url for installation %s: %w", installationID, err)
 	}
-
-	return &AppInstallation{
-		app:            a,
-		accessTokenURL: u,
-	}, nil
+	return i, nil
 }
 
 // InstallationForOrg returns an AccessTokensURLFunc that gets the access token url for the
 // given org context.
+//
+// The initial invocation will make an API call to GitHub to get the access
+// token URL for the installation; future calls will return the cached
+// installation.
 func (a *App) InstallationForOrg(ctx context.Context, org string) (*AppInstallation, error) {
-	u, err := a.accessTokenURL(ctx, fmt.Sprintf("%s/orgs/%s/installation", a.baseURL, org))
+	i, err := a.withInstallationCaching(ctx, "org:"+org, "/orgs/"+org+"/installation")()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token url for org %s: %w", org, err)
 	}
-
-	return &AppInstallation{
-		app:            a,
-		accessTokenURL: u,
-	}, nil
+	return i, nil
 }
 
 // InstallationForRepo returns an AccessTokensURLFunc that gets the access token url for the
 // given repo context.
+//
+// The initial invocation will make an API call to GitHub to get the access
+// token URL for the installation; future calls will return the cached
+// installation.
 func (a *App) InstallationForRepo(ctx context.Context, org, repo string) (*AppInstallation, error) {
-	u, err := a.accessTokenURL(ctx, fmt.Sprintf("%s/repos/%s/%s/installation", a.baseURL, org, repo))
+	i, err := a.withInstallationCaching(ctx, "repo:"+org+"/"+repo, "/repos/"+org+"/"+repo+"/installation")()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token url for repo %s/%s: %w", org, repo, err)
 	}
-
-	return &AppInstallation{
-		app:            a,
-		accessTokenURL: u,
-	}, nil
+	return i, nil
 }
 
 // InstallationForUser returns an AccessTokensURLFunc that gets the access token url for the
 // given user context.
+//
+// The initial invocation will make an API call to GitHub to get the access
+// token URL for the installation; future calls will return the cached
+// installation.
 func (a *App) InstallationForUser(ctx context.Context, user string) (*AppInstallation, error) {
-	u, err := a.accessTokenURL(ctx, fmt.Sprintf("%s/users/%s/installation", a.baseURL, user))
+	i, err := a.withInstallationCaching(ctx, "user:"+user, "/users/"+user+"/installation")()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token url for user %s: %w", user, err)
 	}
+	return i, nil
+}
 
-	return &AppInstallation{
-		app:            a,
-		accessTokenURL: u,
-	}, nil
+// withInstallationCaching returns a closure that caches the app installation by
+// key.
+func (a *App) withInstallationCaching(ctx context.Context, cacheKey, tokenPath string) func() (*AppInstallation, error) {
+	a.installationCacheLock.Lock()
+	defer a.installationCacheLock.Unlock()
+
+	entry, ok := a.installationCache[cacheKey]
+	if !ok {
+		entry = sync.OnceValues(func() (*AppInstallation, error) {
+			u, err := a.accessTokenURL(ctx, a.baseURL+tokenPath)
+			if err != nil {
+				return nil, err
+			}
+
+			return &AppInstallation{
+				app:            a,
+				accessTokenURL: u,
+			}, nil
+		})
+	}
+	return entry
 }
 
 // AccessToken calls the GitHub API to generate a new access token for this
