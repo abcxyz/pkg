@@ -36,6 +36,7 @@ runs:
     - name: 'Get Approved Configuration File'
       uses: 'actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332' # ratchet:actions/checkout@v4
       with:
+        clean: 'false'
         ref: '${{ github.event.repository.default_branch }}'
         sparse-checkout: |
           ${{ inputs.filepath }}
