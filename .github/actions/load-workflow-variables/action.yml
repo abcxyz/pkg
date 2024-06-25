@@ -17,6 +17,10 @@ description: |-
   Use this action to load/override variables into GITHUB_ENV.
 
 inputs:
+  ref:
+    description: 'The branch or ref to checkout the configuration from.'
+    required: false
+    default: ''
   working_directory:
     description: 'The working directory to look for the env file, relative to the GitHub workspace.'
     required: false
@@ -33,6 +37,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: 'Get Approved Configuration File'
+      uses: 'actions/checkout@v4' # ratchet:actions/checkout@v4
+      with:
+        ref: '${{ inputs.ref || github.event.repository.default_branch }}'
+        sparse-checkout: |
+          ${{ inputs.filepath }}
+        sparse-checkout-cone-mode: 'false'
     - name: 'Load Workflow Variables'
       shell: 'bash'
       env:
