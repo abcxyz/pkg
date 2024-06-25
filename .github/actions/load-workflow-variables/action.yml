@@ -33,11 +33,32 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: 'Get Approved Configuration File'
+      id: 'get_url'
+      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
+      with:
+        script: |-
+          const resp = await github.rest.repos.getContent({
+            owner: "${{ github.event.repository.owner.login }}",
+            repo: "${{ github.event.repository.name }}",
+            path: "${{ inputs.filepath }}",
+            ref: "${{ github.event.repository.default_branch }}"
+          });
+          core.setOutput('download_url', resp.data.download_url);
+    - name: 'Download Configuration File'
+      shell: 'bash'
+      run: |-
+        FILENAME="${{ github.workspace }}/config.yml"
+        curl "${{ steps.get_url.outputs.download_url }}" \
+          --location \
+          --header "Authorization: Token ${{ github.token }}" \
+          --output "${FILENAME}"
+        echo "::notice::Wrote configuration file to ${FILENAME}"
     - name: 'Load Workflow Variables'
       shell: 'bash'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        FILEPATH: '${{ inputs.filepath }}'
+        FILEPATH: '${{ github.workspace }}/config.yml'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
         FILEPATH=$(realpath "${FILEPATH}")
