@@ -34,33 +34,23 @@ runs:
   using: 'composite'
   steps:
     - name: 'Get Approved Configuration File'
-      id: 'get_url'
-      uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
+      uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
       with:
-        script: |-
-          const resp = await github.rest.repos.getContent({
-            owner: "${{ github.event.repository.owner.login }}",
-            repo: "${{ github.event.repository.name }}",
-            path: "${{ inputs.filepath }}",
-            ref: "${{ github.event.repository.default_branch }}"
-          });
-          core.setOutput('download_url', resp.data.download_url);
-    - name: 'Download Configuration File'
-      shell: 'bash'
-      run: |-
-        FILENAME="${{ github.workspace }}/config.yml"
-        curl "${{ steps.get_url.outputs.download_url }}" \
-          --location \
-          --header "Authorization: Token ${{ github.token }}" \
-          --output "${FILENAME}"
-        echo "::notice::Wrote configuration file to ${FILENAME}"
+        ref: '${{ github.event.repository.default_branch }}'
+        path: '${{ github.sha }}'
+        sparse-checkout: |
+         '${{ inputs.filepath }}'
+        sparse-checkout-cone-mode: 'false'
+
     - name: 'Load Workflow Variables'
       shell: 'bash'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        FILEPATH: '${{ github.workspace }}/config.yml'
+        FILEPATH: '${{ github.sha }}/${{ inputs.filepath }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
+        tree
+
         FILEPATH=$(realpath "${FILEPATH}")
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"

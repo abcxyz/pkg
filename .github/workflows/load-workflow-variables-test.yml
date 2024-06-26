@@ -23,8 +23,14 @@ jobs:
   success:
     runs-on: 'ubuntu-latest'
     steps:
-      - name: 'Checkout'
-        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+      - name: 'Get Approved Configuration File'
+        uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+        with:
+          ref: '${{ github.event.repository.default_branch }}'
+          path: '${{ github.sha }}'
+          sparse-checkout: |
+          '${{ inputs.filepath }}'
+          sparse-checkout-cone-mode: 'false'
 
       - name: 'Load Env Vars'
         uses: './.github/actions/load-workflow-variables' # ratchet:exclude
