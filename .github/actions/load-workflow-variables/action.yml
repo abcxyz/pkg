@@ -38,8 +38,7 @@ runs:
       with:
         ref: '${{ github.event.repository.default_branch }}'
         path: '${{ github.sha }}'
-        sparse-checkout: |
-         '${{ inputs.filepath }}'
+        sparse-checkout: '${{ inputs.filepath }}'
         sparse-checkout-cone-mode: 'false'
 
     - name: 'Load Workflow Variables'
@@ -49,8 +48,6 @@ runs:
         FILEPATH: '${{ github.sha }}/${{ inputs.filepath }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
-        tree
-
         FILEPATH=$(realpath "${FILEPATH}")
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
