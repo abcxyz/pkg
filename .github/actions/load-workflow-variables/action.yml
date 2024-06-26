@@ -39,7 +39,7 @@ runs:
         ref: '${{ github.event.repository.default_branch }}'
         path: '${{ github.sha }}'
         sparse-checkout: |
-         '${{ inputs.filepath }}'
+          ${{ inputs.filepath }}
         sparse-checkout-cone-mode: 'false'
 
     - name: 'Load Workflow Variables'
