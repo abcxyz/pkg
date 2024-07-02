@@ -44,8 +44,14 @@ func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 	}
 	smallestMap := maps[smallestIdx]
 	final := make(map[K]V, len(smallestMap))
-	for k, v := range smallestMap {
-		final[k] = v
+	for k := range smallestMap {
+		for _, m := range maps {
+			if _, ok := final[k]; !ok {
+				if fv, ok := m[k]; ok {
+					final[k] = fv
+				}
+			}
+		}
 	}
 
 	// Compute the intersection.

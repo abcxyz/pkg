@@ -76,8 +76,8 @@ func TestIntersectMapKeys(t *testing.T) {
 			maps: []map[string]string{
 				{"foo": "bar", "zip": "zap", "fruit": "banana"},
 				{"foo": "bar2", "zip": "zap", "fruit": "banana"},
-				{"foo": "bar", "zip": "zap"},
-				{"foo": "bar"},
+				{"foo": "bar3", "zip": "zap"},
+				{"foo": "bar4"},
 			},
 			exp: map[string]string{
 				"foo": "bar",
