@@ -33,11 +33,20 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: 'Get Approved Configuration File'
+      uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+      with:
+        ref: '${{ github.event.repository.default_branch }}'
+        path: 'load-workflow-variables/${{ github.sha }}'
+        sparse-checkout: |
+          ${{ inputs.filepath }}
+        sparse-checkout-cone-mode: 'false'
+
     - name: 'Load Workflow Variables'
       shell: 'bash'
       env:
         WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        FILEPATH: '${{ inputs.filepath }}'
+        FILEPATH: 'load-workflow-variables/${{ github.sha }}/${{ inputs.filepath }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
         FILEPATH=$(realpath "${FILEPATH}")
