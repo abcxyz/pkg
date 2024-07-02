@@ -14,6 +14,10 @@
 
 package sets
 
+import (
+	gomaps "maps"
+)
+
 // IntersectMapKeys finds the intersection of all m keys, where intersection is
 // defined as keys that exist in all m. In the case where duplicate keys exist
 // across maps, the value corresponding to the key in the first map is used. It
@@ -27,51 +31,20 @@ func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
 		return make(map[K]V)
 	}
 
-	// Pre-compute the maximum possible allocation to minimize allocs. Here we
-	// find the map with the least number of elements and allocate a map of that
-	// size, since we know that is the maximum possible intersection size.
-	var smallestIdx int
-	for i, m := range maps {
-		// Short-circuit: if any of the maps are the empty set, we know the
-		// intersection is the empty set.
-		if len(m) == 0 {
-			return make(map[K]V)
-		}
+	// The only way we can do better than nested for loops in big-O runtime and
+	// space usage would be to get fancy and do a hash join or index join. In
+	// practice that would probably be slower for modestly-sized inputs.
 
-		if len(m) < len(maps[smallestIdx]) {
-			smallestIdx = i
-		}
-	}
-	smallestMap := maps[smallestIdx]
-	final := make(map[K]V, len(smallestMap))
-	for k, v := range smallestMap {
-		final[k] = v
-	}
-
-	// Compute the intersection.
-	for i, m := range maps {
-		// Short-circuit: we've already got the smallest possible intersection
-		// (empty set), so there's no point in continuing.
-		if len(final) == 0 {
-			return make(map[K]V)
-		}
-
-		// This is us, ignore
-		if i == smallestIdx {
-			continue
-		}
-
-		// For each key in our smallest set, check if the key exists in the current
-		// map. If it does not, remove it from the map since it's not part of the
-		// intersection.
-		for k := range final {
+	out := gomaps.Clone(maps[0])
+	for _, m := range maps[1:] {
+		for k := range out {
 			if _, ok := m[k]; !ok {
-				delete(final, k)
+				delete(out, k)
 			}
 		}
 	}
 
-	return final
+	return out
 }
 
 // UnionMapKeys finds the union of all m, where union is defined as the
