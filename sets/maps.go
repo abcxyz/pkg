@@ -14,34 +14,37 @@
 
 package sets
 
-import (
-	gomaps "maps"
-)
-
 // IntersectMapKeys finds the intersection of all m keys, where intersection is
-// defined as keys that exist in all m. In the case where duplicate keys exist
-// across maps, the value corresponding to the key in the first map is used. It
+// defined as keys that exist in all m. The map values come from maps[0]. It
 // always returns an allocated map, even if the intersection is the empty set.
 //
 // It does not modify any of the given inputs, but also does not deep copy any
 // values. That means the returned map may have keys and values that point to
 // the same objects as in the original map.
 func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
-	if len(maps) == 0 {
-		return make(map[K]V)
+	var smallest map[K]V
+	for _, m := range maps {
+		if smallest == nil || len(m) < len(smallest) {
+			smallest = m
+		}
 	}
 
-	// The only way we can do better than nested for loops in big-O runtime and
-	// space usage would be to get fancy and do a hash join or index join. In
-	// practice that would probably be slower for modestly-sized inputs.
-
-	out := gomaps.Clone(maps[0])
-	for _, m := range maps[1:] {
-		for k := range out {
+	out := make(map[K]V)
+	for k := range smallest {
+		isInIntersection := true
+		for _, m := range maps {
 			if _, ok := m[k]; !ok {
-				delete(out, k)
+				isInIntersection = false
+				break
 			}
 		}
+		if !isInIntersection {
+			continue
+		}
+
+		// Since the output keys must exist in every input map, and the earliest
+		// one takes precedence, then the earliest map is always the zeroth map.
+		out[k] = maps[0][k]
 	}
 
 	return out
