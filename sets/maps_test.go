@@ -72,12 +72,12 @@ func TestIntersectMapKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "first_overwrites",
+			name: "first_overwrites_decreasing_size",
 			maps: []map[string]string{
 				{"foo": "bar", "zip": "zap", "fruit": "banana"},
 				{"foo": "bar2", "zip": "zap", "fruit": "banana"},
-				{"foo": "bar", "zip": "zap"},
-				{"foo": "bar"},
+				{"foo": "bar3", "zip": "zap"},
+				{"foo": "bar4"},
 			},
 			exp: map[string]string{
 				"foo": "bar",
@@ -166,7 +166,7 @@ func TestUnionMapKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "first_overwrites",
+			name: "first_overwrites_same_size",
 			maps: []map[string]string{
 				{"foo": "bar"},
 				{"zip": "zap"},

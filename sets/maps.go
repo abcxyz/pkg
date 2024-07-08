@@ -15,63 +15,39 @@
 package sets
 
 // IntersectMapKeys finds the intersection of all m keys, where intersection is
-// defined as keys that exist in all m. In the case where duplicate keys exist
-// across maps, the value corresponding to the key in the first map is used. It
+// defined as keys that exist in all m. The map values come from maps[0]. It
 // always returns an allocated map, even if the intersection is the empty set.
 //
 // It does not modify any of the given inputs, but also does not deep copy any
 // values. That means the returned map may have keys and values that point to
 // the same objects as in the original map.
 func IntersectMapKeys[K comparable, V any](maps ...map[K]V) map[K]V {
-	if len(maps) == 0 {
-		return make(map[K]V)
-	}
-
-	// Pre-compute the maximum possible allocation to minimize allocs. Here we
-	// find the map with the least number of elements and allocate a map of that
-	// size, since we know that is the maximum possible intersection size.
-	var smallestIdx int
-	for i, m := range maps {
-		// Short-circuit: if any of the maps are the empty set, we know the
-		// intersection is the empty set.
-		if len(m) == 0 {
-			return make(map[K]V)
-		}
-
-		if len(m) < len(maps[smallestIdx]) {
-			smallestIdx = i
+	var smallest map[K]V
+	for _, m := range maps {
+		if smallest == nil || len(m) < len(smallest) {
+			smallest = m
 		}
 	}
-	smallestMap := maps[smallestIdx]
-	final := make(map[K]V, len(smallestMap))
-	for k, v := range smallestMap {
-		final[k] = v
-	}
 
-	// Compute the intersection.
-	for i, m := range maps {
-		// Short-circuit: we've already got the smallest possible intersection
-		// (empty set), so there's no point in continuing.
-		if len(final) == 0 {
-			return make(map[K]V)
+	out := make(map[K]V)
+	for k := range smallest {
+		isInIntersection := true
+		for _, m := range maps {
+			if _, ok := m[k]; !ok {
+				isInIntersection = false
+				break
+			}
 		}
-
-		// This is us, ignore
-		if i == smallestIdx {
+		if !isInIntersection {
 			continue
 		}
 
-		// For each key in our smallest set, check if the key exists in the current
-		// map. If it does not, remove it from the map since it's not part of the
-		// intersection.
-		for k := range final {
-			if _, ok := m[k]; !ok {
-				delete(final, k)
-			}
-		}
+		// Since the output keys must exist in every input map, and the earliest
+		// one takes precedence, then the earliest map is always the zeroth map.
+		out[k] = maps[0][k]
 	}
 
-	return final
+	return out
 }
 
 // UnionMapKeys finds the union of all m, where union is defined as the
