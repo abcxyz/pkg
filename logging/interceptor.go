@@ -63,7 +63,7 @@ func GRPCStreamingInterceptor(inLogger *slog.Logger, projectID string) grpc.Stre
 	}
 }
 
-// GRPCUnaryInterceptor returns a client-side gRPC unary interceptor that
+// GRPCUnaryInterceptor returns a server-side gRPC unary interceptor that
 // populates a logger with trace data in the context.
 func GRPCUnaryInterceptor(inLogger *slog.Logger, projectID string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
