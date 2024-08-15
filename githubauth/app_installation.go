@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"golang.org/x/oauth2"
 )
 
 // AppInstallation represents a specific installation of the app (on a repo,
@@ -67,6 +70,26 @@ func (i *AppInstallation) SelectedReposTokenSource(permissions map[string]string
 	})
 }
 
+// SelectedReposOAuth2TokenSource creates an [oauth2.TokenSource] which can be
+// used in combination with [oauth2.NewClient] to create an authenticated HTTP
+// client capable of being passed to the go-github library.
+func (i *AppInstallation) SelectedReposOAuth2TokenSource(ctx context.Context, permissions map[string]string, repos ...string) oauth2.TokenSource {
+	return oauth2.ReuseTokenSource(nil, oauth2TokenSource(func() (*oauth2.Token, error) {
+		token, err := i.AccessToken(ctx, &TokenRequest{
+			Permissions:  permissions,
+			Repositories: repos,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get github access token for repos %q: %w", repos, err)
+		}
+
+		return &oauth2.Token{
+			AccessToken: token,
+			Expiry:      time.Now().Add(55 * time.Minute), // GitHub's expiration is 1 hour
+		}, nil
+	}))
+}
+
 // AccessTokenAllRepos calls the GitHub API to generate a new access token for
 // this application installation with the requested permissions and all granted
 // repositories.
@@ -91,6 +114,25 @@ func (i *AppInstallation) AllReposTokenSource(permissions map[string]string) Tok
 		}
 		return token, nil
 	})
+}
+
+// AllReposOAuth2TokenSource creates an [oauth2.TokenSource] which can be used
+// in combination with [oauth2.NewClient] to create an authenticated HTTP client
+// capable of being passed to the go-github library.
+func (i *AppInstallation) AllReposOAuth2TokenSource(ctx context.Context, permissions map[string]string) oauth2.TokenSource {
+	return oauth2.ReuseTokenSource(nil, oauth2TokenSource(func() (*oauth2.Token, error) {
+		token, err := i.AccessTokenAllRepos(ctx, &TokenRequestAllRepos{
+			Permissions: permissions,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get github access token for all repos: %w", err)
+		}
+
+		return &oauth2.Token{
+			AccessToken: token,
+			Expiry:      time.Now().Add(55 * time.Minute), // GitHub's expiration is 1 hour
+		}, nil
+	}))
 }
 
 // githubAccessToken calls the GitHub API to generate a new access token with
