@@ -64,7 +64,7 @@ runs:
         # use jq to do exact matching for directory values.
 
         # Convert YAML to JSON
-        JSON=$(yq -o=json "${FILEPATH}")
+        JSON=$(yq -o=json < "${FILEPATH}")
 
         # Look for exact match on working directory
         FOUND=$(echo "${JSON}" | jq -r ".[] | select(.dirs[] | select(. == \"$WORKING_DIRECTORY\"))")
