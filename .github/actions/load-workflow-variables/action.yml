@@ -33,6 +33,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # Removes "./" from the input filepath, if exists. This avoids an issue with
+    # the sparse-checkout option in the Checkout step, where a relative path,
+    # e.g. "./env.yml", will not match with the expected "env.yml" file.
     - name: 'Sanitize Input Filepath'
       id: 'sanitize_filepath'
       shell: 'bash'
