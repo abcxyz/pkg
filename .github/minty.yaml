@@ -1,0 +1,44 @@
+version: 'minty.abcxyz.dev/v2'
+
+rule:
+  if: |-
+    assertion.iss == 'https://token.actions.githubusercontent.com' &&
+    assertion.repository_owner_id == '93787867' &&
+    assertion.repository_id == '493022865' &&
+    assertion.workflow_ref == assertion.job_workflow_ref &&
+    assertion.ref == 'refs/heads/main'
+
+scope:
+  draft-release:
+    rule:
+      if: |-
+        assertion.workflow_ref.startsWith("abcxyz/pkg/.github/workflows/draft-release.yml") &&
+        assertion.event_name == 'workflow_dispatch'
+    repositories:
+      - 'pkg'
+    permissions:
+      contents: 'write'
+      pull_request: 'write'
+
+  release:
+    rule:
+      if: |-
+        assertion.job_workflow_ref == 'abcxyz/pkg/.github/workflows/release.yml' &&
+        assertion.event_name == 'push'
+    repositories:
+      - 'pkg'
+    permissions:
+      contents: 'write'
+
+  cleanup:
+    rule:
+      if: |-
+        assertion.job_workflow_ref == 'abcxyz/pkg/.github/workflows/cleanup.yml' &&
+        (assertion.event_name == 'workflow_dispatch' || assertion.event_name == 'schedule')
+    repositories:
+      - '*'
+    permissions:
+      contents: 'read'
+      actions: 'write'
+      workflows: 'write'
+
