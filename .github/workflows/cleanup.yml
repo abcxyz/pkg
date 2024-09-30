@@ -37,6 +37,7 @@ jobs:
           service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
           requested_permissions: |-
             {
+              "scope": "pkg-cleanup",
               "repositories": [],
               "permissions": {
                 "actions": "write",
