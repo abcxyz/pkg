@@ -30,15 +30,3 @@ scope:
     permissions:
       contents: 'write'
 
-  cleanup:
-    rule:
-      if: |-
-        assertion.job_workflow_ref == 'abcxyz/pkg/.github/workflows/cleanup.yml' &&
-        (assertion.event_name == 'workflow_dispatch' || assertion.event_name == 'schedule')
-    repositories:
-      - '*'
-    permissions:
-      contents: 'read'
-      actions: 'write'
-      workflows: 'write'
-
