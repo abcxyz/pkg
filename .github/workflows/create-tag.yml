@@ -153,6 +153,7 @@ jobs:
           service_url: '${{ inputs.token_minter_service_url }}'
           requested_permissions: |-
             {
+              "scope": "create-tag",
               "repositories": ["${{ github.event.repository.name }}"],
               "permissions": {
                 "contents": "write"
