@@ -16,9 +16,7 @@ package githubauth
 
 import (
 	"context"
-	"crypto"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -39,8 +37,8 @@ const defaultBaseURL = "https://api.github.com"
 // App is an object that can be used to generate application level JWTs or to
 // request an OIDC token on behalf of an installation.
 type App struct {
-	appID      string
-	privateKey *rsa.PrivateKey
+	appID  string
+	signer Signer
 
 	installationCache     map[string](func() (*AppInstallation, error))
 	installationCacheLock sync.Mutex
@@ -76,34 +74,46 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+type Key interface {
+	*rsa.PrivateKey | string | []byte | CloudKmsKey
+}
+
 // NewApp creates a new GitHub App from the given inputs.
 //
-// The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
-// []byte) of the private key material.
-func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, opts ...Option) (*App, error) {
-	var privateKey *rsa.PrivateKey
-	var err error
+// The key can be an [*rsa.PrivateKey], or a PEM-encoded string (or
+// []byte) of the private key material, used to sign GitHub requests;
+// or a CloudKmsKey used to get Cloud KMS to sign GitHub requests.
+func NewApp[T Key](appID string, keyT T, opts ...Option) (*App, error) {
+	var signer Signer
 
-	switch t := any(privateKeyT).(type) {
+	switch t := any(keyT).(type) {
 	case *rsa.PrivateKey:
-		privateKey = t
+		signer = NewRSASigner(t)
 	case string:
-		privateKey, err = parseRSAPrivateKeyPEM([]byte(t))
+		privateKey, err := parseRSAPrivateKeyPEM([]byte(t))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded string: %w", err)
 		}
+		signer = NewRSASigner(privateKey)
 	case []byte:
-		privateKey, err = parseRSAPrivateKeyPEM(t)
+		privateKey, err := parseRSAPrivateKeyPEM(t)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded []byte: %w", err)
 		}
+		signer = NewRSASigner(privateKey)
+	case CloudKmsKey:
+		s, err := NewCloudKmsSigner(context.Background(), t)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cloud KMS signer: %w", err)
+		}
+		signer = s
 	default:
 		panic("impossible")
 	}
 
 	app := &App{
 		appID:             appID,
-		privateKey:        privateKey,
+		signer:            signer,
 		installationCache: make(map[string](func() (*AppInstallation, error)), 8),
 
 		baseURL: defaultBaseURL,
@@ -161,11 +171,7 @@ func (g *App) AppToken() (string, error) {
 
 	unsigned := headers + "." + b64Encode(token)
 
-	h := sha256.New()
-	h.Write([]byte(unsigned))
-	digest := h.Sum(nil)
-
-	signature, err := rsa.SignPKCS1v15(nil, g.privateKey, crypto.SHA256, digest)
+	signature, err := g.signer.Sign(unsigned)
 	if err != nil {
 		return "", fmt.Errorf("error signing JWT: %w", err)
 	}
