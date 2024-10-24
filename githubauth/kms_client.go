@@ -31,7 +31,11 @@ type CloudKmsClient struct {
 }
 
 func (c *CloudKmsClient) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest) (*kmspb.AsymmetricSignResponse, error) {
-	return c.client.AsymmetricSign(ctx, req)
+	resp, err := c.client.AsymmetricSign(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("error response from AsymmetricSign: %w", err)
+	}
+	return resp, nil
 }
 
 func NewCloudKmsClient(ctx context.Context) (KeyManagementClient, error) {

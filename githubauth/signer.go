@@ -91,17 +91,17 @@ func (s *kmsSigner) Sign(data string) ([]byte, error) {
 	// Optional, but recommended: perform integrity verification on result.
 	// For more details on ensuring E2E in-transit integrity to and from Cloud KMS visit:
 	// https://cloud.google.com/kms/docs/data-integrity-guidelines
-	if result.VerifiedDigestCrc32C == false {
+	if !result.GetVerifiedDigestCrc32C() {
 		return nil, fmt.Errorf("AsymmetricSign: request corrupted in-transit")
 	}
-	if result.Name != req.Name {
+	if result.GetName() != req.GetName() {
 		return nil, fmt.Errorf("AsymmetricSign: request corrupted in-transit")
 	}
-	if int64(crc32c(result.Signature)) != result.SignatureCrc32C.Value {
+	if int64(crc32c(result.GetSignature())) != result.GetSignatureCrc32C().GetValue() {
 		return nil, fmt.Errorf("AsymmetricSign: response corrupted in-transit")
 	}
 
-	return result.Signature, nil
+	return result.GetSignature(), nil
 }
 
 func NewCloudKmsSigner(ctx context.Context, key CloudKmsKey) (*kmsSigner, error) {

@@ -400,7 +400,7 @@ func (c *mockKmsClient) AsymmetricSign(ctx context.Context, req *kmspb.Asymmetri
 	if c.signErr != nil {
 		return nil, c.signErr
 	}
-	signature, err := rsa.SignPKCS1v15(nil, c.secretKey, crypto.SHA256, req.Digest.GetSha256())
+	signature, err := rsa.SignPKCS1v15(nil, c.secretKey, crypto.SHA256, req.GetDigest().GetSha256())
 	if err != nil {
 		return nil, fmt.Errorf("error signing JWT: %w", err)
 	}
