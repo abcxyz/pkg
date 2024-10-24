@@ -15,6 +15,7 @@
 package githubauth
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -22,13 +23,18 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
+	"fmt"
+	"hash/crc32"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/abcxyz/pkg/testutil"
 )
@@ -50,6 +56,14 @@ func TestNew(t *testing.T) {
 		Timeout: 5 * time.Second,
 	}
 
+	cloudKmsKey := CloudKmsKey{
+		Name: "key-name",
+	}
+	testKmsSigner, err := NewCloudKmsSigner(context.Background(), cloudKmsKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		name           string
 		appID          string
@@ -58,6 +72,7 @@ func TestNew(t *testing.T) {
 		privateKey       *rsa.PrivateKey
 		privateKeyString string
 		privateKeyBytes  []byte
+		cloudKmsKey      *CloudKmsKey
 
 		options []Option
 
@@ -71,7 +86,7 @@ func TestNew(t *testing.T) {
 			privateKey:     rsaPrivateKey,
 			want: &App{
 				appID:      "test-app-id",
-				privateKey: rsaPrivateKey,
+				signer:     NewRSASigner(rsaPrivateKey),
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -83,7 +98,7 @@ func TestNew(t *testing.T) {
 			privateKeyString: rsaPrivateKeyString,
 			want: &App{
 				appID:      "test-app-id",
-				privateKey: rsaPrivateKey,
+				signer:     NewRSASigner(rsaPrivateKey),
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -95,7 +110,19 @@ func TestNew(t *testing.T) {
 			privateKeyBytes: rsaPrivateKeyBytes,
 			want: &App{
 				appID:      "test-app-id",
-				privateKey: rsaPrivateKey,
+				signer:     NewRSASigner(rsaPrivateKey),
+				baseURL:    "https://api.github.com",
+				httpClient: &http.Client{Timeout: 10 * time.Second},
+			},
+		},
+		{
+			name:           "cloud_kms_key",
+			appID:          "test-app-id",
+			installationID: "test-install-id",
+			cloudKmsKey:    &cloudKmsKey,
+			want: &App{
+				appID:      "test-app-id",
+				signer:     testKmsSigner,
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -108,7 +135,7 @@ func TestNew(t *testing.T) {
 			options:        []Option{WithBaseURL("https://foo.bar/")},
 			want: &App{
 				appID:      "test-app-id",
-				privateKey: rsaPrivateKey,
+				signer:     NewRSASigner(rsaPrivateKey),
 				baseURL:    "https://foo.bar",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -121,7 +148,7 @@ func TestNew(t *testing.T) {
 			options:        []Option{WithHTTPClient(testClient)},
 			want: &App{
 				appID:      "test-app-id",
-				privateKey: rsaPrivateKey,
+				signer:     NewRSASigner(rsaPrivateKey),
 				baseURL:    "https://api.github.com",
 				httpClient: testClient,
 			},
@@ -143,18 +170,21 @@ func TestNew(t *testing.T) {
 				got, err = NewApp(tc.appID, tc.privateKeyString, tc.options...)
 			case tc.privateKeyBytes != nil:
 				got, err = NewApp(tc.appID, tc.privateKeyBytes, tc.options...)
+			case tc.cloudKmsKey != nil:
+				got, err = NewApp(tc.appID, *tc.cloudKmsKey, tc.options...)
 			default:
-				t.Fatal("missing private key")
+				t.Fatal("missing key")
 			}
 			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
 				t.Fatalf("unexpected err: %s", diff)
 			}
 
 			opts := []cmp.Option{
-				cmp.AllowUnexported(App{}),
+				cmp.AllowUnexported(App{}, rsaSigner{}, kmsSigner{}),
 				cmpopts.IgnoreFields(App{},
 					"installationCache",
 					"installationCacheLock"),
+				cmpopts.IgnoreFields(kmsSigner{}, "client"),
 			}
 			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)
@@ -207,6 +237,119 @@ func TestApp_AppToken(t *testing.T) {
 	}
 }
 
+func TestApp_AppToken_KmsSigner(t *testing.T) {
+	t.Parallel()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kmsKey := CloudKmsKey{
+		Name: "projects/example-project/locations/global/keyRings/example-keyring/cryptoKeys/example-key/cryptoKeyVersions/1",
+	}
+
+	cases := []struct {
+		name      string
+		client    mockKmsClient
+		wantError string
+	}{
+		{
+			name: "success",
+			client: mockKmsClient{
+				secretKey:      privateKey,
+				responseName:   kmsKey.Name,
+				verifiedDigest: true,
+			},
+		},
+		{
+			name: "fail-sign-error",
+			client: mockKmsClient{
+				signErr: errors.New("asymmetric sign request failed"),
+			},
+			wantError: "asymmetric sign request failed",
+		},
+		{
+			name: "fail-unverified-digest",
+			client: mockKmsClient{
+				secretKey:      privateKey,
+				responseName:   kmsKey.Name,
+				verifiedDigest: false,
+			},
+			wantError: "AsymmetricSign: request corrupted in-transit",
+		},
+		{
+			name: "fail-wrong-key-name",
+			client: mockKmsClient{
+				secretKey:      privateKey,
+				responseName:   "wrong-key-name",
+				verifiedDigest: true,
+			},
+			wantError: "AsymmetricSign: request corrupted in-transit",
+		},
+		{
+			name: "fail-crc-verification",
+			client: mockKmsClient{
+				secretKey:      privateKey,
+				responseName:   kmsKey.Name,
+				verifiedDigest: true,
+				badCrc32C:      true,
+			},
+			wantError: "AsymmetricSign: response corrupted in-transit",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			app, err := NewApp("my-app-id", kmsKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			app.signer = &kmsSigner{
+				key:    kmsKey,
+				client: &tc.client,
+			}
+
+			token, err := app.AppToken()
+			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
+				t.Fatalf("unexpected err: %s", diff)
+			}
+			if err != nil {
+				return
+			}
+
+			parts := strings.Split(token, ".")
+			if exp := 3; len(parts) != exp {
+				t.Fatalf("expected %d items, got %q", exp, parts)
+			}
+
+			header := testBase64Decode(t, parts[0])
+			if got, want := string(header), `{"alg":"RS256","typ":"JWT"}`; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+
+			body := testBase64Decode(t, parts[1])
+			if got, want := string(body), `"iss":"my-app-id"`; !strings.Contains(got, want) {
+				t.Errorf("expected %q to contain %q", got, want)
+			}
+
+			signature := testBase64Decode(t, parts[2])
+
+			h := sha256.New()
+			h.Write([]byte(parts[0] + "." + parts[1]))
+			digest := h.Sum(nil)
+
+			if err := rsa.VerifyPKCS1v15(&privateKey.PublicKey, crypto.SHA256, digest, signature); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestApp_OAuthAppTokenSource(t *testing.T) {
 	t.Parallel()
 
@@ -243,4 +386,32 @@ func testBase64Decode(tb testing.TB, s string) []byte {
 		tb.Fatal(err)
 	}
 	return b
+}
+
+type mockKmsClient struct {
+	secretKey      *rsa.PrivateKey
+	verifiedDigest bool
+	badCrc32C      bool
+	responseName   string
+	signErr        error
+}
+
+func (c *mockKmsClient) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest) (*kmspb.AsymmetricSignResponse, error) {
+	if c.signErr != nil {
+		return nil, c.signErr
+	}
+	signature, err := rsa.SignPKCS1v15(nil, c.secretKey, crypto.SHA256, req.Digest.GetSha256())
+	if err != nil {
+		return nil, fmt.Errorf("error signing JWT: %w", err)
+	}
+	signatureCrc32C := int64(crc32.Checksum(signature, crc32.MakeTable(crc32.Castagnoli)))
+	if c.badCrc32C {
+		signatureCrc32C += 1
+	}
+	return &kmspb.AsymmetricSignResponse{
+		Name:                 c.responseName,
+		Signature:            signature,
+		SignatureCrc32C:      wrapperspb.Int64(signatureCrc32C),
+		VerifiedDigestCrc32C: c.verifiedDigest,
+	}, nil
 }
