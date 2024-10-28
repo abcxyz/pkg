@@ -30,6 +30,8 @@ jobs:
 
   go_test:
     uses: './.github/workflows/go-test.yml'
+    with:
+      env: '{"GOOGLE_APPLICATION_CREDENTIALS": "./fake/credentials.json"}'
 
   terraform_lint:
     uses: './.github/workflows/terraform-lint.yml'
