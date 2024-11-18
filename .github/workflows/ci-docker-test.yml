@@ -28,7 +28,7 @@ jobs:
       - 'maybe-create-ci-image'
     runs-on: 'ubuntu-latest'
     container:
-      image: 'ghcr.io/${{ github.repository }}/ci-docker-test:${{ needs.maybe-create-ci-image.outputs.docker-tag }}'
+      image: 'ghcr.io/${{ github.repository }}/ci-docker-test:${{ needs.maybe-create-ci-image.outputs.docker_tag }}'
       credentials:
         username: '${{ github.actor }}'
         password: '${{ secrets.GITHUB_TOKEN }}'
