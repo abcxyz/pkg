@@ -156,7 +156,7 @@ jobs:
           echo "branch_tag=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF}}" | sed 's/refs\/heads\///g' | sed 's/\//-/g')" >> "$GITHUB_OUTPUT"
 
       - id: 'gcp-auth'
-        if: |- 
+        if: |-
           inputs.artifact_registry_image_name != ''
         uses: 'google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d' # v1
         with:
