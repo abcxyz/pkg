@@ -13,7 +13,7 @@
 #     uses: ./.github/workflows/maybe-build-docker.yml
 #     with:
 #       dockerfile: '.github/workflows/ci.dockerfile' # path to dockerfile to build
-#       github_image_name: 'ghcr.io/${{ github.repo }}/ci-build'
+#       github_image_name: 'ghcr.io/${{ github.repository }}/ci-build'
 #       extra_tag1: 'latest'
 #
 #   build_embedded:
@@ -22,7 +22,7 @@
 #     runs-on:
 #       labels: ['ubuntu-latest']
 #     container:
-#       image: 'ghcr.io/${{ github.repo }}/ci-build:${{ needs.maybe-create-ci-image.outputs.docker_tag }}'
+#       image: 'ghcr.io/${{ github.repository }}/ci-build:${{ needs.maybe-create-ci-image.outputs.docker_tag }}'
 #       credentials:
 #         username: '${{ github.actor }}'
 #         password: '${{ secrets.GITHUB_TOKEN }}'
@@ -44,7 +44,7 @@ on:
         type: 'string'
         description: |-
           The full path of the image to upload in github package registry without the tag.
-          Example: 'ghcr.io/\$\{\{ github.repo \}\}/ci-build'
+          Example: 'ghcr.io/\$\{\{ github.repository \}\}/ci-build'
       artifact_registry_image_name:
         required: false
         type: 'string'

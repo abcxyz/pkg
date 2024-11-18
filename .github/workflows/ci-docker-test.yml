@@ -19,7 +19,7 @@ jobs:
     uses: './.github/workflows/maybe-build-docker.yml'
     with:
       dockerfile: '.github/workflows/ci.dockerfile'
-      github_image_name: 'ghcr.io/${{ github.repo }}/ci-docker-test'
+      github_image_name: 'ghcr.io/${{ github.repository }}/ci-docker-test'
 
   # Then we run using the latest docker image and build all artifacts in that
   # container.
@@ -28,7 +28,7 @@ jobs:
       - 'maybe-create-ci-image'
     runs-on: 'ubuntu-latest'
     container:
-      image: 'ghcr.io/${{ github.repo }}/ci-docker-test:${{ needs.maybe-create-ci-image.outputs.docker-tag }}'
+      image: 'ghcr.io/${{ github.repository }}/ci-docker-test:${{ needs.maybe-create-ci-image.outputs.docker-tag }}'
       credentials:
         username: '${{ github.actor }}'
         password: '${{ secrets.GITHUB_TOKEN }}'
