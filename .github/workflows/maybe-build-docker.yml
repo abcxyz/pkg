@@ -44,7 +44,7 @@ on:
         type: 'string'
         description: |-
           The full path of the image to upload in github package registry without the tag.
-          Example: 'ghcr.io/${{ github.repo }}/ci-build'
+          Example: 'ghcr.io/\$\{\{ github.repo \}\}/ci-build'
       artifact_registry_image_name:
         required: false
         type: 'string'
