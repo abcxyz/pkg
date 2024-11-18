@@ -18,7 +18,7 @@ jobs:
   maybe-create-ci-image:
     uses: './.github/workflows/maybe-build-docker.yml'
     with:
-      dockerfile: '.github/workflows/ci.dockerfile'
+      dockerfile: '.github/workflows/ci-docker-test.dockerfile'
       github_image_name: 'ghcr.io/${{ github.repository }}/ci-docker-test'
 
   # Then we run using the latest docker image and build all artifacts in that

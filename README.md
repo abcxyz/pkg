@@ -231,3 +231,4 @@ This is particularly useful:
    forcing them to re-build the image locally every time there is a change.
 3. You are compiling for other architectures and your build tooling does not
    natively support it.
+4. You would prefer to manage CI dependencies in docker rather than github actions.

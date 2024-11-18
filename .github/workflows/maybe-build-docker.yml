@@ -127,6 +127,26 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
 
+      - name: 'Check inputs'
+        shell: 'bash'
+        env:
+          DOCKERFILE: '${{ inputs.dockerfile }}'
+          EXTRA_HASH_FILE1: '${{ inputs.extra_hash_file1 }}'
+          EXTRA_HASH_FILE2: '${{ inputs.extra_hash_file2 }}'
+        run: |
+          if [[ ! -f "$DOCKERFILE" ]]; then
+            "Unable to find dockerfile: $DOCKERFILE."
+            exit 1
+          fi
+          if [[ "$EXTRA_HASH_FILE1" != "" && ! -f "$EXTRA_HASH_FILE1" ]]; then
+            "Unable to find extra file: $EXTRA_HASH_FILE1."
+            exit 1
+          fi
+          if [[ "$EXTRA_HASH_FILE2" != "" && ! -f "$EXTRA_HASH_FILE2" ]]; then
+            "Unable to find extra file: $EXTRA_HASH_FILE2."
+            exit 1
+          fi
+
       # Generate the hash of the provided files and use that to determine if the docker image needs to be rebuilt.
       - name: 'Echo docker hash tag'
         id: 'docker-tag'
