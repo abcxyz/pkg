@@ -1,0 +1,272 @@
+# Reusable workflow for building and pushing docker images.
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+#
+# Only re-builds the image if the hash of the dockerfile has changed. Supports
+# pushing both to Google artifact registry and GitHub packages (automatically
+# tags for each if the `github_image_name` and `artifact_registry_image_name`
+# inputs are provided). Also supports building for multiple platforms via the
+# `platforms` argument.
+# Exmaple of using this Workflow:
+#
+# jobs:
+#   maybe-create-ci-image:
+#     uses: ./.github/workflows/maybe-build-docker.yml
+#     with:
+#       dockerfile: '.github/workflows/ci.dockerfile' # path to dockerfile to build
+#       github_image_name: 'ghcr.io/${{ github.repository }}/ci-build'
+#       extra_tag1: 'latest'
+#
+#   build_embedded:
+#     needs:
+#       - 'maybe-create-ci-image'
+#     runs-on:
+#       labels: ['ubuntu-latest']
+#     container:
+#       image: 'ghcr.io/${{ github.repository }}/ci-build:${{ needs.maybe-create-ci-image.outputs.docker_tag }}'
+#       credentials:
+#         username: '${{ github.actor }}'
+#         password: '${{ secrets.GITHUB_TOKEN }}'
+name: 'maybe-build-docker'
+
+on:
+  workflow_call:
+    inputs:
+      runs_on:
+        description: 'The GitHub runner on which to execute. This must be a valid JSON but can represent a string, array of strings, or object.'
+        type: 'string'
+        default: '"ubuntu-latest"'
+      dockerfile:
+        required: true
+        type: 'string'
+        description: 'The path to the dockerfile to build.'
+      github_image_name:
+        required: true
+        type: 'string'
+        description: |-
+          The full path of the image to upload in github package registry without the tag.
+          Example: 'ghcr.io/\$\{\{ github.repository \}\}/ci-build'
+      artifact_registry_image_name:
+        required: false
+        type: 'string'
+        description: |-
+          The full path of the image to upload in artifact registry without the
+          tag. If set, will push the image to the specified artifact registry.
+          Example: 'us-docker.pkg.dev/my-project/my-gar-registry/ci-build'
+      workload_identity_provider:
+        required: false
+        type: 'string'
+        description: |-
+          Required if pushing to google artifact registry. The full identifier
+          of the Workload Identity Provider, including the project number, pool
+          name, and provider name. Fully documented in
+          https://github.com/google-github-actions/auth
+      wif_service_account:
+        required: false
+        type: 'string'
+        description: |-
+          Required if pushing to google artifact registry. Email address or
+          unique identifier of the Google Cloud service account for
+          which to generate credentials. Fully documented in
+          https://github.com/google-github-actions/auth
+      access_token_lifetime:
+        required: false
+        type: 'string'
+        description: |-
+          The amount of time to authenticate to GCP for. Defaults to 1 hour.
+          Used when pushing images to GAR.
+        default: '3600s' # 1 hour
+      platforms:
+        required: false
+        type: 'string'
+        description: 'String delimited list of platforms. e.g. linux/arm64,linux/amd64'
+      extra_hash_file1:
+        required: false
+        type: 'string'
+        description: |-
+          Additional file to use when determining unique hash of docker image.
+          This allows re-triggering a build if another file changes in addition
+          to the dockerfile. This is helpful if you install go deps in a
+          dockerfile (e.g. go.mod) or other deps managed outside of the dockerfile.
+      extra_hash_file2:
+        required: false
+        type: 'string'
+        description: 'Same as extra_hash_file1'
+      extra_tag1:
+        required: false
+        type: 'string'
+        description: 'Additional tag to tag the docker image with.'
+      extra_tag2:
+        required: false
+        type: 'string'
+        description: 'Additional tag to tag the docker image with.'
+      force:
+        type: 'boolean'
+        default: false
+        description: 'Ignore the cache and rebuild the docker image.'
+    outputs:
+      docker_tag:
+        description: 'The unique docker tag of the created image'
+        value: '${{ jobs.maybe-create-docker-image.outputs.docker_tag }}'
+      branch_tag:
+        description: 'The branch tag of the created image.'
+        value: '${{ jobs.maybe-create-docker-image.outputs.branch_tag }}'
+      image_created:
+        description: 'Whether or not an image was created.'
+        value: '${{ jobs.maybe-create-docker-image.outputs.image_created }}'
+
+jobs:
+  maybe-create-docker-image:
+    runs-on: ${{ fromJSON(inputs.runs_on) }} # yamllint disable-line
+
+    outputs:
+      docker_tag: '${{ steps.docker-tag.outputs.tag }}'
+      branch_tag: '${{ steps.docker-tag.outputs.branch_tag }}'
+      image_created: "${{ steps.cache-dockerfile.outputs.cache-hit != 'true' || inputs.force }}"
+
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+
+      - name: 'Check inputs'
+        shell: 'bash'
+        env:
+          DOCKERFILE: '${{ inputs.dockerfile }}'
+          EXTRA_HASH_FILE1: '${{ inputs.extra_hash_file1 }}'
+          EXTRA_HASH_FILE2: '${{ inputs.extra_hash_file2 }}'
+        run: |
+          if [[ ! -f "$DOCKERFILE" ]]; then
+            "Unable to find dockerfile: $DOCKERFILE."
+            exit 1
+          fi
+          if [[ "$EXTRA_HASH_FILE1" != "" && ! -f "$EXTRA_HASH_FILE1" ]]; then
+            "Unable to find extra file: $EXTRA_HASH_FILE1."
+            exit 1
+          fi
+          if [[ "$EXTRA_HASH_FILE2" != "" && ! -f "$EXTRA_HASH_FILE2" ]]; then
+            "Unable to find extra file: $EXTRA_HASH_FILE2."
+            exit 1
+          fi
+
+      # Generate the hash of the provided files and use that to determine if the docker image needs to be rebuilt.
+      - name: 'Echo docker hash tag'
+        id: 'docker-tag'
+        shell: 'bash'
+        run: |
+          echo "tag=${{ hashFiles(inputs.dockerfile, inputs.extra_hash_file1, inputs.extra_hash_file2) }}" >> "$GITHUB_OUTPUT"
+          echo "branch_tag=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF}}" | sed 's/refs\/heads\///g' | sed 's/\//-/g')" >> "$GITHUB_OUTPUT"
+
+      - id: 'gcp-auth'
+        if: |-
+          inputs.artifact_registry_image_name != ''
+        uses: 'google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d' # v1
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: '${{ inputs.workload_identity_provider }}'
+          service_account: '${{ inputs.wif_service_account }}'
+          access_token_lifetime: '${{ inputs.access_token_lifetime }}'
+
+      - name: 'Login GitHub Packages'
+        shell: 'bash'
+        env:
+          GH_IMAGE: '${{ inputs.github_image_name }}'
+        run: |
+          # GitHub packages is required if you intend to run container based workflows directly on GitHub.
+          docker login --username ${{ github.actor }} --password-stdin ghcr.io <<< "${{ github.token }}"
+
+      - name: 'Login Artifact Registry'
+        if: |-
+          inputs.artifact_registry_image_name != ''
+        shell: 'bash'
+        env:
+          GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
+        run: |
+          GAR_IMAGE_REGISTRY=$(echo "$GAR_IMAGE" | cut -d '/' -f 1)
+          echo '${{ steps.gcp-auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin "https://$GAR_IMAGE_REGISTRY"
+
+      - name: 'Check dockerfile exists'
+        id: 'cache-dockerfile'
+        shell: 'bash'
+        env:
+          GH_IMAGE: '${{ inputs.github_image_name }}'
+          GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
+        run: |
+          # We rebuild the image:
+          #  1. if the dockerfile has changed and never been previously built on any PR/branch.
+          #  2. if the main branch hasn't built this particular hash before.
+
+          if [[ "$GH_IMAGE" != "" ]]; then
+            DOCKER_CHECK=$(docker manifest inspect "$GH_IMAGE:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
+            DOCKER_BRANCH_CHECK=$(docker manifest inspect "$GH_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
+          elif [[ "$GAR_IMAGE" != "" ]]; then
+            DOCKER_CHECK=$(docker manifest inspect "$GAR_IMAGE:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
+            DOCKER_BRANCH_CHECK=$(docker manifest inspect "$GAR_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
+          fi
+
+          foundTag=$(if [[ "$DOCKER_CHECK" != "" ]]; then echo "true"; fi)
+          tagsMatch=$(if [[ "$DOCKER_CHECK" = "$DOCKER_BRANCH_CHECK" ]]; then echo "true"; fi)
+          isRunningInPR=$(if [[ "${{ github.ref }}" != 'refs/heads/main' ]]; then echo "true"; fi)
+
+          if [[ $foundTag == 'true' && ($tagsMatch == 'true' || $isRunningInPR == 'true') ]]; then
+            echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Setup Docker Buildx'
+        if: |-
+          steps.cache-dockerfile.outputs.cache-hit != 'true' || inputs.force
+        env:
+          PLATFORMS: '${{ inputs.platforms }}'
+        run: |
+          if [[ "$PLATFORMS" != "" ]]; then
+            qemuVer=f654e8c1dda9d99f6ec95db08c5019d8bed9a9f4170c21350ea86692712304ef
+            docker pull -q multiarch/qemu-user-static@sha256:${qemuVer}
+            docker run --rm --privileged multiarch/qemu-user-static@sha256:${qemuVer} --install "$PLATFORMS"
+            docker buildx create --name builder-${GITHUB_SHA} --driver docker-container --use
+          fi
+          docker buildx ls
+
+      - name: 'Build and push the Docker image'
+        if: |-
+          steps.cache-dockerfile.outputs.cache-hit != 'true' || inputs.force
+        env:
+          GH_IMAGE: '${{ inputs.github_image_name }}'
+          GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
+          EXTRA_TAG1: '${{ inputs.extra_tag1 }}'
+          EXTRA_TAG2: '${{ inputs.extra_tag2 }}'
+          PLATFORMS: '${{ inputs.platforms }}'
+          DOCKERFILE: '${{ inputs.dockerfile }}'
+        run: |
+          tags=()
+          if [[ "$GH_IMAGE" != "" ]]; then
+            tags+=(--tag "$GH_IMAGE:${{ steps.docker-tag.outputs.tag }}")
+            tags+=(--tag "$GH_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}")
+            if [[ "$EXTRA_TAG1" != "" ]]; then
+              tags+=(--tag "$GH_IMAGE:$EXTRA_TAG1")
+            fi
+            if [[ "$EXTRA_TAG2" != "" ]]; then
+              tags+=(--tag "$GH_IMAGE:$EXTRA_TAG2")
+            fi
+          fi
+          if [[ "$GAR_IMAGE" != "" ]]; then
+            tags+=(--tag "$GAR_IMAGE:${{ steps.docker-tag.outputs.tag }}")
+            tags+=(--tag "$GAR_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}")
+            if [[ "$EXTRA_TAG1" != "" ]]; then
+              tags+=(--tag "$GAR_IMAGE:$EXTRA_TAG1")
+            fi
+            if [[ "$EXTRA_TAG2" != "" ]]; then
+              tags+=(--tag "$GAR_IMAGE:$EXTRA_TAG2")
+            fi
+          fi
+
+          if [[ "$PLATFORMS" != "" ]]; then
+            docker buildx build . --file "$DOCKERFILE" --platform="$PLATFORMS" "${tags[@]}" --push
+          else
+            docker buildx build . --file "$DOCKERFILE" "${tags[@]}" --push
+          fi
+
+      - name: 'Cleanup docker config'
+        if: |-
+          always()
+        run: |
+          rm /home/runner/.docker/config.json

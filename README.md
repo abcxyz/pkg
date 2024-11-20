@@ -177,3 +177,58 @@ approval from all requested reviewers.
 
 An admin will need to create a new ruleset within the repo to add want_lgtm_all to be included
 as a required status check.
+
+### maybe-build-docker.yml
+
+Use this workflow to build and push docker images to several supported docker
+registries. Docker images will only be rebuilt if the hash of the dockerfile
+(or other configurable input files) changes.
+
+```yaml
+name: 'ci_docker_test'
+on:
+  pull_request:
+
+permissions:
+  contents: 'read'  # For checking out repository code.
+  packages: 'write' # For pushing/pulling from github docker registry.
+
+jobs:
+  maybe-create-ci-image:
+    uses: abcxyz/pkg/.github/workflows/maybe-build-docker.yml
+    with:
+      dockerfile: '.github/workflows/ci.dockerfile'
+      github-image-name: 'ghcr.io/${{ github.repo }}/ci-docker-test'
+
+  # Then we run using the latest docker image and build all artifacts in that
+  # container.
+  ci-on-docker-image:
+    needs:
+      - 'maybe-create-ci-image'
+    runs-on: 'ubuntu-latest'
+    container:
+      image: 'ghcr.io/${{ github.repo }}/ci-docker-test:${{ needs.maybe-create-ci-image.outputs.docker-tag }}'
+      credentials:
+        username: '${{ github.actor }}'
+        password: '${{ secrets.GITHUB_TOKEN }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+
+      - name: 'Run something...'
+        shell: 'bash'
+        run: |
+          # Do something in the docker container context...
+```
+
+For a full list of all input arguments and configuration see the
+[workflow file](.github/workflows/maybe-build-docker.yml).
+
+This is particularly useful:
+
+1. If you have a complex build environment with many non-standard system dependencies.
+2. If you would like to share your CI env easily with engineers without
+   forcing them to re-build the image locally every time there is a change.
+3. You are compiling for other architectures and your build tooling does not
+   natively support it.
+4. You would prefer to manage CI dependencies in docker rather than github actions.
