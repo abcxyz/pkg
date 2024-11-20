@@ -40,7 +40,7 @@ on:
         type: 'string'
         description: 'The path to the dockerfile to build.'
       github_image_name:
-        required: true
+        required: false
         type: 'string'
         description: |-
           The full path of the image to upload in github package registry without the tag.
@@ -133,17 +133,23 @@ jobs:
           DOCKERFILE: '${{ inputs.dockerfile }}'
           EXTRA_HASH_FILE1: '${{ inputs.extra_hash_file1 }}'
           EXTRA_HASH_FILE2: '${{ inputs.extra_hash_file2 }}'
+          GH_IMAGE: '${{ inputs.github_image_name }}'
+          GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
         run: |
           if [[ ! -f "$DOCKERFILE" ]]; then
-            "Unable to find dockerfile: $DOCKERFILE."
+            "[Error] Unable to find dockerfile: $DOCKERFILE."
             exit 1
           fi
           if [[ "$EXTRA_HASH_FILE1" != "" && ! -f "$EXTRA_HASH_FILE1" ]]; then
-            "Unable to find extra file: $EXTRA_HASH_FILE1."
+            "[Error] Unable to find extra file: $EXTRA_HASH_FILE1."
             exit 1
           fi
           if [[ "$EXTRA_HASH_FILE2" != "" && ! -f "$EXTRA_HASH_FILE2" ]]; then
-            "Unable to find extra file: $EXTRA_HASH_FILE2."
+            "[Error] Unable to find extra file: $EXTRA_HASH_FILE2."
+            exit 1
+          fi
+          if [[ "$GH_IMAGE" == "" && "$GAR_IMAGE" == "" ]]; then
+            "[Error] At least one of github_image_name or artifact_registry_image_name must be provided."
             exit 1
           fi
 
@@ -166,6 +172,8 @@ jobs:
           access_token_lifetime: '${{ inputs.access_token_lifetime }}'
 
       - name: 'Login GitHub Packages'
+        if: |-
+          inputs.github_image_name != ''
         shell: 'bash'
         env:
           GH_IMAGE: '${{ inputs.github_image_name }}'
