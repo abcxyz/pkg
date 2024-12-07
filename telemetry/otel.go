@@ -42,9 +42,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-var (
-	defaultStartOnce sync.Once
-)
+var defaultStartOnce sync.Once
 
 const (
 	defaultOtelAgentAddr = "0.0.0.0:4317"
@@ -113,7 +111,7 @@ func start(ctx context.Context, newTracer tracerProviderFunc, newMeter meterProv
 	// Set up tracing.
 	tracerProvider, err := newTracer(ctx, res)
 	if err != nil {
-		return nil, fmt.Errorf("failed to set up tracing: %w", err)
+		return nil, fmt.Errorf("failed to set up tracing provider: %w", err)
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
@@ -121,7 +119,7 @@ func start(ctx context.Context, newTracer tracerProviderFunc, newMeter meterProv
 	// Set up monitoring.
 	meterProvider, err := newMeter(ctx, res)
 	if err != nil {
-		return nil, fmt.Errorf("failed to set up monitoring: %w", err)
+		return nil, fmt.Errorf("failed to set up meter provider: %w", err)
 	}
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
@@ -146,7 +144,7 @@ func newOTLPTraceProvider(ctx context.Context, res *resource.Resource) (*trace.T
 		otlptracegrpc.WithEndpoint(otelAgentAddr))
 	traceExporter, err := otlptrace.New(ctx, traceClient)
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // Want passthrough
 	}
 
 	bsp := trace.NewBatchSpanProcessor(traceExporter)
@@ -162,7 +160,7 @@ func newStdoutTraceProvider(_ context.Context, res *resource.Resource) (*trace.T
 	traceExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint())
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // Want passthrough
 	}
 
 	traceProvider := trace.NewTracerProvider(
@@ -184,7 +182,7 @@ func newOTLPMeterProvider(ctx context.Context, res *resource.Resource) (*metric.
 		otlpmetricgrpc.WithEndpoint(otelAgentAddr),
 		otlpmetricgrpc.WithTemporalitySelector(deltaSelector))
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // Want passthrough
 	}
 
 	meterProvider := metric.NewMeterProvider(
@@ -200,7 +198,7 @@ func newStdoutMeterProvider(_ context.Context, res *resource.Resource) (*metric.
 		stdoutmetric.WithPrettyPrint(),
 		stdoutmetric.WithTemporalitySelector(deltaSelector))
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck // Want passthrough
 	}
 
 	meterProvider := metric.NewMeterProvider(
