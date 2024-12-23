@@ -16,7 +16,6 @@ package githubauth
 
 import (
 	"context"
-	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -39,8 +38,8 @@ const defaultBaseURL = "https://api.github.com"
 // App is an object that can be used to generate application level JWTs or to
 // request an OIDC token on behalf of an installation.
 type App struct {
-	appID      string
-	privateKey *rsa.PrivateKey
+	appID  string
+	signer Signer
 
 	installationCache     map[string](func() (*AppInstallation, error))
 	installationCacheLock sync.Mutex
@@ -55,14 +54,14 @@ func (a *App) AppID() string { //nolint:stylecheck // "AppID" is the name GitHub
 }
 
 // Option is a function that provides an option to the GitHub App creation.
-type Option func(g *App) *App
+type Option func(g *App) (*App, error)
 
 // WithBaseURL allows overriding of the GitHub API url. This is usually only
 // overidden for testing or private GitHub installations.
 func WithBaseURL(url string) Option {
-	return func(g *App) *App {
+	return func(g *App) (*App, error) {
 		g.baseURL = strings.TrimSuffix(url, "/")
-		return g
+		return g, nil
 	}
 }
 
@@ -70,17 +69,13 @@ func WithBaseURL(url string) Option {
 // client implementation. This HTTP client will be shared among all
 // [AppInstallation].
 func WithHTTPClient(client *http.Client) Option {
-	return func(g *App) *App {
+	return func(g *App) (*App, error) {
 		g.httpClient = client
-		return g
+		return g, nil
 	}
 }
 
-// NewApp creates a new GitHub App from the given inputs.
-//
-// The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
-// []byte) of the private key material.
-func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, opts ...Option) (*App, error) {
+func WithPrivateKeySigner[T *rsa.PrivateKey | string | []byte](privateKeyT T) Option {
 	var privateKey *rsa.PrivateKey
 	var err error
 
@@ -89,21 +84,35 @@ func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, op
 		privateKey = t
 	case string:
 		privateKey, err = parseRSAPrivateKeyPEM([]byte(t))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded string: %w", err)
-		}
 	case []byte:
 		privateKey, err = parseRSAPrivateKeyPEM(t)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded []byte: %w", err)
-		}
 	default:
 		panic("impossible")
 	}
+	return func(g *App) (*App, error) {
+		if err != nil {
+			return nil, err
+		}
+		g.signer = NewPrivateKeySigner(privateKey)
+		return g, nil
+	}
+}
 
+func WithKMSSigner(ctx context.Context, keyID string) Option {
+	return func(g *App) (*App, error) {
+		g.signer = NewKMSSigner(ctx, keyID)
+		return g, nil
+	}
+}
+
+// NewApp creates a new GitHub App from the given inputs.
+//
+// The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
+// []byte) of the private key material.
+func NewApp(appID string, opts ...Option) (*App, error) {
+	var err error
 	app := &App{
 		appID:             appID,
-		privateKey:        privateKey,
 		installationCache: make(map[string](func() (*AppInstallation, error)), 8),
 
 		baseURL: defaultBaseURL,
@@ -113,7 +122,10 @@ func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, op
 	}
 
 	for _, opt := range opts {
-		app = opt(app)
+		app, err = opt(app)
+		if err != nil {
+			return nil, fmt.Errorf("error when applying option: %w", err)
+		}
 	}
 
 	return app, nil
@@ -140,6 +152,7 @@ type TokenRequestAllRepos struct {
 // AppToken creates a signed JWT to authenticate a GitHub app so that it can
 // make API calls to GitHub.
 func (g *App) AppToken() (string, error) {
+	ctx := context.Background()
 	// Make the current time 30 seconds in the past to combat clock skew issues
 	// where the JWT we issue looks like it is coming from the future when it gets
 	// to GitHub
@@ -165,12 +178,14 @@ func (g *App) AppToken() (string, error) {
 	h.Write([]byte(unsigned))
 	digest := h.Sum(nil)
 
-	signature, err := rsa.SignPKCS1v15(nil, g.privateKey, crypto.SHA256, digest)
-	if err != nil {
-		return "", fmt.Errorf("error signing JWT: %w", err)
+	if g.signer != nil {
+		signature, err := g.signer.Sign(ctx, digest)
+		if err != nil {
+			return "", fmt.Errorf("error signing JWT: %w", err)
+		}
+		return unsigned + "." + b64Encode(signature), nil
 	}
-
-	return unsigned + "." + b64Encode(signature), nil
+	return unsigned, nil
 }
 
 // OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token
