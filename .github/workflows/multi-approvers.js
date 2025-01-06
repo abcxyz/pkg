@@ -2,11 +2,6 @@ const APPROVED = 'APPROVED';
 const COMMENTED = 'COMMENTED';
 const MIN_APPROVED_COUNT = 2;
 
-/** Returns true if the login exists in the members list. */
-function containsLogin(members, login) {
-  return !!members.find((member) => member.login === login);
-}
-
 /** Returns the number of approvals from members in the given list. */
 function inOrgApprovedCount(members, submittedReviews, prLogin) {
   const reviewStateByLogin = {};
@@ -14,7 +9,7 @@ function inOrgApprovedCount(members, submittedReviews, prLogin) {
     // Remove the PR user.
     .filter((r) => r.user.login !== prLogin)
     // Only consider users in the org.
-    .filter((r) => containsLogin(members, r.user.login))
+    .filter((r) => members.has(r.user.login))
     // Sort chronologically ascending. Note that a reviewer can submit multiple reviews.
     .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
     .forEach((r) => {
@@ -43,13 +38,11 @@ function inOrgApprovedCount(members, submittedReviews, prLogin) {
 
 /** Checks that approval requirements are satisfied. */
 async function onPullRequest({orgMembersPath, prNumber, repoName, repoOwner, github, core}) {
-  const members = require(orgMembersPath);
+  const members = require(orgMembersPath).reduce((acc, v) => acc.set(v.login, v), new Map());
   const prResponse = await github.rest.pulls.get({owner: repoOwner, repo: repoName, pull_number: prNumber});
   const prLogin = prResponse.data.user.login;
 
-  const isOrgMember = containsLogin(members, prLogin);
-
-  if (isOrgMember) {
+  if (members.has(prLogin)) {
     // Do nothing if the pull request owner is a member of the org.
     core.info(`Pull request login ${prLogin} is a member of the org, therefore no special approval rules apply.`);
     return;
