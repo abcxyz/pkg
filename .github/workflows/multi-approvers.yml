@@ -7,7 +7,7 @@ on:
       # See the README for more.
       org-members-path:
         required: true
-        type: string
+        type: 'string'
 
 permissions:
   actions: 'write'
