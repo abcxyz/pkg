@@ -234,7 +234,7 @@ concurrency:
 
 jobs:
   multi-approvers:
-    uses: './.github/workflows/multi-approvers.yml'
+    uses: 'abcxyz/pkg/.github/workflows/multi-approvers.yml@main'
     with:
       org-members-path: './members.json'
 ```
