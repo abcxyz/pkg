@@ -140,7 +140,7 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 
 			token, err := installation.AccessToken(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 
 			if got, want := token, tc.expToken; got != want {
@@ -270,7 +270,7 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 
 			token, err := installation.AccessTokenAllRepos(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 
 			if got, want := token, tc.expToken; got != want {

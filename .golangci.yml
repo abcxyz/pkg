@@ -33,6 +33,7 @@ linters:
     - 'bidichk'
     - 'bodyclose'
     - 'containedctx'
+    # - 'copyloopvar' TODO: enable after everything is upgraded to Go 1.22
     - 'depguard'
     - 'dupword'
     - 'durationcheck'
@@ -40,9 +41,7 @@ linters:
     - 'errchkjson'
     - 'errname'
     - 'errorlint'
-    - 'execinquery'
     - 'exhaustive'
-    - 'exportloopref'
     - 'forcetypeassert'
     - 'gci'
     - 'gocheckcompilerdirectives'
@@ -170,7 +169,7 @@ linters-settings:
 
   sloglint:
     # default: false
-    context-only: true
+    context: 'all'
     # default: false
     static-msg: false
     # default: '' (snake, kebab, camel, pascal)

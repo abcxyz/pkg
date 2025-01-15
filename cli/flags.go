@@ -16,16 +16,21 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/kr/text"
 	"github.com/posener/complete/v2"
@@ -37,9 +42,19 @@ import (
 
 const maxLineLength = 80
 
-// LookupEnvFunc is the signature of a function for looking up environment
-// variables. It makes that of [os.LookupEnv].
-type LookupEnvFunc = func(string) (string, bool)
+type (
+	// LookupEnvFunc is the signature of a function for looking up environment
+	// variables. It makes that of [os.LookupEnv].
+	LookupEnvFunc = func(string) (string, bool)
+
+	// WorkingDirFunc is the signature of a function for getting the current
+	// working directory.
+	WorkingDirFunc = func() (string, error)
+
+	// PromptAllFunc is the signature for a function that prompts or reads from a
+	// pipe.
+	PromptAllFunc = func(ctx context.Context, msg string, args ...any) (string, error)
+)
 
 // MapLookuper returns a LookupEnvFunc that reads from a map instead of the
 // environment. This is mostly used for testing.
@@ -79,9 +94,12 @@ type AfterParseFunc func(existingErr error) error
 
 // FlagSet is the root flag set for creating and managing flag sections.
 type FlagSet struct {
-	flagSet   *flag.FlagSet
-	sections  []*FlagSection
-	lookupEnv LookupEnvFunc
+	flagSet  *flag.FlagSet
+	sections []*FlagSection
+
+	lookupEnv  LookupEnvFunc
+	workingDir WorkingDirFunc
+	promptAll  PromptAllFunc
 
 	afterParseFuncs []AfterParseFunc
 	args            []string
@@ -109,6 +127,26 @@ func WithLookupEnv(fn LookupEnvFunc) Option {
 	}
 }
 
+// WithWorkingDir sets the working directory function.
+func WithWorkingDir(fn WorkingDirFunc) Option {
+	return func(fs *FlagSet) *FlagSet {
+		if fn != nil {
+			fs.workingDir = fn
+		}
+		return fs
+	}
+}
+
+// WithWorkingDir sets the prompt function.
+func WithPromptAll(fn PromptAllFunc) Option {
+	return func(fs *FlagSet) *FlagSet {
+		if fn != nil {
+			fs.promptAll = fn
+		}
+		return fs
+	}
+}
+
 // NewFlagSet creates a new root flag set.
 func NewFlagSet(opts ...Option) *FlagSet {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
@@ -118,8 +156,15 @@ func NewFlagSet(opts ...Option) *FlagSet {
 	f.SetOutput(io.Discard)
 
 	fs := &FlagSet{
-		flagSet:   f,
-		lookupEnv: os.LookupEnv,
+		flagSet:    f,
+		lookupEnv:  os.LookupEnv,
+		workingDir: workingDir,
+		promptAll: func(ctx context.Context, msg string, args ...any) (string, error) {
+			var val string
+			fmt.Printf(msg, args...)
+			_, err := fmt.Scanf("%s", &val)
+			return val, err
+		},
 	}
 
 	for _, opt := range opts {
@@ -137,17 +182,22 @@ type FlagSection struct {
 	flagNames []string
 
 	// fields inherited from the parent
-	flagSet   *flag.FlagSet
-	lookupEnv LookupEnvFunc
+	flagSet *flag.FlagSet
+
+	lookupEnv  LookupEnvFunc
+	workingDir WorkingDirFunc
+	promptAll  PromptAllFunc
 }
 
 // NewSection creates a new flag section. By convention, section names should be
 // all capital letters (e.g. "MY SECTION"), but this is not strictly enforced.
 func (f *FlagSet) NewSection(name string) *FlagSection {
 	fs := &FlagSection{
-		name:      name,
-		flagSet:   f.flagSet,
-		lookupEnv: f.lookupEnv,
+		name:       name,
+		flagSet:    f.flagSet,
+		lookupEnv:  f.lookupEnv,
+		workingDir: f.workingDir,
+		promptAll:  f.promptAll,
 	}
 	f.sections = append(f.sections, fs)
 	return fs
@@ -357,6 +407,14 @@ type Var[T any] struct {
 	EnvVar  string
 	Target  *T
 
+	// AllowFromFile allows the flag contents to be read from a file by starting
+	// the input value with an "@" sign.
+	AllowFromFile bool
+
+	// AllowFromPrompt allows the flag contents to be read from a prompt or a pipe
+	// like stdin by setting the input value to "-".
+	AllowFromPrompt bool
+
 	// Parser and Printer are the generic functions for converting string values
 	// to/from the target value. These are populated by the individual flag
 	// helpers.
@@ -405,6 +463,20 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 		}
 	}
 
+	usage := i.Usage
+
+	if i.AllowFromFile {
+		parser = fromFileParser(i.Name, parser, f.workingDir)
+		usage += " This can be read from a file on disk by setting the value " +
+			"to \"@\" followed by the filepath."
+	}
+
+	if i.AllowFromPrompt {
+		parser = fromPromptParser(i.Name, parser, f.promptAll)
+		usage += " This value be read from a prompt or pipe by setting the value " +
+			"to \"-\"."
+	}
+
 	setter := i.Setter
 	if setter == nil {
 		setter = func(cur *T, val T) { *cur = val }
@@ -425,9 +497,6 @@ func Flag[T any](f *FlagSection, i *Var[T]) {
 	if example == "" {
 		example = fmt.Sprintf("%T", *new(T))
 	}
-
-	// Pre-compute full usage.
-	usage := i.Usage
 
 	if v := printer(i.Default); v != "" {
 		usage += fmt.Sprintf(" The default value is %q.", v)
@@ -492,15 +561,17 @@ func (f *flagValue[T]) IsBoolFlag() bool              { return f.isBool }
 func (f *flagValue[T]) Predictor() complete.Predictor { return f.predictor }
 
 type BoolVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default bool
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *bool
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         bool
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *bool
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 // BoolVar creates a new boolean variable (true/false). By convention, the
@@ -512,59 +583,67 @@ type BoolVar struct {
 // Consider naming your flags to match this convention.
 func (f *FlagSection) BoolVar(i *BoolVar) {
 	Flag(f, &Var[bool]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		IsBool:  true,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  strconv.ParseBool,
-		Printer: strconv.FormatBool,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		IsBool:          true,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          strconv.ParseBool,
+		Printer:         strconv.FormatBool,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type DurationVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default time.Duration
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *time.Duration
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         time.Duration
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *time.Duration
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) DurationVar(i *DurationVar) {
 	Flag(f, &Var[time.Duration]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  time.ParseDuration,
-		Printer: timeutil.HumanDuration,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          time.ParseDuration,
+		Printer:         timeutil.HumanDuration,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type Float64Var struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default float64
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *float64
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         float64
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *float64
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) Float64Var(i *Float64Var) {
@@ -576,30 +655,34 @@ func (f *FlagSection) Float64Var(i *Float64Var) {
 	}
 
 	Flag(f, &Var[float64]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type IntVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default int
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *int
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         int
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *int
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) IntVar(i *IntVar) {
@@ -610,30 +693,34 @@ func (f *FlagSection) IntVar(i *IntVar) {
 	printer := func(v int) string { return strconv.FormatInt(int64(v), 10) }
 
 	Flag(f, &Var[int]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type Int64Var struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default int64
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *int64
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         int64
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *int64
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) Int64Var(i *Int64Var) {
@@ -641,30 +728,34 @@ func (f *FlagSection) Int64Var(i *Int64Var) {
 	printer := func(v int64) string { return strconv.FormatInt(v, 10) }
 
 	Flag(f, &Var[int64]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type StringVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default string
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *string
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         string
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *string
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) StringVar(i *StringVar) {
@@ -672,30 +763,34 @@ func (f *FlagSection) StringVar(i *StringVar) {
 	printer := func(v string) string { return v }
 
 	Flag(f, &Var[string]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type StringMapVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default map[string]string
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *map[string]string
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         map[string]string
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *map[string]string
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) StringMapVar(i *StringMapVar) {
@@ -737,31 +832,35 @@ func (f *FlagSection) StringMapVar(i *StringMapVar) {
 	}
 
 	Flag(f, &Var[map[string]string]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
-		Setter:  setter,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		Setter:          setter,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type StringSliceVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default []string
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *[]string
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         []string
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *[]string
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
@@ -794,31 +893,35 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	}
 
 	Flag(f, &Var[[]string]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
-		Setter:  setter,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		Setter:          setter,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type TimeVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default time.Time
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *time.Time
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         time.Time
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *time.Time
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) TimeVar(layout string, i *TimeVar) {
@@ -830,30 +933,34 @@ func (f *FlagSection) TimeVar(layout string, i *TimeVar) {
 	}
 
 	Flag(f, &Var[time.Time]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type UintVar struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default uint
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *uint
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         uint
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *uint
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) UintVar(i *UintVar) {
@@ -864,30 +971,34 @@ func (f *FlagSection) UintVar(i *UintVar) {
 	printer := func(v uint) string { return strconv.FormatUint(uint64(v), 10) }
 
 	Flag(f, &Var[uint]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type Uint64Var struct {
-	Name    string
-	Aliases []string
-	Usage   string
-	Example string
-	Default uint64
-	Hidden  bool
-	EnvVar  string
-	Predict complete.Predictor
-	Target  *uint64
+	Name            string
+	Aliases         []string
+	Usage           string
+	Example         string
+	Default         uint64
+	Hidden          bool
+	EnvVar          string
+	Predict         complete.Predictor
+	Target          *uint64
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) Uint64Var(i *Uint64Var) {
@@ -895,22 +1006,26 @@ func (f *FlagSection) Uint64Var(i *Uint64Var) {
 	printer := func(v uint64) string { return strconv.FormatUint(v, 10) }
 
 	Flag(f, &Var[uint64]{
-		Name:    i.Name,
-		Aliases: i.Aliases,
-		Usage:   i.Usage,
-		Example: i.Example,
-		Default: i.Default,
-		Hidden:  i.Hidden,
-		EnvVar:  i.EnvVar,
-		Predict: i.Predict,
-		Target:  i.Target,
-		Parser:  parser,
-		Printer: printer,
+		Name:            i.Name,
+		Aliases:         i.Aliases,
+		Usage:           i.Usage,
+		Example:         i.Example,
+		Default:         i.Default,
+		Hidden:          i.Hidden,
+		EnvVar:          i.EnvVar,
+		Predict:         i.Predict,
+		Target:          i.Target,
+		Parser:          parser,
+		Printer:         printer,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
 type LogLevelVar struct {
-	Logger *slog.Logger
+	Logger          *slog.Logger
+	AllowFromFile   bool
+	AllowFromPrompt bool
 }
 
 func (f *FlagSection) LogLevelVar(i *LogLevelVar) {
@@ -936,13 +1051,15 @@ func (f *FlagSection) LogLevelVar(i *LogLevelVar) {
 		Aliases: []string{"l"},
 		Usage: `Sets the logging verbosity. Valid values include: ` +
 			strings.Join(levelNames, ",") + `.`,
-		Example: "warn",
-		Default: slog.LevelInfo,
-		Predict: predict.Set(levelNames),
-		Target:  &fake,
-		Parser:  parser,
-		Printer: printer,
-		Setter:  setter,
+		Example:         "warn",
+		Default:         slog.LevelInfo,
+		Predict:         predict.Set(levelNames),
+		Target:          &fake,
+		Parser:          parser,
+		Printer:         printer,
+		Setter:          setter,
+		AllowFromFile:   i.AllowFromFile,
+		AllowFromPrompt: i.AllowFromPrompt,
 	})
 }
 
@@ -959,4 +1076,60 @@ func wrapAtLengthWithPadding(s string, pad int) string {
 
 func ptr[T any](i T) *T {
 	return &i
+}
+
+// fromFileParser wraps an existing parser function and adds the ability for the
+// input to be sourced from a file using the "@" prefix syntax.
+func fromFileParser[T any](name string, inner ParserFunc[T], workingDir WorkingDirFunc) ParserFunc[T] {
+	return func(val string) (T, error) {
+		if len(val) > 0 && val[0] == '@' {
+			root, err := workingDir()
+			if err != nil {
+				var nilT T
+				return nilT, err
+			}
+
+			pth := filepath.Clean(val[1:])
+			if !filepath.IsAbs(pth) {
+				pth = filepath.Clean(filepath.Join(root, pth))
+			}
+
+			b, err := os.ReadFile(pth)
+			if err != nil {
+				var nilT T
+				return nilT, fmt.Errorf("failed to set %q: failed to read %s: %w", name, pth, err)
+			}
+
+			val = strings.TrimRightFunc(string(b), unicode.IsSpace)
+		} else if len(val) > 1 && val[0] == '\\' && val[1] == '@' {
+			// Unescape \@foo to "@foo"
+			val = val[1:]
+		}
+
+		return inner(val)
+	}
+}
+
+// fromPromptParser wraps an existing parser function and adds the ability for the
+// input to be sourced from a prompt or pipe using the "-" value.
+func fromPromptParser[T any](name string, inner ParserFunc[T], promptAll PromptAllFunc) ParserFunc[T] {
+	return func(val string) (T, error) {
+		if len(val) == 1 && val[0] == '-' {
+			ctx, done := signal.NotifyContext(context.Background(),
+				syscall.SIGINT, syscall.SIGTERM)
+			defer done()
+
+			s, err := promptAll(ctx, "Provide a value for %q: ", name)
+			if err != nil {
+				var nilT T
+				return nilT, fmt.Errorf("failed to set %q: %w", name, err)
+			}
+			val = strings.TrimRightFunc(s, unicode.IsSpace)
+		} else if len(val) == 2 && val[0] == '\\' && val[1] == '-' {
+			// Unescape \- to "-" to support the literal value "-".
+			val = val[1:]
+		}
+
+		return inner(val)
+	}
 }
