@@ -270,8 +270,6 @@ func TestFlagSection_StringMapVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -362,8 +360,6 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -577,8 +573,6 @@ func TestLogLevelVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -665,8 +659,6 @@ func TestFlagSet_Parse(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		for dashName, dash := range map[string]string{
 			"single_dash": "-",
 			"double_dash": "--",
@@ -770,8 +762,6 @@ func TestFromFileParser(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -836,8 +826,6 @@ func TestFromPromptParser(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
