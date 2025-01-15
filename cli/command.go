@@ -262,8 +262,15 @@ type BaseCommand struct {
 }
 
 // NewFlagSet creates a new flag set that inherits properties from the command.
-func (c *BaseCommand) NewFlagSet(opts ...Option) *FlagSet {
-	return NewFlagSet(WithLookupEnv(c.LookupEnv))
+func (c *BaseCommand) NewFlagSet(o ...Option) *FlagSet {
+	opts := []Option{
+		WithLookupEnv(c.LookupEnv),
+		WithPromptAll(c.PromptAll),
+		WithWorkingDir(c.WorkingDir),
+	}
+	opts = append(opts, o...)
+
+	return NewFlagSet(opts...)
 }
 
 // Flags returns the base command flags, which is always nil.
@@ -483,22 +490,7 @@ func (c *BaseCommand) GetEnv(key string) string {
 // WorkingDir returns the absolute path of current working directory from where
 // the command was started. All symlinks are resolved to their real paths.
 func (c *BaseCommand) WorkingDir() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current working directory: %w", err)
-	}
-
-	symCwd, err := filepath.EvalSymlinks(cwd)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve symlinks for current working directory: %w", err)
-	}
-
-	abs, err := filepath.Abs(symCwd)
-	if err != nil {
-		return "", fmt.Errorf("failed to compute absolute path for current working directory: %w", err)
-	}
-
-	return abs, nil
+	return workingDir()
 }
 
 // ExecutablePath returns the absolute path of the CLI executable binary. All
@@ -574,4 +566,23 @@ func buildCompleteCommands(cmd Command) *complete.Command {
 	}
 
 	return completer
+}
+
+func workingDir() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	symCwd, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve symlinks for current working directory: %w", err)
+	}
+
+	abs, err := filepath.Abs(symCwd)
+	if err != nil {
+		return "", fmt.Errorf("failed to compute absolute path for current working directory: %w", err)
+	}
+
+	return abs, nil
 }

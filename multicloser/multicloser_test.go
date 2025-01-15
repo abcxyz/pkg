@@ -93,7 +93,7 @@ func TestClose(t *testing.T) {
 		got := c.Close()
 		want := "0\n1\n2\n3\n4"
 		if diff := testutil.DiffErrString(got, want); diff != "" {
-			t.Errorf(diff)
+			t.Error(diff)
 		}
 	})
 }
