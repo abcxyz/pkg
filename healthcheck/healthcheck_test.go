@@ -83,8 +83,6 @@ func TestHandleHTTPHealth(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		for _, header := range []string{"accept", "content-type"} {
 			header := header
 

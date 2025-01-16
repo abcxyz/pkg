@@ -56,8 +56,6 @@ func TestDiffErrString(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -105,8 +103,6 @@ func TestDiffErrString_LongDiff(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			gotDiff := DiffErrString(tc.err, tc.msg)
