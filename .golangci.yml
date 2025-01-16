@@ -87,6 +87,7 @@ issues:
   # default: []
   exclude:
     - '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
+    - '^G115:' # gosec: there's no way to actually satisfy this linter
 
   # default: []
   exclude-rules:
