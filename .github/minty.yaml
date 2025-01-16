@@ -18,7 +18,7 @@ scope:
       - 'pkg'
     permissions:
       contents: 'write'
-      pull_request: 'write'
+      pull_requests: 'write'
 
   release:
     rule:
