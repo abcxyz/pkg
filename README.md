@@ -239,7 +239,8 @@ jobs:
       org-members-path: '.github/workflows/members.json'
 ```
 
-Note: the `org-members-path` should be the full path to the JSON file.
+Note: the `org-members-path` should be the full path to the JSON file without
+the leading `/`.
 
 ### maybe-build-docker.yml
 
