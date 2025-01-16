@@ -39,13 +39,21 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
-      - name: 'Mint token'
-        id: 'mint-token'
-        uses: 'abcxyz/github-token-minter/.github/actions/mint-token@main' # ratchet:exclude
+      - id: 'minty-auth'
+        uses: 'google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f' # ratchet:google-github-actions/auth@v2
         with:
-          wif_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
-          wif_service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
-          service_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          create_credentials_file: false
+          export_environment_variables: false
+          workload_identity_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
+          service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
+          token_format: 'id_token'
+          id_token_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          id_token_include_email: true
+
+      - id: 'mint-token'
+        uses: 'abcxyz/github-token-minter/.github/actions/minty@main' # ratchet:exclude
+        with:
+          id_token: '${{ steps.minty-auth.outputs.id_token }}'
           service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
           requested_permissions: |-
             {
