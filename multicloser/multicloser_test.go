@@ -84,7 +84,6 @@ func TestClose(t *testing.T) {
 
 		var c *Closer
 		for i := 0; i < 5; i++ {
-			i := i
 			c = Append(c, func() error {
 				return fmt.Errorf("%d", i)
 			})

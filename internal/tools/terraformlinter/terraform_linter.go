@@ -106,8 +106,6 @@ func RunLinter(ctx context.Context, paths []string) error {
 
 	// Process each provided path in parallel for violations.
 	for _, path := range paths {
-		path := path
-
 		if err := pool.Do(ctx, func() ([]*ViolationInstance, error) {
 			instances, err := lint(path)
 			if err != nil {

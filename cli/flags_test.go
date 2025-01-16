@@ -663,8 +663,6 @@ func TestFlagSet_Parse(t *testing.T) {
 			"single_dash": "-",
 			"double_dash": "--",
 		} {
-			dash, dashName := dash, dashName
-
 			t.Run(dashName+"/"+tc.name, func(t *testing.T) {
 				t.Parallel()
 

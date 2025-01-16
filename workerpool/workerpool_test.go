@@ -101,8 +101,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			if err := pool.Do(ctx, func() (*Void, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return nil, fmt.Errorf("%d", i)
@@ -137,8 +135,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			if err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return i, nil
@@ -173,8 +169,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			_ = pool.Do(ctx, func() (int, error) {
 				if i < 2 {
 					return i, nil
@@ -218,8 +212,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(100 * time.Millisecond)
 				return i, nil
@@ -266,7 +258,6 @@ func TestWorker_Done(t *testing.T) {
 		var wg sync.WaitGroup
 
 		for i := 0; i < 15; i++ {
-			i := i
 			wg.Add(1)
 
 			go func() {
