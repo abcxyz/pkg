@@ -75,6 +75,10 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+// WithPrivateKeySigner is one of two options that configures how requests
+// to GitHub are signed. This option utilizes a private key that is provided
+// directly. The private key can be an actual rsa.Private or a string
+// or a byte[] representation of the key.
 func WithPrivateKeySigner[T *rsa.PrivateKey | string | []byte](privateKeyT T) Option {
 	var privateKey *rsa.PrivateKey
 	var err error
@@ -98,6 +102,10 @@ func WithPrivateKeySigner[T *rsa.PrivateKey | string | []byte](privateKeyT T) Op
 	}
 }
 
+// WithKMSSigner is one of two options that configures how requests
+// to GitHub are signed. This option utilizes Google Cloud KMS
+// via the provided keyID to sign the request. The keyID is in the
+// format "projects/*/locations/*/keyRings/*/cryptoKeys/*.".
 func WithKMSSigner(ctx context.Context, keyID string) Option {
 	return func(g *App) (*App, error) {
 		g.signer = NewKMSSigner(ctx, keyID)
@@ -128,6 +136,10 @@ func NewApp(appID string, opts ...Option) (*App, error) {
 		}
 	}
 
+	if app.signer == nil {
+		return nil, fmt.Errorf("no signer configured for app - please provide one of [WithPrivateKeySigner|WithKMSSigner] as options")
+	}
+
 	return app, nil
 }
 
@@ -151,8 +163,7 @@ type TokenRequestAllRepos struct {
 
 // AppToken creates a signed JWT to authenticate a GitHub app so that it can
 // make API calls to GitHub.
-func (g *App) AppToken() (string, error) {
-	ctx := context.Background()
+func (g *App) AppToken(ctx context.Context) (string, error) {
 	// Make the current time 30 seconds in the past to combat clock skew issues
 	// where the JWT we issue looks like it is coming from the future when it gets
 	// to GitHub
@@ -192,7 +203,7 @@ func (g *App) AppToken() (string, error) {
 // by creating a JWT token.
 func (a *App) OAuthAppTokenSource() oauth2.TokenSource {
 	return oauth2TokenSource(func() (*oauth2.Token, error) {
-		jwt, err := a.AppToken()
+		jwt, err := a.AppToken(context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate app token: %w", err)
 		}
@@ -285,7 +296,7 @@ func (a *App) withInstallationCaching(ctx context.Context, cacheKey, tokenPath s
 // accessTokenURL gets an access token for the given path (which might be an
 // org, repo, or user). It uses the app's JWT to authenticate as a Bearer token.
 func (a *App) accessTokenURL(ctx context.Context, u string) (string, error) {
-	jwt, err := a.AppToken()
+	jwt, err := a.AppToken(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate github app jwt: %w", err)
 	}

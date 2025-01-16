@@ -15,6 +15,7 @@
 package githubauth
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -111,7 +112,10 @@ func TestNew(t *testing.T) {
 			appID:          "test-app-id",
 			installationID: "test-install-id",
 			privateKey:     rsaPrivateKey,
-			options:        []Option{WithBaseURL("https://foo.bar/")},
+			options: []Option{
+				WithBaseURL("https://foo.bar/"),
+				WithPrivateKeySigner(rsaPrivateKeyBytes),
+			},
 			want: &App{
 				appID:      "test-app-id",
 				signer:     NewPrivateKeySigner(rsaPrivateKey),
@@ -124,13 +128,25 @@ func TestNew(t *testing.T) {
 			appID:          "test-app-id",
 			installationID: "test-install-id",
 			privateKey:     rsaPrivateKey,
-			options:        []Option{WithHTTPClient(testClient)},
+			options: []Option{
+				WithHTTPClient(testClient),
+				WithPrivateKeySigner(rsaPrivateKeyBytes),
+			},
 			want: &App{
 				appID:      "test-app-id",
 				signer:     NewPrivateKeySigner(rsaPrivateKey),
 				baseURL:    "https://api.github.com",
 				httpClient: testClient,
 			},
+		},
+		{
+			name:           "with_http_client",
+			appID:          "test-app-id",
+			installationID: "test-install-id",
+			privateKey:     rsaPrivateKey,
+			options:        []Option{},
+			want:           nil,
+			wantError:      "no signer configured for app - please provide one of [WithPrivateKeySigner|WithKMSSigner] as options",
 		},
 	}
 
@@ -171,7 +187,7 @@ func TestApp_AppToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token, err := app.AppToken()
+	token, err := app.AppToken(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +231,7 @@ func TestApp_OAuthAppTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	token, err := app.AppToken()
+	token, err := app.AppToken(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

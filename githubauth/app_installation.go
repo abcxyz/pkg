@@ -138,7 +138,7 @@ func (i *AppInstallation) AllReposOAuth2TokenSource(ctx context.Context, permiss
 // githubAccessToken calls the GitHub API to generate a new access token with
 // provided JSON payload bytes.
 func (i *AppInstallation) githubAccessToken(ctx context.Context, requestJSON []byte) (string, error) {
-	appJWT, err := i.app.AppToken()
+	appJWT, err := i.app.AppToken(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate github app jwt: %w", err)
 	}
