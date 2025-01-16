@@ -33,7 +33,7 @@ linters:
     - 'bidichk'
     - 'bodyclose'
     - 'containedctx'
-    # - 'copyloopvar' TODO: enable after everything is upgraded to Go 1.22
+    - 'copyloopvar'
     - 'depguard'
     - 'dupword'
     - 'durationcheck'

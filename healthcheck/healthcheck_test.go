@@ -84,8 +84,6 @@ func TestHandleHTTPHealth(t *testing.T) {
 
 	for _, tc := range cases {
 		for _, header := range []string{"accept", "content-type"} {
-			header := header
-
 			t.Run(tc.name+"_"+header, func(t *testing.T) {
 				t.Parallel()
 
