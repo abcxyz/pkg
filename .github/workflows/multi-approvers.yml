@@ -25,7 +25,7 @@ on:
         type: 'string'
       multi-approvers-js-url:
         description: 'The URL to multi-approvers.js. This should typically not need to be set.'
-        type: string
+        type: 'string'
         default: 'https://raw.githubusercontent.com/abcxyz/pkg/main/.github/workflows/multi-approvers.js'
 
 
