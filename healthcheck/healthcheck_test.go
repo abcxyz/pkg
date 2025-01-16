@@ -139,7 +139,7 @@ func TestHandleGRPCHealth(t *testing.T) {
 	}()
 
 	addr := lis.Addr().String()
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to dail %q: %s", addr, err)
 	}

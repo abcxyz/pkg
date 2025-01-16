@@ -17,7 +17,7 @@
 #
 # Example usage:
 #   name: scancode
-
+#
 #   on:
 #     workflow_dispatch:
 #       inputs:
@@ -26,16 +26,16 @@
 #           required: false
 #           type: 'string'
 #           default: 'main'
-
+#
 #   permissions:
 #     contents: 'read'
-
+#
 #   jobs:
 #     scancode:
 #       uses: 'abcxyz/pkg/.github/workflows/scancode.yml@main' # pin tag or sha here.
 #       with:
 #         branch: '${{ inputs.branch }}'
-
+#
 # After install the workflow in your repository, to scan both the repository and
 # all transitive dependencies:
 #   1, checkout a branch to include the dependencies (i.e. run `go mod vendor`
@@ -67,19 +67,22 @@ jobs:
       contents: 'read'
     steps:
       - run: 'mkdir -p ${{ env.REPO_ROOT }}'
+
       # Checkout the repo branch to the given path.
-      - uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+      - uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
         with:
           path: '${{ env.REPO_ROOT }}'
           ref: '${{ inputs.branch }}'
+
       - name: 'Scan the code'
         id: 'scancode'
         uses: 'abcxyz/pkg/.github/actions/scancode@main' # ratchet:exclude
         with:
           directory-to-scan: '${{ env.REPO_ROOT }}'
+
       # Upload the scancode result artifacts to GitHub Action artifact, see
       # https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts.
-      - uses: 'actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808' # ratchet:actions/upload-artifact@v4
+      - uses: 'actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08' # ratchet:actions/upload-artifact@v4
         with:
           name: 'scancode output'
           path: |
