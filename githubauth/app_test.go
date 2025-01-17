@@ -15,7 +15,6 @@
 package githubauth
 
 import (
-	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -51,6 +50,19 @@ func TestNew(t *testing.T) {
 		Timeout: 5 * time.Second,
 	}
 
+	signerPK, err := NewPrivateKeySigner(rsaPrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signerStr, err := NewPrivateKeySigner(rsaPrivateKeyString)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signerBytes, err := NewPrivateKeySigner(rsaPrivateKeyBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		name           string
 		appID          string
@@ -59,6 +71,8 @@ func TestNew(t *testing.T) {
 		privateKey       *rsa.PrivateKey
 		privateKeyString string
 		privateKeyBytes  []byte
+
+		signer crypto.Signer
 
 		options []Option
 
@@ -69,12 +83,10 @@ func TestNew(t *testing.T) {
 			name:           "private_key_rsa_key",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
-			options: []Option{
-				WithPrivateKeySigner(rsaPrivateKey),
-			},
+			signer:         signerPK,
 			want: &App{
 				appID:      "test-app-id",
-				signer:     NewPrivateKeySigner(rsaPrivateKey),
+				signer:     signerPK,
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -83,12 +95,10 @@ func TestNew(t *testing.T) {
 			name:           "private_key_string",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
-			options: []Option{
-				WithPrivateKeySigner(rsaPrivateKeyString),
-			},
+			signer:         signerStr,
 			want: &App{
 				appID:      "test-app-id",
-				signer:     NewPrivateKeySigner(rsaPrivateKey),
+				signer:     signerStr,
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -97,12 +107,10 @@ func TestNew(t *testing.T) {
 			name:           "private_key_bytes",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
-			options: []Option{
-				WithPrivateKeySigner(rsaPrivateKeyBytes),
-			},
+			signer:         signerBytes,
 			want: &App{
 				appID:      "test-app-id",
-				signer:     NewPrivateKeySigner(rsaPrivateKey),
+				signer:     signerBytes,
 				baseURL:    "https://api.github.com",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -111,14 +119,14 @@ func TestNew(t *testing.T) {
 			name:           "with_base_url",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
+			signer:         signerPK,
 			privateKey:     rsaPrivateKey,
 			options: []Option{
 				WithBaseURL("https://foo.bar/"),
-				WithPrivateKeySigner(rsaPrivateKeyBytes),
 			},
 			want: &App{
 				appID:      "test-app-id",
-				signer:     NewPrivateKeySigner(rsaPrivateKey),
+				signer:     signerPK,
 				baseURL:    "https://foo.bar",
 				httpClient: &http.Client{Timeout: 10 * time.Second},
 			},
@@ -127,26 +135,17 @@ func TestNew(t *testing.T) {
 			name:           "with_http_client",
 			appID:          "test-app-id",
 			installationID: "test-install-id",
+			signer:         signerPK,
 			privateKey:     rsaPrivateKey,
 			options: []Option{
 				WithHTTPClient(testClient),
-				WithPrivateKeySigner(rsaPrivateKeyBytes),
 			},
 			want: &App{
 				appID:      "test-app-id",
-				signer:     NewPrivateKeySigner(rsaPrivateKey),
+				signer:     signerPK,
 				baseURL:    "https://api.github.com",
 				httpClient: testClient,
 			},
-		},
-		{
-			name:           "with_http_client",
-			appID:          "test-app-id",
-			installationID: "test-install-id",
-			privateKey:     rsaPrivateKey,
-			options:        []Option{},
-			want:           nil,
-			wantError:      "no signer configured for app - please provide one of [WithPrivateKeySigner|WithKMSSigner] as options",
 		},
 	}
 
@@ -156,7 +155,7 @@ func TestNew(t *testing.T) {
 
 			var got *App
 			var err error
-			got, err = NewApp(tc.appID, tc.options...)
+			got, err = NewApp(tc.appID, tc.signer, tc.options...)
 			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
 				t.Fatalf("unexpected err: %s", diff)
 			}
@@ -165,7 +164,8 @@ func TestNew(t *testing.T) {
 				cmp.AllowUnexported(App{}),
 				cmpopts.IgnoreFields(App{},
 					"installationCache",
-					"installationCacheLock"),
+					"installationCacheLock",
+					"signer"),
 			}
 			if diff := cmp.Diff(tc.want, got, opts...); diff != "" {
 				t.Errorf("mismatch (-want, +got):\n%s", diff)
@@ -182,12 +182,16 @@ func TestApp_AppToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app, err := NewApp("my-app-id", []Option{WithPrivateKeySigner(privateKey)}...)
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	token, err := app.AppToken(context.Background())
+	token, err := app.AppToken()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,12 +230,16 @@ func TestApp_OAuthAppTokenSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app, err := NewApp("my-app-id", []Option{WithPrivateKeySigner(privateKey)}...)
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	token, err := app.AppToken(context.Background())
+	token, err := app.AppToken()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -126,7 +126,11 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", WithPrivateKeySigner(privateKey), WithBaseURL(srv.URL))
+			signer, err := NewPrivateKeySigner(privateKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -169,7 +173,11 @@ func TestAppInstallation_SelectedReposTokenSource(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", WithPrivateKeySigner(privateKey), WithBaseURL(srv.URL))
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +262,11 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", WithPrivateKeySigner(privateKey), WithBaseURL(srv.URL))
+			signer, err := NewPrivateKeySigner(privateKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -297,7 +309,11 @@ func TestAppInstallation_AllReposTokenSource(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", WithPrivateKeySigner(privateKey), WithBaseURL(srv.URL))
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
