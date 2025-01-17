@@ -236,8 +236,11 @@ jobs:
   multi-approvers:
     uses: 'abcxyz/pkg/.github/workflows/multi-approvers.yml@main'
     with:
-      org-members-path: './members.json'
+      org-members-path: '.github/workflows/members.json'
 ```
+
+Note: the `org-members-path` should be the full path to the JSON file without
+the leading `/`.
 
 ### maybe-build-docker.yml
 
