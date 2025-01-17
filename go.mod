@@ -12,6 +12,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/posener/complete/v2 v2.1.0
 	github.com/sethvargo/go-envconfig v1.1.0
+	github.com/sethvargo/go-gcpkms v0.2.0
 	github.com/sethvargo/go-retry v0.3.0
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/sync v0.10.0

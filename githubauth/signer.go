@@ -19,70 +19,68 @@ import (
 	"crypto"
 	"crypto/rsa"
 	"fmt"
-	"log"
+	"io"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"cloud.google.com/go/kms/apiv1/kmspb"
+	"github.com/sethvargo/go-gcpkms/pkg/gcpkms"
 )
 
-// Signer is an interface that exposes a single method that is used
-// to sign a digest using a private key.
-type Signer interface {
-	Sign(ctx context.Context, digest []byte) ([]byte, error)
-}
+// NewPrivateKeySigner utilizes a private key that is provided
+// directly to sign requests. The private key can be an actual rsa.Private
+// or a string / byte[] representation of the key.
+func NewPrivateKeySigner[T *rsa.PrivateKey | string | []byte](privateKeyT T) (crypto.Signer, error) {
+	var privateKey *rsa.PrivateKey
+	var err error
 
-// PrivateKeySigner is a Signer implementation that uses a provided
-// private key to sign the request.
-type PrivateKeySigner struct {
-	PrivateKey *rsa.PrivateKey
-}
-
-// NewPrivateKeySigner creates a new instance of the PrivateKeySigner
-// with the provided private key.
-func NewPrivateKeySigner(privateKey *rsa.PrivateKey) Signer {
-	return &PrivateKeySigner{
-		PrivateKey: privateKey,
+	switch t := any(privateKeyT).(type) {
+	case *rsa.PrivateKey:
+		privateKey = t
+	case string:
+		privateKey, err = parseRSAPrivateKeyPEM([]byte(t))
+	case []byte:
+		privateKey, err = parseRSAPrivateKeyPEM(t)
+	default:
+		panic("impossible")
 	}
+	if err != nil {
+		return nil, fmt.Errorf("error parsing private key: %w", err)
+	}
+	return &privateKeySigner{
+		privateKey: privateKey,
+	}, nil
+}
+
+// privateKeySigner is a Signer implementation that uses a provided
+// private key to sign the request.
+type privateKeySigner struct {
+	privateKey *rsa.PrivateKey
+}
+
+func (s *privateKeySigner) Public() crypto.PublicKey {
+	return s.privateKey.Public()
 }
 
 // Sign creates a signature for the provided digest using the private key.
-func (s *PrivateKeySigner) Sign(ctx context.Context, digest []byte) ([]byte, error) {
-	signature, err := rsa.SignPKCS1v15(nil, s.PrivateKey, crypto.SHA256, digest)
+func (s *privateKeySigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	signature, err := rsa.SignPKCS1v15(nil, s.privateKey, opts.HashFunc(), digest)
 	if err != nil {
 		return nil, fmt.Errorf("error signing JWT: %w", err)
 	}
 	return signature, nil
 }
 
-// KMSSigner is a Signer implementation that uses Google Cloud
-// KMS to sign a request.
-type KMSSigner struct {
-	client *kms.KeyManagementClient
-	keyID  string
-}
-
-// Sign implements Signer using Google Cloud KMS to produce a
-// signature for the provided digest.
-func (s *KMSSigner) Sign(ctx context.Context, digest []byte) ([]byte, error) {
-	req := &kmspb.AsymmetricSignRequest{
-		Name: s.keyID,
-		Data: digest,
-	}
-	resp, err := s.client.AsymmetricSign(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("error signing via kms key: %w", err)
-	}
-	return resp.GetSignature(), nil
-}
-
-// NewKMSSigner creates a new instance of a KMSSigner
-// using the provided KMS key ID.
-func NewKMSSigner(ctx context.Context, keyID string) Signer {
+// NewGoogleCloudKMSSigner creates a new instance of a crypto.Signer
+// using the provided KMS key ID. Signature creation is done via Google Cloud
+// KMS using the provided key to sign the request. The keyID is in the
+// format "projects/*/locations/*/keyRings/*/cryptoKeys/*.".
+func NewGoogleCloudKMSSigner(ctx context.Context, keyID string) (crypto.Signer, error) {
 	client, err := kms.NewKeyManagementClient(ctx)
 	if err != nil {
-		log.Fatalf("failed to setup client: %v", err)
+		return nil, fmt.Errorf("failed to setup client: %w", err)
 	}
-	return &KMSSigner{
-		client: client,
+	signer, err := gcpkms.NewSigner(ctx, client, keyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create signer: %w", err)
 	}
+	return signer, nil
 }

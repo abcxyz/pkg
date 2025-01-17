@@ -16,6 +16,7 @@ package githubauth
 
 import (
 	"context"
+	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -39,7 +40,7 @@ const defaultBaseURL = "https://api.github.com"
 // request an OIDC token on behalf of an installation.
 type App struct {
 	appID  string
-	signer Signer
+	signer crypto.Signer
 
 	installationCache     map[string](func() (*AppInstallation, error))
 	installationCacheLock sync.Mutex
@@ -54,14 +55,14 @@ func (a *App) AppID() string { //nolint:stylecheck // "AppID" is the name GitHub
 }
 
 // Option is a function that provides an option to the GitHub App creation.
-type Option func(g *App) (*App, error)
+type Option func(g *App) *App
 
 // WithBaseURL allows overriding of the GitHub API url. This is usually only
 // overidden for testing or private GitHub installations.
 func WithBaseURL(url string) Option {
-	return func(g *App) (*App, error) {
+	return func(g *App) *App {
 		g.baseURL = strings.TrimSuffix(url, "/")
-		return g, nil
+		return g
 	}
 }
 
@@ -69,47 +70,9 @@ func WithBaseURL(url string) Option {
 // client implementation. This HTTP client will be shared among all
 // [AppInstallation].
 func WithHTTPClient(client *http.Client) Option {
-	return func(g *App) (*App, error) {
+	return func(g *App) *App {
 		g.httpClient = client
-		return g, nil
-	}
-}
-
-// WithPrivateKeySigner is one of two options that configures how requests
-// to GitHub are signed. This option utilizes a private key that is provided
-// directly. The private key can be an actual rsa.Private or a string
-// or a byte[] representation of the key.
-func WithPrivateKeySigner[T *rsa.PrivateKey | string | []byte](privateKeyT T) Option {
-	var privateKey *rsa.PrivateKey
-	var err error
-
-	switch t := any(privateKeyT).(type) {
-	case *rsa.PrivateKey:
-		privateKey = t
-	case string:
-		privateKey, err = parseRSAPrivateKeyPEM([]byte(t))
-	case []byte:
-		privateKey, err = parseRSAPrivateKeyPEM(t)
-	default:
-		panic("impossible")
-	}
-	return func(g *App) (*App, error) {
-		if err != nil {
-			return nil, err
-		}
-		g.signer = NewPrivateKeySigner(privateKey)
-		return g, nil
-	}
-}
-
-// WithKMSSigner is one of two options that configures how requests
-// to GitHub are signed. This option utilizes Google Cloud KMS
-// via the provided keyID to sign the request. The keyID is in the
-// format "projects/*/locations/*/keyRings/*/cryptoKeys/*.".
-func WithKMSSigner(ctx context.Context, keyID string) Option {
-	return func(g *App) (*App, error) {
-		g.signer = NewKMSSigner(ctx, keyID)
-		return g, nil
+		return g
 	}
 }
 
@@ -117,11 +80,11 @@ func WithKMSSigner(ctx context.Context, keyID string) Option {
 //
 // The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
 // []byte) of the private key material.
-func NewApp(appID string, opts ...Option) (*App, error) {
-	var err error
+func NewApp(appID string, signer crypto.Signer, opts ...Option) (*App, error) {
 	app := &App{
 		appID:             appID,
 		installationCache: make(map[string](func() (*AppInstallation, error)), 8),
+		signer:            signer,
 
 		baseURL: defaultBaseURL,
 		httpClient: &http.Client{
@@ -130,16 +93,8 @@ func NewApp(appID string, opts ...Option) (*App, error) {
 	}
 
 	for _, opt := range opts {
-		app, err = opt(app)
-		if err != nil {
-			return nil, fmt.Errorf("error when applying option: %w", err)
-		}
+		app = opt(app)
 	}
-
-	if app.signer == nil {
-		return nil, fmt.Errorf("no signer configured for app - please provide one of [WithPrivateKeySigner|WithKMSSigner] as options")
-	}
-
 	return app, nil
 }
 
@@ -163,7 +118,7 @@ type TokenRequestAllRepos struct {
 
 // AppToken creates a signed JWT to authenticate a GitHub app so that it can
 // make API calls to GitHub.
-func (g *App) AppToken(ctx context.Context) (string, error) {
+func (g *App) AppToken() (string, error) {
 	// Make the current time 30 seconds in the past to combat clock skew issues
 	// where the JWT we issue looks like it is coming from the future when it gets
 	// to GitHub
@@ -190,7 +145,7 @@ func (g *App) AppToken(ctx context.Context) (string, error) {
 	digest := h.Sum(nil)
 
 	if g.signer != nil {
-		signature, err := g.signer.Sign(ctx, digest)
+		signature, err := g.signer.Sign(nil, digest, crypto.SHA256)
 		if err != nil {
 			return "", fmt.Errorf("error signing JWT: %w", err)
 		}
@@ -203,7 +158,7 @@ func (g *App) AppToken(ctx context.Context) (string, error) {
 // by creating a JWT token.
 func (a *App) OAuthAppTokenSource() oauth2.TokenSource {
 	return oauth2TokenSource(func() (*oauth2.Token, error) {
-		jwt, err := a.AppToken(context.Background())
+		jwt, err := a.AppToken()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate app token: %w", err)
 		}
@@ -296,7 +251,7 @@ func (a *App) withInstallationCaching(ctx context.Context, cacheKey, tokenPath s
 // accessTokenURL gets an access token for the given path (which might be an
 // org, repo, or user). It uses the app's JWT to authenticate as a Bearer token.
 func (a *App) accessTokenURL(ctx context.Context, u string) (string, error) {
-	jwt, err := a.AppToken(ctx)
+	jwt, err := a.AppToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate github app jwt: %w", err)
 	}
