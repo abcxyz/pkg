@@ -78,8 +78,19 @@ func WithHTTPClient(client *http.Client) Option {
 
 // NewApp creates a new GitHub App from the given inputs.
 //
-// The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
-// []byte) of the private key material.
+// The signer can be any crypto.Signer. For RSA keys or PEM-encoded strings of
+// RSA keys, use [NewPrivateKeySigner]. For Google Cloud KMS, use a signer
+// implementation like [github.com/sethvargo/go-gcpkms/pkg/gcpkms.NewSigner]:
+//
+//	client, err := kms.NewKeyManagementClient(ctx)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to setup client: %w", err)
+//	}
+//	signer, err := gcpkms.NewSigner(ctx, client, keyID)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to create signer: %w", err)
+//	}
+//	return signer, nil
 func NewApp(appID string, signer crypto.Signer, opts ...Option) (*App, error) {
 	app := &App{
 		appID:             appID,

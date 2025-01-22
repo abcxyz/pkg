@@ -15,14 +15,10 @@
 package githubauth
 
 import (
-	"context"
 	"crypto"
 	"crypto/rsa"
 	"fmt"
 	"io"
-
-	kms "cloud.google.com/go/kms/apiv1"
-	"github.com/sethvargo/go-gcpkms/pkg/gcpkms"
 )
 
 // NewPrivateKeySigner utilizes a private key that is provided
@@ -67,20 +63,4 @@ func (s *privateKeySigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOp
 		return nil, fmt.Errorf("error signing JWT: %w", err)
 	}
 	return signature, nil
-}
-
-// NewGoogleCloudKMSSigner creates a new instance of a crypto.Signer
-// using the provided KMS key ID. Signature creation is done via Google Cloud
-// KMS using the provided key to sign the request. The keyID is in the
-// format "projects/*/locations/*/keyRings/*/cryptoKeys/*.".
-func NewGoogleCloudKMSSigner(ctx context.Context, keyID string) (crypto.Signer, error) {
-	client, err := kms.NewKeyManagementClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup client: %w", err)
-	}
-	signer, err := gcpkms.NewSigner(ctx, client, keyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create signer: %w", err)
-	}
-	return signer, nil
 }
