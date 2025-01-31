@@ -213,10 +213,7 @@ runs:
           # Copy everything into the scratch directory so we don't mess with the
           # local tree in case there are other actions that assume a pristine
           # working directory.
-          echo "PWD: ${PWD}"
-          ls -alh .
-
-          cp -r "${PWD}/" "${SCRATCH}/"
+          cp -r . "${SCRATCH}/"
           cd "${SCRATCH}" || exit 1
 
           tree "${SCRATCH}"
