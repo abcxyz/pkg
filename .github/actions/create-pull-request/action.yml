@@ -47,6 +47,10 @@ inputs:
     description: 'Create pull request in draft status.'
     required: false
     default: 'false'
+  compute_paths:
+    description: 'Automatically compute the changed and deleted files. Defaults to `false`.'
+    required: false
+    default: 'false'
   changed_paths:
     description: 'JSON array of the relative file paths added or changed in the pull request. Defaults to `[]`.'
     required: false
@@ -189,17 +193,66 @@ runs:
             core.error(err);
           }
 
+    # Compute changed files
+    - name: 'Compute changed files'
+      id: 'compute-changes'
+      shell: 'bash'
+      env:
+        COMPUTE_PATHS: '${{ inputs.compute_paths }}'
+        CHANGED_PATHS: '${{ inputs.changed_paths }}'
+        DELETED_PATHS: '${{ inputs.deleted_paths }}'
+      run: |-
+        if [ "${COMPUTE_PATHS}" = true ]; then
+          # Make a scratch directory that gets cleaned up.
+          SCRATCH="$(mktemp -d -p "${RUNNER_TEMP}" -t "create-pull-request-${GITHUB_SHA:0:7}")"
+          cleanup() { rm -rf "${SCRATCH}" }
+          trap cleanup EXIT
+
+          # Copy everything into the scratch directory so we don't mess with the
+          # local tree in case there are other actions that assume a pristine
+          # working directory.
+          cp -r "${PWD}" "${SCRATCH}"
+          cd "${SCRATCH}"
+
+          git add -A
+          git commit --allow-empty --message "test: automation testing"
+
+          CHANGED_PATHS="$(git diff HEAD~1 --name-only --diff-filter=d | jq --compact-output --raw-output --raw-input --slurp 'split("\n") | map(select(. != ""))')"
+          echo "::debug::computed changed paths: ${CHANGED_PATHS}"
+
+          DELETED_PATHS="$(git diff HEAD~1 --name-only --diff-filter=D | jq --compact-output --raw-output --raw-input --slurp 'split("\n") | map(select(. != ""))')"
+          echo "::debug::computed deleted paths: ${DELETED_PATHS}"
+        else
+          echo "::debug::using given changed paths: ${CHANGED_PATHS}"
+          echo "::debug::using given deleted paths: ${DELETED_PATHS}"
+        fi
+
+        echo "changed_paths=${CHANGED_PATHS}" >> $GITHUB_OUTPUT
+        echo "deleted_paths=${DELETED_PATHS}" >> $GITHUB_OUTPUT
+
+        HAS_CHANGES="false"
+        if [ "${CHANGED_PATHS}" != "[]" ]; then
+          HAS_CHANGES="true"
+        fi
+        if [ "${DELETED_PATHS}" != "[]" ]; then
+          HAS_CHANGES="true"
+        fi
+        echo "::debug::computed has_changes: ${HAS_CHANGES}"
+        echo "has_changes=${HAS_CHANGES}" >> $GITHUB_OUTPUT
+
     # Commit files using the GitHub API to ensure commits are signed
     - name: 'Create Commits'
       id: 'create-commits'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
+      if: |-
+        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
         PR_TITLE: '${{ inputs.title }}'
         PR_BODY: '${{ inputs.body }}'
-        CHANGED_PATHS: '${{ inputs.changed_paths }}'
-        DELETED_PATHS: '${{ inputs.deleted_paths }}'
+        CHANGED_PATHS: '${{ steps.compute-changes.outputs.changed_paths }}'
+        DELETED_PATHS: '${{ steps.compute-changes.outputs.deleted_paths }}'
       with:
         github-token: '${{ inputs.token }}'
         retries: '${{ inputs.max_retries }}'
@@ -222,6 +275,7 @@ runs:
             // iterate the files loading their content into each object
             await Promise.all(
               changedPaths.map(async (file) => {
+                core.debug("processing changed file: ${file}...")
                 const content = await fs.readFile(file, { encoding: "utf8" });
                 const isExec = !!((await fs.stat(file).mode) & fs.constants.S_IXUSR);
                 prCommitTree.push({
@@ -236,6 +290,7 @@ runs:
             // iterate the files loading their content into each object
             await Promise.all(
               deletedPaths.map(async (file) => {
+                core.debug("processing deleted file: ${file}...")
                 const isExec = !!((await fs.stat(file).mode) & fs.constants.S_IXUSR);
                 prCommitTree.push({
                   path: file,
@@ -260,7 +315,7 @@ runs:
               tree: prCommitTree,
             });
 
-            core.debug("tree: ", tree);
+            core.debug("tree: ${tree}");
 
             core.info(`Creating new commit:
               owner:   ${context.repo.owner}
@@ -278,7 +333,7 @@ runs:
               tree: tree.sha,
             });
 
-            core.debug("commit: ", commit);
+            core.debug("commit: ${commit}");
 
             core.info(`Updating PR branch ref
               owner: ${context.repo.owner}
@@ -304,6 +359,8 @@ runs:
     - name: 'Create/Update Pull Request'
       id: 'create-update-pull-request'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
+      if: |-
+        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -386,6 +443,8 @@ runs:
     # This is significantly less code and more readability for one extra API call
     - name: 'Toggle draft'
       id: 'toggle-draft'
+      if: |-
+        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
       env:
         GH_TOKEN: '${{ inputs.token }}'
         DRAFT: '${{ fromJSON(inputs.draft) }}'
@@ -405,8 +464,9 @@ runs:
     # This is significantly less code and more readability for one extra API call
     - name: 'Toggle auto-merge'
       id: 'toggle-automerge'
-      # Skip if draft == true, draft PRs cannot modify auto-merge
-      if: '${{ !fromJSON(inputs.draft) }}'
+      if: |-
+        # Skip if draft == true, draft PRs cannot modify auto-merge
+        ${{ toJSON(steps.compute-changes.outputs.has_changes) && !fromJSON(inputs.draft)  }}
       env:
         GH_TOKEN: '${{ inputs.token }}'
         DISABLE_AUTO_MERGE: '${{ fromJSON(inputs.disable_automerge) }}'
