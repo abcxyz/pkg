@@ -204,7 +204,7 @@ runs:
       run: |-
         if [ "${COMPUTE_PATHS}" = true ]; then
           # Make a scratch directory that gets cleaned up.
-          SCRATCH="$(mktemp -d -p "${RUNNER_TEMP}" -t "create-pull-request-${GITHUB_SHA:0:7}")"
+          SCRATCH="$(mktemp -d "${RUNNER_TEMP}/cpr-${GITHUB_SHA:0:7}.XXXXXXX")"
           function cleanup() {
             rm -rf "${SCRATCH}"
           }
