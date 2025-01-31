@@ -216,8 +216,6 @@ runs:
           cp -r . "${SCRATCH}/"
           cd "${SCRATCH}" || exit 1
 
-          tree "${SCRATCH}"
-
           git config user.name "Robot Account"
           git config user.email "robot@example.com"
           git add -A
@@ -251,7 +249,7 @@ runs:
       id: 'create-commits'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       if: |-
-        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
+        ${{ fromJSON(steps.compute-changes.outputs.has_changes || 'false') }}
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -366,7 +364,7 @@ runs:
       id: 'create-update-pull-request'
       uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
       if: |-
-        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
+        ${{ fromJSON(steps.compute-changes.outputs.has_changes || 'false') }}
       env:
         HEAD_BRANCH: '${{ inputs.head_branch }}'
         BASE_BRANCH: '${{ inputs.base_branch }}'
@@ -450,7 +448,7 @@ runs:
     - name: 'Toggle draft'
       id: 'toggle-draft'
       if: |-
-        ${{ toJSON(steps.compute-changes.outputs.has_changes) }}
+        ${{ fromJSON(steps.compute-changes.outputs.has_changes || 'false') }}
       env:
         GH_TOKEN: '${{ inputs.token }}'
         DRAFT: '${{ fromJSON(inputs.draft) }}'
@@ -472,7 +470,7 @@ runs:
       id: 'toggle-automerge'
       if: |-
         # Skip if draft == true, draft PRs cannot modify auto-merge
-        ${{ toJSON(steps.compute-changes.outputs.has_changes) && !fromJSON(inputs.draft)  }}
+        ${{ fromJSON(steps.compute-changes.outputs.has_changes || 'false') && !fromJSON(inputs.draft || 'false')  }}
       env:
         GH_TOKEN: '${{ inputs.token }}'
         DISABLE_AUTO_MERGE: '${{ fromJSON(inputs.disable_automerge) }}'
