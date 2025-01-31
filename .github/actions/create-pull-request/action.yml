@@ -205,17 +205,21 @@ runs:
         if [ "${COMPUTE_PATHS}" = true ]; then
           # Make a scratch directory that gets cleaned up.
           SCRATCH="$(mktemp -d -p "${RUNNER_TEMP}" -t "create-pull-request-${GITHUB_SHA:0:7}")"
-          cleanup() { rm -rf "${SCRATCH}" }
+          function cleanup() {
+            rm -rf "${SCRATCH}"
+          }
           trap cleanup EXIT
 
           # Copy everything into the scratch directory so we don't mess with the
           # local tree in case there are other actions that assume a pristine
           # working directory.
           cp -r "${PWD}" "${SCRATCH}"
-          cd "${SCRATCH}"
+          cd "${SCRATCH}" || exit 1
 
+          git config user.name "Robot Account"
+          git config user.email "robot@example.com"
           git add -A
-          git commit --allow-empty --message "test: automation testing"
+          git commit --allow-empty --message "automation: compute changed files"
 
           CHANGED_PATHS="$(git diff HEAD~1 --name-only --diff-filter=d | jq --compact-output --raw-output --raw-input --slurp 'split("\n") | map(select(. != ""))')"
           echo "::debug::computed changed paths: ${CHANGED_PATHS}"
@@ -227,8 +231,8 @@ runs:
           echo "::debug::using given deleted paths: ${DELETED_PATHS}"
         fi
 
-        echo "changed_paths=${CHANGED_PATHS}" >> $GITHUB_OUTPUT
-        echo "deleted_paths=${DELETED_PATHS}" >> $GITHUB_OUTPUT
+        echo "changed_paths=${CHANGED_PATHS}" >> "${GITHUB_OUTPUT}"
+        echo "deleted_paths=${DELETED_PATHS}" >> "${GITHUB_OUTPUT}"
 
         HAS_CHANGES="false"
         if [ "${CHANGED_PATHS}" != "[]" ]; then
@@ -238,7 +242,7 @@ runs:
           HAS_CHANGES="true"
         fi
         echo "::debug::computed has_changes: ${HAS_CHANGES}"
-        echo "has_changes=${HAS_CHANGES}" >> $GITHUB_OUTPUT
+        echo "has_changes=${HAS_CHANGES}" >> "${GITHUB_OUTPUT}"
 
     # Commit files using the GitHub API to ensure commits are signed
     - name: 'Create Commits'
