@@ -468,8 +468,8 @@ runs:
     # This is significantly less code and more readability for one extra API call
     - name: 'Toggle auto-merge'
       id: 'toggle-automerge'
+      # Skip if draft == true, draft PRs cannot modify auto-merge
       if: |-
-        # Skip if draft == true, draft PRs cannot modify auto-merge
         ${{ fromJSON(steps.compute-changes.outputs.has_changes || 'false') && !fromJSON(inputs.draft || 'false')  }}
       env:
         GH_TOKEN: '${{ inputs.token }}'
