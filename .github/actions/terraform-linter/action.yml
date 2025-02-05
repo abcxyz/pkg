@@ -18,23 +18,16 @@ inputs:
   directory:
     description: 'Directory with terraform files to lint'
     default: '.'
+    deprecationMessage: 'This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/terraform-linter@main instead.'
 
 runs:
   using: 'composite'
   steps:
-    - id: 'checkout-pkg'
-      uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
-      with:
-        repository: 'abcxyz/pkg'
-        path: 'abcxyz-pkg'
-
-    - id: 'setup-go'
-      uses: 'actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34' # ratchet:actions/setup-go@v5
-      with:
-        go-version: '1.22'
-
-    - id: 'run-linter'
-      shell: 'bash'
-      working-directory: 'abcxyz-pkg'
+    - name: 'Emit deprecation warning'
       run: |-
-        go run ./cmd/terraform-linter ${GITHUB_WORKSPACE}/${{inputs.directory}}
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/terraform-linter@main instead."
+
+    - name: 'Lint'
+      uses: 'abcxyz/terraform-linter@main'
+      with:
+        paths: '${{ inputs.directory }}'

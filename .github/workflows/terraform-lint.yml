@@ -73,9 +73,9 @@ jobs:
           path: 'abcxyz-pkg'
 
       - id: 'lint'
-        uses: './abcxyz-pkg/.github/actions/terraform-linter'
+        uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
         with:
-          directory: '${{ inputs.directory }}'
+          paths: '${{ inputs.directory }}'
 
       - name: 'Initialize and validate sub directories'
         if: '${{ inputs.walk_dirs }}'
