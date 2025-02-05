@@ -66,17 +66,6 @@ jobs:
         run: |-
           terraform fmt -recursive -check -diff
 
-      - id: 'checkout-pkg'
-        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
-        with:
-          repository: 'abcxyz/pkg'
-          path: 'abcxyz-pkg'
-
-      - id: 'lint'
-        uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
-        with:
-          paths: '${{ inputs.directory }}'
-
       - name: 'Initialize and validate sub directories'
         if: '${{ inputs.walk_dirs }}'
         shell: 'bash'
@@ -117,3 +106,8 @@ jobs:
         run: |-
           terraform init -backend=false -input=false
           terraform validate
+
+      - name: 'abcxyz Terraform linter'
+        uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
+        with:
+          paths: '${{ inputs.directory }}'
