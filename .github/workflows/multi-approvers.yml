@@ -17,7 +17,8 @@ name: 'multi-approvers'
 on:
   workflow_call:
     inputs:
-      # Path to a JSON file containing the members of the org. This should be # the full path that should work with the https://raw.githubusercontent.com/ prefix.
+      # Path to a JSON file containing the members of the org. This should be
+      # the full path that should work with the https://raw.githubusercontent.com/ prefix.
       # See the README for more.
       org-members-path:
         description: 'DEPRECATED: Use members-url with https://raw.githubusercontent.com/ prepeneded instead.'
