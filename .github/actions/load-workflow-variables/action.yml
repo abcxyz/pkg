@@ -22,7 +22,7 @@ inputs:
     required: false
     default: '.'
   filepath:
-    description: 'The YAML filepath to load the configuration from, relative to the GitHub workspace.'
+    description: 'The YAML filepath to load the configuration from. Must be a relative path on the default branch of the repository.'
     required: false
     default: 'env.yml'
   fail_on_missing:
