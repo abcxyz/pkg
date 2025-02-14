@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"html/template"
 	"testing"
 
@@ -25,7 +24,7 @@ import (
 func TestWithTemplateFuncs(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name string

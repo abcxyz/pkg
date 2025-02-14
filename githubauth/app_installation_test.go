@@ -15,7 +15,6 @@
 package githubauth
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -116,7 +115,7 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mux := http.NewServeMux()
 			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +154,7 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 func TestAppInstallation_SelectedReposTokenSource(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -252,7 +251,7 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mux := http.NewServeMux()
 			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -291,7 +290,7 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 func TestAppInstallation_AllReposTokenSource(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

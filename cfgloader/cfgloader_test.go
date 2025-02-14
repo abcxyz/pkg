@@ -15,7 +15,6 @@
 package cfgloader
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -118,7 +117,7 @@ num_val: 2`))},
 			t.Parallel()
 
 			got := tc.input
-			err := Load(context.Background(), got, tc.opts...)
+			err := Load(t.Context(), got, tc.opts...)
 			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
 				t.Errorf("Load got unexpected err: %s", diff)
 			}

@@ -15,7 +15,6 @@
 package logging_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/abcxyz/pkg/logging"
@@ -33,7 +32,7 @@ func ExampleTestLogger_context() {
 	_ = func(t *testing.T) { // func TestMyThing(t *testing.T)
 		// Most tests rely on the logger in the context, so here's a fast way to
 		// inject a test logger into the context.
-		ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+		ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 		// Use ctx in tests. Anything that extracts a logger from the context will
 		// get the test logger now.

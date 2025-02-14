@@ -15,7 +15,6 @@
 package healthcheck
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +28,7 @@ import (
 func TestHandleHTTPHealth(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name   string
@@ -117,7 +116,7 @@ func TestHandleHTTPHealth(t *testing.T) {
 func TestHandleGRPCHealth(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	s := grpc.NewServer()
 

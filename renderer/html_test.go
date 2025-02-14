@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -25,7 +24,7 @@ import (
 func TestRenderHTMLStatus(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	sys := fstest.MapFS{
 		"template.html": &fstest.MapFile{

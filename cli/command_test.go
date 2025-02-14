@@ -123,7 +123,7 @@ Usage: test COMMAND
 func TestRootCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	rootCmd := func() *RootCommand {
 		return &RootCommand{
@@ -274,7 +274,7 @@ func TestRootCommand_Run(t *testing.T) {
 func TestBaseCommand_Prompt(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
@@ -395,7 +395,7 @@ func TestBaseCommand_Prompt(t *testing.T) {
 func TestBaseCommand_PromptAll(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
@@ -509,7 +509,7 @@ func TestBaseCommand_PromptAll(t *testing.T) {
 func TestBaseCommand_PromptTo(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
