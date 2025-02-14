@@ -28,6 +28,6 @@ runs:
         echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/terraform-linter@main instead."
 
     - name: 'Lint'
-      uses: 'abcxyz/terraform-linter@main'
+      uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
       with:
         paths: '${{ inputs.directory }}'
