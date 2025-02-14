@@ -15,7 +15,6 @@
 package gcpmetadata
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,7 +25,7 @@ import (
 func TestClient_ProjectID(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	testServer := testMetadataServer(t)
 	client := NewClient(WithHost(testServer.Listener.Addr().String()))
@@ -44,7 +43,7 @@ func TestClient_ProjectID(t *testing.T) {
 func TestClient_ProjectNumber(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	testServer := testMetadataServer(t)
 	client := NewClient(WithHost(testServer.Listener.Addr().String()))

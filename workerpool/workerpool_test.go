@@ -29,7 +29,7 @@ import (
 func TestWorker(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	pool := New[*Void](&Config{
 		Concurrency: 3,
 	})
@@ -57,7 +57,7 @@ func TestWorker(t *testing.T) {
 func TestWorker_Do(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
@@ -80,7 +80,7 @@ func TestWorker_Do(t *testing.T) {
 func TestWorker_Done(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
@@ -204,7 +204,7 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("cancelled", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, done := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		ctx, done := context.WithTimeout(t.Context(), 10*time.Millisecond)
 		t.Cleanup(done)
 
 		pool := New[int](&Config{
@@ -231,7 +231,7 @@ func TestWorker_Done(t *testing.T) {
 			}
 		}
 
-		finishCtx := context.Background()
+		finishCtx := t.Context()
 		results, err := pool.Done(finishCtx)
 		if got, want := err, context.DeadlineExceeded; !errors.Is(got, want) {
 			t.Errorf("expected %v to be %v", got, want)

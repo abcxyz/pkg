@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +25,7 @@ import (
 func TestAssetIncludeTag(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name string
