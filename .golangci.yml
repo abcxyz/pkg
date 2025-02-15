@@ -74,11 +74,11 @@ linters:
     - 'sqlclosecheck'
     - 'staticcheck'
     - 'stylecheck'
-    - 'tenv'
     - 'thelper'
     - 'typecheck'
     - 'unconvert'
     - 'unused'
+    - 'usetesting'
     - 'wastedassign'
     - 'whitespace'
     - 'wrapcheck'
@@ -177,6 +177,10 @@ linters-settings:
     key-naming-case: 'snake'
     # default: false
     args-on-sep-lines: true
+
+  usetesting:
+    # default: false
+    os-temp-dir: true
 
   wrapcheck:
     ignoreSigRegexps:
