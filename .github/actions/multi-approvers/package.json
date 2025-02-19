@@ -1,0 +1,24 @@
+{
+  "name": "multi-approvers",
+  "version": "1.0.0",
+  "description": "GitHub Action that enforces approver requriements.",
+  "author": "",
+  "license": "Apache-2.0",
+  "main": "src/index.js",
+  "scripts": {
+    "tests": "jest",
+    "build-min": "ncc build -o dist/main -m src/index.js",
+    "build": "ncc build -o dist/main src/index.js"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3",
+    "jest": "^29.7.0"
+  }
+}

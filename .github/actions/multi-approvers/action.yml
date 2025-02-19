@@ -1,0 +1,16 @@
+name: 'multi-approvers action'
+description: 'Requires multiple internal approvals for external PRs.'
+
+inputs:
+  token:
+    description: 'Token with at least members:read, pull_requests:read, and actions:write privileges.'
+    required: true
+    type: 'string'
+  team:
+    description: "Team slug. The team's organization must be in the repository's organization."
+    required: true
+    type: 'string'
+
+runs:
+  using: 'node20'
+  main: 'dist/main/index.js'

@@ -1,0 +1,26 @@
+{
+  "inputs": {
+    "token": "fake-token",
+    "team": "fake-team"
+  },
+  "github": {
+    "context": {
+      "eventName": "push",
+      "runId": 1,
+      "payload": {
+        "pull_request": {
+          "number": 1,
+          "head": {
+            "ref": "fake-branch"
+          }
+        },
+        "repository": {
+          "name": "fake-repository",
+          "owner": {
+            "login": "test-org"
+          }
+        }
+      }
+    }
+  }
+}
