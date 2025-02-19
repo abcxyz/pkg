@@ -4,6 +4,15 @@ const github = require('@actions/github');
 jest.mock('@actions/core');
 jest.mock('@actions/github');
 
+function mockCoreGetInput(inputs = {}) {
+    core.getInput.mockImplementation((name) => {
+      if (Object.hasOwn(inputs, name)) {
+        return inputs[name];
+      }
+      return jest.requireActual('@actions/core').getInput(name);
+    });
+}
+
 /** Returns a GitHub Actions context. **/
 function getGhContext({
     eventName = 'pull_request',
@@ -38,15 +47,7 @@ describe('main', () => {
   });
 
   it('should fail on unsupported event', async () => {
-    core.getInput.mockImplementation((name) => {
-      if (name === 'token') {
-        return 'a-fake-token';
-      }
-      if (name === 'team') {
-        return 'a-fake-team';
-      }
-      return jest.requireActual('@actions/core').getInput(name);
-    });
+    mockCoreGetInput({token: 'fake-token', team: 'fake-team'});
     github.context = getGhContext({eventName: 'push'});
     const { main } = require('../src/main');
 
@@ -65,32 +66,22 @@ describe('main', () => {
   });
 
   it('should fail when token is not set', async () => {
-    core.getInput.mockImplementation((name) => {
-      if (name === 'token') {
-        return 'a-fake-token';
-      }
-      return jest.requireActual('@actions/core').getInput(name);
-    });
-    github.context = getGhContext();
-    const { main } = require('../src/main');
-
-    await main();
-
-    expect(core.setFailed).toHaveBeenCalledWith(new Error("Invalid input(s): team is required"));
-  });
-
-  it('should fail when team is not set', async () => {
-    core.getInput.mockImplementation((name) => {
-      if (name === 'team') {
-        return 'a-fake-team';
-      }
-      return jest.requireActual('@actions/core').getInput(name);
-    });
+    mockCoreGetInput({team: 'fake-team'});
     github.context = getGhContext();
     const { main } = require('../src/main');
 
     await main();
 
     expect(core.setFailed).toHaveBeenCalledWith(new Error("Invalid input(s): token is required"));
+  });
+
+  it('should fail when team is not set', async () => {
+    mockCoreGetInput({token: 'fake-token'});
+    github.context = getGhContext();
+    const { main } = require('../src/main');
+
+    await main();
+
+    expect(core.setFailed).toHaveBeenCalledWith(new Error("Invalid input(s): team is required"));
   });
 });
