@@ -13,4 +13,4 @@ users are external.
 `npm run build-min`: Generates minimized versions of Javascript source code.
 This MUST be run after making changes to code under the `src` directory.
 
- `npm run test`: runs tests.
+`npm run test`: runs tests.
