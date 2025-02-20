@@ -188,6 +188,12 @@ function validateInputs({token, team}) {
   }
 }
 
+function validateEvent(eventName) {
+    if (SUPPORTED_EVENTS.indexOf(eventName) < 0) {
+      throw new Error(`Unexpected event [${eventName}]. Supported events are ${SUPPORTED_EVENTS.join(', ')}`);
+    }
+}
+
 async function main() {
   try {
     const eventName = github.context.eventName;
@@ -201,10 +207,7 @@ async function main() {
     const team = core.getInput('team');
     const octokit = github.getOctokit(token);
 
-    if (SUPPORTED_EVENTS.indexOf(eventName) < 0) {
-      throw new Error(`Unexpected event [${eventName}]. Supported events are ${SUPPORTED_EVENTS.join(', ')}`);
-    }
-
+    validateEvent(eventName);
     validateInputs({token, team});
 
     await validate({team, prNumber, repoName, repoOwner, octokit});
