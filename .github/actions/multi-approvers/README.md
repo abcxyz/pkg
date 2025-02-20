@@ -8,8 +8,9 @@ users are external.
 
 ## Development
 
-Run `npm install` to download the required packages.
+`npm install`: Downloads required node packages.
 
-Run `npm run build-min` after making changes to code under the `src` directory.
+`npm run build-min`: Generates minimized versions of Javascript source code.
+This MUST be run after making changes to code under the `src` directory.
 
-Test by running `npm run test`.
+ `npm run test`: runs tests.
