@@ -4,7 +4,7 @@
   "description": "GitHub Action that enforces approver requriements.",
   "author": "",
   "license": "Apache-2.0",
-  "main": "main.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "jest",
     "build-min": "ncc build -o dist/main -m src/index.js",
