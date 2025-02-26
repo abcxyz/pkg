@@ -3,7 +3,7 @@ description: 'Requires multiple internal approvals for external PRs.'
 
 inputs:
   token:
-    description: 'Token with at least members:read, pull_requests:read, and actions:write privileges.'
+    description: 'GitHub token with at least members:read, pull_requests:read, and actions:write permissions.'
     required: true
     type: 'string'
   team:
