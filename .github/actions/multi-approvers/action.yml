@@ -7,7 +7,7 @@ inputs:
     required: true
     type: 'string'
   team:
-    description: "Team slug. The team's organization must be in the repository's organization."
+    description: "Team slug. The team's organization must be in the repository's organization. Example: feature-team"
     required: true
     type: 'string'
 
