@@ -1,0 +1,47 @@
+{
+  "inputs": {
+    "token": "fake-token",
+    "team": "fake-team"
+  },
+  "github": {
+    "context": {
+      "eventName": "pull_request",
+      "runId": 1,
+      "payload": {
+        "pull_request": {
+          "number": 1,
+          "head": {
+            "ref": "fake-branch"
+          }
+        },
+        "repository": {
+          "name": "fake-repository",
+          "owner": {
+            "login": "test-org"
+          }
+        }
+      }
+    }
+  },
+  "model": {
+    "pulls": [
+      {
+        "owner": "test-org",
+        "pull_number": 1,
+        "repo": "fake-repository",
+        "user": {
+          "login": "a-user"
+        }
+      }
+    ],
+    "teams": [
+      {
+        "org": "test-org",
+        "team_slug": "fake-team",
+        "username": "a-user",
+        "role": "member",
+        "state": "active"
+      }
+    ]
+  }
+}
