@@ -199,8 +199,8 @@ runs:
       shell: 'bash'
       env:
         COMPUTE_PATHS: '${{ inputs.compute_paths }}'
-        CHANGED_PATHS: '${{ toJSON(inputs.changed_paths) }}'
-        DELETED_PATHS: '${{ toJSON(inputs.deleted_paths) }}'
+        CHANGED_PATHS: '${{ inputs.changed_paths || "[]" }}'
+        DELETED_PATHS: '${{ inputs.deleted_paths || "[]" }}'
       run: |-
         if [ "${COMPUTE_PATHS}" = true ]; then
           # Make a scratch directory that gets cleaned up.
@@ -228,8 +228,8 @@ runs:
           echo "::debug::computed deleted paths: ${DELETED_PATHS}"
         else
           # Ensure the given paths are a single line of valid JSON.
-          CHANGED_PATHS="$(echo "${CHANGED_PATHS}" | jq -c .)"
-          DELETED_PATHS="$(echo "${DELETED_PATHS}" | jq -c .)"
+          CHANGED_PATHS="$(echo "${CHANGED_PATHS}" | jq -c -r .)"
+          DELETED_PATHS="$(echo "${DELETED_PATHS}" | jq -c -r .)"
           echo "::debug::using given changed paths: ${CHANGED_PATHS}"
           echo "::debug::using given deleted paths: ${DELETED_PATHS}"
         fi
