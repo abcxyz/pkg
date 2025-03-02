@@ -199,8 +199,8 @@ runs:
       shell: 'bash'
       env:
         COMPUTE_PATHS: '${{ inputs.compute_paths }}'
-        CHANGED_PATHS: '${{ inputs.changed_paths || "[]" }}'
-        DELETED_PATHS: '${{ inputs.deleted_paths || "[]" }}'
+        CHANGED_PATHS: '${{ inputs.changed_paths }}'
+        DELETED_PATHS: '${{ inputs.deleted_paths }}'
       run: |-
         if [ "${COMPUTE_PATHS}" = true ]; then
           # Make a scratch directory that gets cleaned up.
