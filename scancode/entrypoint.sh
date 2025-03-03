@@ -13,12 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd /scancode-toolkit
+if [ -z "${GITHUB_OUTPUT+x}" ]; then
+  echo "required environment variable \$GITHUB_OUTPUT is not set"
+  exit 126
+fi
 
-./scancode /github/workspace/$1 \
-  --json /github/workspace/scancode.json \
-  --csv /github/workspace/scancode.csv \
-  --license --package --copyright --license-score=70
+cd /scancode-toolkit || exit 127
 
-echo "json=scancode.json" >> $GITHUB_OUTPUT
-echo "csv=scancode.csv" >> $GITHUB_OUTPUT
+./scancode "/github/workspace/${1}" \
+  --json "/github/workspace/scancode.json" \
+  --csv "/github/workspace/scancode.csv" \
+  --license \
+  --package \
+  --copyright \
+  --license-score "70"
+
+echo "json=scancode.json" >> "${GITHUB_OUTPUT}"
+echo "csv=scancode.csv" >> "${GITHUB_OUTPUT}"
