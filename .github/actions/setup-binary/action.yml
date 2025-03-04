@@ -80,7 +80,7 @@ runs:
       id: 'cache-binary'
       if: |
         inputs.cache_key != ''
-      uses: 'actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9' # ratchet:actions/cache/restore@v4
+      uses: 'actions/cache/restore@d4323d4df104b026a6aa633fdb11d772146be0bf' # ratchet:actions/cache/restore@v4
       with:
         path: '${{ inputs.install_path }}'
         key: 'setup-binary-${{ inputs.cache_key }}'
@@ -147,7 +147,7 @@ runs:
     - name: 'Save cache binary'
       if: |
         inputs.cache_key != '' && steps.cache-binary.outputs.cache-hit != 'true'
-      uses: 'actions/cache/save@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9' # ratchet:actions/cache/save@v4
+      uses: 'actions/cache/save@d4323d4df104b026a6aa633fdb11d772146be0bf' # ratchet:actions/cache/save@v4
       with:
         path: '${{ inputs.install_path }}'
         key: 'setup-binary-${{ inputs.cache_key }}'
