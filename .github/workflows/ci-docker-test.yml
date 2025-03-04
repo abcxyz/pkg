@@ -8,7 +8,7 @@ on:
       - '.github/workflows/maybe-build-docker.yml'
 
 permissions:
-  contents: 'read'  # For checking out repository code.
+  contents: 'read' # For checking out repository code.
   packages: 'write' # For pushing/pulling from github docker registry.
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
         password: '${{ secrets.GITHUB_TOKEN }}'
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Check installs'
         shell: 'bash'

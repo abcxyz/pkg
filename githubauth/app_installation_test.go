@@ -15,7 +15,6 @@
 package githubauth
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
@@ -113,12 +112,10 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mux := http.NewServeMux()
 			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +125,11 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
+			signer, err := NewPrivateKeySigner(privateKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -140,7 +141,7 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 
 			token, err := installation.AccessToken(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 
 			if got, want := token, tc.expToken; got != want {
@@ -153,7 +154,7 @@ func TestAppInstallation_AccessToken(t *testing.T) {
 func TestAppInstallation_SelectedReposTokenSource(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -171,7 +172,11 @@ func TestAppInstallation_SelectedReposTokenSource(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,12 +248,10 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mux := http.NewServeMux()
 			mux.Handle("/app/installations/123", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -258,7 +261,11 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
+			signer, err := NewPrivateKeySigner(privateKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -270,7 +277,7 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 
 			token, err := installation.AccessTokenAllRepos(ctx, tc.req)
 			if diff := testutil.DiffErrString(err, tc.expErr); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 
 			if got, want := token, tc.expToken; got != want {
@@ -283,7 +290,7 @@ func TestAppInstallation_AccessTokenAllRepos(t *testing.T) {
 func TestAppInstallation_AllReposTokenSource(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -301,7 +308,11 @@ func TestAppInstallation_AllReposTokenSource(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	app, err := NewApp("my-app-id", privateKey, WithBaseURL(srv.URL))
+	signer, err := NewPrivateKeySigner(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := NewApp("my-app-id", signer, WithBaseURL(srv.URL))
 	if err != nil {
 		t.Fatal(err)
 	}

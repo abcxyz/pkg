@@ -53,10 +53,10 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }} # yamllint disable-line
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Setup Terraform'
-        uses: 'hashicorp/setup-terraform@97f030cf6dc0b4f5e0da352c7bca9cca34579800' # ratchet:hashicorp/setup-terraform@v3.1.0
+        uses: 'hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd' # ratchet:hashicorp/setup-terraform@v3.1.2
         with:
           terraform_version: '${{ inputs.terraform_version }}'
 
@@ -65,17 +65,6 @@ jobs:
         working-directory: '${{ inputs.directory }}'
         run: |-
           terraform fmt -recursive -check -diff
-
-      - id: 'checkout-pkg'
-        uses: 'actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b' # ratchet:actions/checkout@v4
-        with:
-          repository: 'abcxyz/pkg'
-          path: 'abcxyz-pkg'
-
-      - id: 'lint'
-        uses: './abcxyz-pkg/.github/actions/terraform-linter'
-        with:
-          directory: '${{ inputs.directory }}'
 
       - name: 'Initialize and validate sub directories'
         if: '${{ inputs.walk_dirs }}'
@@ -117,3 +106,8 @@ jobs:
         run: |-
           terraform init -backend=false -input=false
           terraform validate
+
+      - name: 'abcxyz Terraform linter'
+        uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
+        with:
+          paths: '${{ inputs.directory }}'

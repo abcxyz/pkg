@@ -178,6 +178,71 @@ approval from all requested reviewers.
 An admin will need to create a new ruleset within the repo to add want_lgtm_all to be included
 as a required status check.
 
+#### multi-approvers.yml
+
+Use this workflow to require two in-org approvers for pull requests sent from an
+out-of-org user. This prevents in-org users from creating "sock puppet" accounts
+and approving their own pull requests with their in-org account.
+
+This workflow requires one input: `org-members-path`. This is a JSON formatted
+file with the following schema:
+
+```json
+[
+  {"login": "github-user-name-1"},
+  {"login": "github-user-name-2"}
+]
+```
+
+This file can be generated using the following command:
+
+```bash
+gh api \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  --paginate \
+  /orgs/{org}/members | \
+jq '[.[] | {login}]'
+```
+
+```yaml
+name: 'multi-approvers'
+
+on:
+  pull_request:
+    types:
+      - 'opened'
+      - 'edited'
+      - 'reopened'
+      - 'synchronize'
+      - 'ready_for_review'
+      - 'review_requested'
+      - 'review_request_removed'
+  pull_request_review:
+    types:
+      - 'submitted'
+      - 'dismissed'
+
+permissions:
+  actions: 'write'
+  contents: 'read'
+  pull-requests: 'read'
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  multi-approvers:
+    uses: 'abcxyz/pkg/.github/workflows/multi-approvers.yml@main'
+    with:
+      org-members-path: 'abcxyz/pkg/main/.github/workflows/members.json'
+```
+
+Note: the `org-members-path` should be the full path to the JSON file without
+the leading `/` and should be accessible by using the URL:
+https://raw.githubusercontent.com/${org-members-path}.
+
 ### maybe-build-docker.yml
 
 Use this workflow to build and push docker images to several supported docker

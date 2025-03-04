@@ -84,7 +84,6 @@ func TestClose(t *testing.T) {
 
 		var c *Closer
 		for i := 0; i < 5; i++ {
-			i := i
 			c = Append(c, func() error {
 				return fmt.Errorf("%d", i)
 			})
@@ -93,7 +92,7 @@ func TestClose(t *testing.T) {
 		got := c.Close()
 		want := "0\n1\n2\n3\n4"
 		if diff := testutil.DiffErrString(got, want); diff != "" {
-			t.Errorf(diff)
+			t.Error(diff)
 		}
 	})
 }

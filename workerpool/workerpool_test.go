@@ -29,7 +29,7 @@ import (
 func TestWorker(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	pool := New[*Void](&Config{
 		Concurrency: 3,
 	})
@@ -57,7 +57,7 @@ func TestWorker(t *testing.T) {
 func TestWorker_Do(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
@@ -80,7 +80,7 @@ func TestWorker_Do(t *testing.T) {
 func TestWorker_Done(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("stopped", func(t *testing.T) {
 		t.Parallel()
@@ -101,8 +101,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			if err := pool.Do(ctx, func() (*Void, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return nil, fmt.Errorf("%d", i)
@@ -137,8 +135,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			if err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(time.Duration(i) * time.Millisecond)
 				return i, nil
@@ -173,8 +169,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			_ = pool.Do(ctx, func() (int, error) {
 				if i < 2 {
 					return i, nil
@@ -210,7 +204,7 @@ func TestWorker_Done(t *testing.T) {
 	t.Run("cancelled", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, done := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		ctx, done := context.WithTimeout(t.Context(), 10*time.Millisecond)
 		t.Cleanup(done)
 
 		pool := New[int](&Config{
@@ -218,8 +212,6 @@ func TestWorker_Done(t *testing.T) {
 		})
 
 		for i := 0; i < 5; i++ {
-			i := i
-
 			err := pool.Do(ctx, func() (int, error) {
 				time.Sleep(100 * time.Millisecond)
 				return i, nil
@@ -239,7 +231,7 @@ func TestWorker_Done(t *testing.T) {
 			}
 		}
 
-		finishCtx := context.Background()
+		finishCtx := t.Context()
 		results, err := pool.Done(finishCtx)
 		if got, want := err, context.DeadlineExceeded; !errors.Is(got, want) {
 			t.Errorf("expected %v to be %v", got, want)
@@ -266,7 +258,6 @@ func TestWorker_Done(t *testing.T) {
 		var wg sync.WaitGroup
 
 		for i := 0; i < 15; i++ {
-			i := i
 			wg.Add(1)
 
 			go func() {

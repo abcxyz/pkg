@@ -51,7 +51,7 @@ type Server struct {
 func New(port string) (*Server, error) {
 	// Create the net listener first, so the connection ready when we return. This
 	// guarantees that it can accept requests.
-	addr := fmt.Sprintf(":" + port)
+	addr := ":" + port
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener on %s: %w", addr, err)

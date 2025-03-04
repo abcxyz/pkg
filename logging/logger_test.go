@@ -27,7 +27,7 @@ import (
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("default", func(t *testing.T) {
 		t.Parallel()
@@ -81,7 +81,7 @@ func TestNew(t *testing.T) {
 func TestNewFromEnv(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name      string
@@ -144,8 +144,6 @@ func TestNewFromEnv(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -187,9 +185,9 @@ func TestContext(t *testing.T) {
 	logger1 := slog.New(slog.NewTextHandler(io.Discard, nil))
 	logger2 := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	checkFromContext(context.Background(), t, DefaultLogger())
+	checkFromContext(t.Context(), t, DefaultLogger())
 
-	ctx := WithLogger(context.Background(), logger1)
+	ctx := WithLogger(t.Context(), logger1)
 	checkFromContext(ctx, t, logger1)
 
 	ctx = WithLogger(ctx, logger2)

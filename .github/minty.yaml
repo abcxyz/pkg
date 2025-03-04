@@ -12,21 +12,20 @@ scope:
   draft-release:
     rule:
       if: |-
-        assertion.workflow_ref.startsWith("abcxyz/pkg/.github/workflows/draft-release.yml") &&
+        assertion.workflow_ref.startsWith('abcxyz/pkg/.github/workflows/draft-release.yml') &&
         assertion.event_name == 'workflow_dispatch'
     repositories:
       - 'pkg'
     permissions:
       contents: 'write'
-      pull_request: 'write'
+      pull_requests: 'write'
 
   release:
     rule:
       if: |-
-        assertion.job_workflow_ref == 'abcxyz/pkg/.github/workflows/release.yml' &&
+        assertion.job_workflow_ref.startsWith('abcxyz/pkg/.github/workflows/release.yml') &&
         assertion.event_name == 'push'
     repositories:
       - 'pkg'
     permissions:
       contents: 'write'
-

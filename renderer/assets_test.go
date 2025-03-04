@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +25,7 @@ import (
 func TestAssetIncludeTag(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name string
@@ -62,8 +61,6 @@ func TestAssetIncludeTag(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

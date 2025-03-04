@@ -90,8 +90,8 @@ func New[T any](expireAfter time.Duration) *Cache[T] {
 	// largely defeat the purpose. In this case, 50ms is somewhat arbitrary, but
 	// it ensures the CPU is not entirely bound by the sweep operation.
 	sweep := expireAfter / 4.0
-	if min := 50 * time.Millisecond; sweep < min {
-		sweep = min
+	if minimum := 50 * time.Millisecond; sweep < minimum {
+		sweep = minimum
 	}
 	go c.start(sweep)
 

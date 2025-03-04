@@ -15,7 +15,6 @@
 package cfgloader
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -114,13 +113,11 @@ num_val: 2`))},
 	}
 
 	for _, tc := range tests {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			got := tc.input
-			err := Load(context.Background(), got, tc.opts...)
+			err := Load(t.Context(), got, tc.opts...)
 			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
 				t.Errorf("Load got unexpected err: %s", diff)
 			}

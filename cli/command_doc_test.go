@@ -74,13 +74,13 @@ func (c *CountCommand) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("expected 1 argument, got %q", args)
 	}
 
-	maxStr := args[0]
-	max, err := strconv.ParseInt(maxStr, 10, 64)
+	maximumStr := args[0]
+	maximum, err := strconv.ParseInt(maximumStr, 10, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse max: %w", err)
 	}
 
-	for i := int64(0); i <= max; i += c.flagStep {
+	for i := int64(0); i <= maximum; i += c.flagStep {
 		c.Outf("%d", i)
 	}
 

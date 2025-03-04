@@ -64,13 +64,11 @@ func TestGRPCStreamingInterceptor(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			originalLogger, buf := testLogger(t)
-			ctx := WithLogger(context.Background(), originalLogger)
+			ctx := WithLogger(t.Context(), originalLogger)
 
 			streamDesc := &grpc.StreamDesc{
 				StreamName: "TestServer.Streamer",
@@ -145,13 +143,11 @@ func TestGRPCUnaryInterceptor(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			originalLogger, buf := testLogger(t)
-			ctx := WithLogger(context.Background(), originalLogger)
+			ctx := WithLogger(t.Context(), originalLogger)
 
 			unaryInfo := &grpc.UnaryServerInfo{
 				FullMethod: "TestServer.UnaryInfo",
@@ -219,13 +215,11 @@ func TestHTTPInterceptor(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			originalLogger, buf := testLogger(t)
-			ctx := WithLogger(context.Background(), originalLogger)
+			ctx := WithLogger(t.Context(), originalLogger)
 
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
 			for k, v := range tc.headers {

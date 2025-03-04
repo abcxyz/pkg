@@ -110,8 +110,6 @@ Usage: test COMMAND
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -125,7 +123,7 @@ Usage: test COMMAND
 func TestRootCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	rootCmd := func() *RootCommand {
 		return &RootCommand{
@@ -251,8 +249,6 @@ func TestRootCommand_Run(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -278,7 +274,7 @@ func TestRootCommand_Run(t *testing.T) {
 func TestBaseCommand_Prompt(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
@@ -384,8 +380,6 @@ func TestBaseCommand_Prompt(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -401,7 +395,7 @@ func TestBaseCommand_Prompt(t *testing.T) {
 func TestBaseCommand_PromptAll(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
@@ -500,8 +494,6 @@ func TestBaseCommand_PromptAll(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -517,7 +509,7 @@ func TestBaseCommand_PromptAll(t *testing.T) {
 func TestBaseCommand_PromptTo(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	cases := []struct {
 		name    string
@@ -568,8 +560,6 @@ func TestBaseCommand_PromptTo(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -699,8 +689,6 @@ func TestBaseCommand_LookupEnv(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -767,8 +755,6 @@ func TestBaseCommand_GetEnv(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

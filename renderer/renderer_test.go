@@ -15,7 +15,6 @@
 package renderer
 
 import (
-	"context"
 	"html/template"
 	"testing"
 
@@ -25,7 +24,7 @@ import (
 func TestWithTemplateFuncs(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name string
@@ -92,8 +91,6 @@ func TestWithTemplateFuncs(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 

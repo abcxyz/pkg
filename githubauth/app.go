@@ -39,8 +39,8 @@ const defaultBaseURL = "https://api.github.com"
 // App is an object that can be used to generate application level JWTs or to
 // request an OIDC token on behalf of an installation.
 type App struct {
-	appID      string
-	privateKey *rsa.PrivateKey
+	appID  string
+	signer crypto.Signer
 
 	installationCache     map[string](func() (*AppInstallation, error))
 	installationCacheLock sync.Mutex
@@ -78,33 +78,24 @@ func WithHTTPClient(client *http.Client) Option {
 
 // NewApp creates a new GitHub App from the given inputs.
 //
-// The privateKey can be the [*rsa.PrivateKey], or a PEM-encoded string (or
-// []byte) of the private key material.
-func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, opts ...Option) (*App, error) {
-	var privateKey *rsa.PrivateKey
-	var err error
-
-	switch t := any(privateKeyT).(type) {
-	case *rsa.PrivateKey:
-		privateKey = t
-	case string:
-		privateKey, err = parseRSAPrivateKeyPEM([]byte(t))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded string: %w", err)
-		}
-	case []byte:
-		privateKey, err = parseRSAPrivateKeyPEM(t)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key as a PEM-encoded []byte: %w", err)
-		}
-	default:
-		panic("impossible")
-	}
-
+// The signer can be any crypto.Signer. For RSA keys or PEM-encoded strings of
+// RSA keys, use [NewPrivateKeySigner]. For Google Cloud KMS, use a signer
+// implementation like [github.com/sethvargo/go-gcpkms/pkg/gcpkms.NewSigner]:
+//
+//	client, err := kms.NewKeyManagementClient(ctx)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to setup client: %w", err)
+//	}
+//	signer, err := gcpkms.NewSigner(ctx, client, keyID)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to create signer: %w", err)
+//	}
+//	return signer, nil
+func NewApp(appID string, signer crypto.Signer, opts ...Option) (*App, error) {
 	app := &App{
 		appID:             appID,
-		privateKey:        privateKey,
 		installationCache: make(map[string](func() (*AppInstallation, error)), 8),
+		signer:            signer,
 
 		baseURL: defaultBaseURL,
 		httpClient: &http.Client{
@@ -115,7 +106,6 @@ func NewApp[T *rsa.PrivateKey | string | []byte](appID string, privateKeyT T, op
 	for _, opt := range opts {
 		app = opt(app)
 	}
-
 	return app, nil
 }
 
@@ -165,12 +155,14 @@ func (g *App) AppToken() (string, error) {
 	h.Write([]byte(unsigned))
 	digest := h.Sum(nil)
 
-	signature, err := rsa.SignPKCS1v15(nil, g.privateKey, crypto.SHA256, digest)
-	if err != nil {
-		return "", fmt.Errorf("error signing JWT: %w", err)
+	if g.signer != nil {
+		signature, err := g.signer.Sign(nil, digest, crypto.SHA256)
+		if err != nil {
+			return "", fmt.Errorf("error signing JWT: %w", err)
+		}
+		return unsigned + "." + b64Encode(signature), nil
 	}
-
-	return unsigned + "." + b64Encode(signature), nil
+	return unsigned, nil
 }
 
 // OAuthAppTokenSource adheres to the oauth2 TokenSource interface and returns a oauth2 token

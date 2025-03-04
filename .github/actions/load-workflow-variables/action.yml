@@ -22,7 +22,7 @@ inputs:
     required: false
     default: '.'
   filepath:
-    description: 'The YAML filepath to load the configuration from, relative to the GitHub workspace.'
+    description: 'The YAML filepath to load the configuration from. Must be a relative path on the default branch of the repository.'
     required: false
     default: 'env.yml'
   fail_on_missing:
@@ -47,7 +47,7 @@ runs:
         echo "CONFIG_PATH=$filepath" >> "$GITHUB_OUTPUT"
 
     - name: 'Get Approved Configuration File'
-      uses: 'actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11' # ratchet:actions/checkout@v4
+      uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
       with:
         ref: '${{ github.event.repository.default_branch }}'
         path: 'load-workflow-variables/${{ github.sha }}'

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -268,8 +270,6 @@ func TestFlagSection_StringMapVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -360,8 +360,6 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -543,7 +541,7 @@ func ExampleFlagSet_AfterParse_checkIfError() {
 func TestLogLevelVar(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name string
@@ -575,8 +573,6 @@ func TestLogLevelVar(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -663,14 +659,10 @@ func TestFlagSet_Parse(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		for dashName, dash := range map[string]string{
 			"single_dash": "-",
 			"double_dash": "--",
 		} {
-			dash, dashName := dash, dashName
-
 			t.Run(dashName+"/"+tc.name, func(t *testing.T) {
 				t.Parallel()
 
@@ -702,5 +694,153 @@ func TestFlagSet_Parse(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestFromFileParser(t *testing.T) {
+	t.Parallel()
+
+	goodFilePathAbs := filepath.Join(t.TempDir(), "good")
+	if err := os.WriteFile(goodFilePathAbs, []byte("good\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	goodFilePathRel, err := filepath.Rel(t.TempDir(), goodFilePathAbs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name       string
+		input      string
+		workingDir WorkingDirFunc
+		want       string
+		wantError  string
+	}{
+		{
+			name: "working_dir_error_empty_input",
+			workingDir: func() (string, error) {
+				return "", fmt.Errorf("should not error")
+			},
+			want: "",
+		},
+		{
+			name:  "working_dir_error_prefix_input",
+			input: "@/foo/bar",
+			workingDir: func() (string, error) {
+				return "", fmt.Errorf("working dir error")
+			},
+			wantError: "working dir error",
+		},
+		{
+			name:  "prefix_escaped",
+			input: "\\@foo",
+			want:  "@foo",
+		},
+		{
+			name:  "normal_input_does_not_call_working_dir",
+			input: "foo",
+			workingDir: func() (string, error) {
+				return "", fmt.Errorf("should not error")
+			},
+			want: "foo",
+		},
+		{
+			name:  "relative_path",
+			input: "@" + goodFilePathRel,
+			workingDir: func() (string, error) {
+				return t.TempDir(), nil
+			},
+			want: "good",
+		},
+		{
+			name:  "absolute_path",
+			input: "@" + goodFilePathAbs,
+			want:  "good",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			identityParser := func(val string) (string, error) { return val, nil }
+
+			workingDir := func() (string, error) { return t.TempDir(), nil }
+			if tc.workingDir != nil {
+				workingDir = tc.workingDir
+			}
+
+			got, err := fromFileParser("flag", identityParser, workingDir)(tc.input)
+			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
+				t.Error(diff)
+			}
+
+			if got, want := got, tc.want; got != want {
+				t.Errorf("args: expected %q to be %q", got, want)
+			}
+		})
+	}
+}
+
+func TestFromPromptParser(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		input        string
+		promptResult string
+		promptError  error
+		want         string
+		wantError    string
+	}{
+		{
+			name:        "no_prompt_on_empty_input",
+			input:       "",
+			promptError: fmt.Errorf("impossible"),
+		},
+		{
+			name:        "no_prompt_on_extra_characters",
+			input:       "--foo",
+			promptError: fmt.Errorf("impossible"),
+			want:        "--foo",
+		},
+		{
+			name:  "prompt_escaped",
+			input: "\\-",
+			want:  "-",
+		},
+		{
+			name:        "prompt_error",
+			input:       "-",
+			promptError: fmt.Errorf("something happened"),
+			wantError:   "something happened",
+		},
+		{
+			name:         "prompt_result",
+			input:        "-",
+			promptResult: "hello there\n",
+			want:         "hello there",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			identityParser := func(val string) (string, error) { return val, nil }
+
+			prompt := func(_ context.Context, msg string, args ...any) (string, error) {
+				return tc.promptResult, tc.promptError
+			}
+
+			got, err := fromPromptParser("flag", identityParser, prompt)(tc.input)
+			if diff := testutil.DiffErrString(err, tc.wantError); diff != "" {
+				t.Error(diff)
+			}
+
+			if got, want := got, tc.want; got != want {
+				t.Errorf("args: expected %q to be %q", got, want)
+			}
+		})
 	}
 }

@@ -54,8 +54,6 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -97,8 +95,6 @@ func TestNewFromListener(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -122,7 +118,7 @@ func TestNewFromListener(t *testing.T) {
 func TestServer_StartHTTP(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	s, err := New("")
 	if err != nil {
@@ -168,7 +164,7 @@ func TestServer_StartHTTP(t *testing.T) {
 func TestServer_StartGRPC(t *testing.T) {
 	t.Parallel()
 
-	ctx := logging.WithLogger(context.Background(), logging.TestLogger(t))
+	ctx := logging.WithLogger(t.Context(), logging.TestLogger(t))
 
 	s, err := New("")
 	if err != nil {

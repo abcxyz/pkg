@@ -15,7 +15,6 @@
 package healthcheck
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +28,7 @@ import (
 func TestHandleHTTPHealth(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name   string
@@ -83,11 +82,7 @@ func TestHandleHTTPHealth(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		for _, header := range []string{"accept", "content-type"} {
-			header := header
-
 			t.Run(tc.name+"_"+header, func(t *testing.T) {
 				t.Parallel()
 
@@ -121,7 +116,7 @@ func TestHandleHTTPHealth(t *testing.T) {
 func TestHandleGRPCHealth(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	s := grpc.NewServer()
 
@@ -141,7 +136,7 @@ func TestHandleGRPCHealth(t *testing.T) {
 	}()
 
 	addr := lis.Addr().String()
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to dail %q: %s", addr, err)
 	}
