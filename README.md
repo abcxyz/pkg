@@ -178,32 +178,20 @@ approval from all requested reviewers.
 An admin will need to create a new ruleset within the repo to add want_lgtm_all to be included
 as a required status check.
 
-#### multi-approvers.yml
+#### Multi-approvers
 
-Use this workflow to require two in-org approvers for pull requests sent from an
-out-of-org user. This prevents in-org users from creating "sock puppet" accounts
-and approving their own pull requests with their in-org account.
+Use this action to require two internal approvers for pull requests originating
+from an external user. This prevents internal users from creating "sock puppet"
+accounts and approving their own pull requests with their internal accounts.
 
-This workflow requires one input: `org-members-path`. This is a JSON formatted
-file with the following schema:
+Internal users are users that are in the given GitHub team. External users are
+all other users.
 
-```json
-[
-  {"login": "github-user-name-1"},
-  {"login": "github-user-name-2"}
-]
-```
-
-This file can be generated using the following command:
-
-```bash
-gh api \
-  -H "Accept: application/vnd.github+json" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  --paginate \
-  /orgs/{org}/members | \
-jq '[.[] | {login}]'
-```
+This action requires a token with at least members:read, pull_requests:read, and
+actions:write privledges.
+[github-token-minter](https://github.com/abcxyz/github-token-minter) can be used
+to generate this token in a workflow. Here's an example workflow YAML using this
+action:
 
 ```yaml
 name: 'multi-approvers'
@@ -226,6 +214,7 @@ on:
 permissions:
   actions: 'write'
   contents: 'read'
+  id-token: 'write'
   pull-requests: 'read'
 
 concurrency:
@@ -234,14 +223,45 @@ concurrency:
 
 jobs:
   multi-approvers:
-    uses: 'abcxyz/pkg/.github/workflows/multi-approvers.yml@main'
-    with:
-      org-members-path: 'abcxyz/pkg/main/.github/workflows/members.json'
-```
+    if: |-
+      contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name)
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Authenticate to Google Cloud'
+        id: 'minty-auth'
+        uses: 'google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f' # ratchet:google-github-actions/auth@v2
+        with:
+          create_credentials_file: false
+          export_environment_variables: false
+          workload_identity_provider: '${{ vars.TOKEN_MINTER_WIF_PROVIDER }}'
+          service_account: '${{ vars.TOKEN_MINTER_WIF_SERVICE_ACCOUNT }}'
+          token_format: 'id_token'
+          id_token_audience: '${{ vars.TOKEN_MINTER_SERVICE_AUDIENCE }}'
+          id_token_include_email: true
 
-Note: the `org-members-path` should be the full path to the JSON file without
-the leading `/` and should be accessible by using the URL:
-https://raw.githubusercontent.com/${org-members-path}.
+      - name: 'Mint Token'
+        id: 'minty'
+        uses: 'abcxyz/github-token-minter/.github/actions/minty@main' # ratchet:exclude
+        with:
+          id_token: '${{ steps.minty-auth.outputs.id_token }}'
+          service_url: '${{ vars.TOKEN_MINTER_SERVICE_URL }}'
+          requested_permissions: |-
+            {
+              "scope": "your-scope",
+              "repositories": ["your-repository-name"],
+              "permissions": {
+                "actions": "write",
+                "members": "read",
+                "pull_requests": "read"
+              }
+            }
+
+      - name: 'Multi-approvers'
+        uses: 'abcxyz/pkg/.github/actions/multi-approvers'
+        with:
+          team: 'github-team-slug'
+          token: '${{ steps.minty.outputs.token }}'
+```
 
 ### maybe-build-docker.yml
 
