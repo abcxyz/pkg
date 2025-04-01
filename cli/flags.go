@@ -44,7 +44,6 @@ import (
 const maxLineLength = 80
 
 // unescapedCommas finds all unescaped commas.
-// var unescapedCommas = regexp.MustCompile(`[^\\](,)`)
 var unescapedCommas = regexp.MustCompile(`(\\.)|(,)`)
 
 type (
