@@ -875,7 +875,7 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		for _, indexPair := range indices {
 			if indexPair[4] != -1 {
 				part := s[lastMatch:indexPair[4]]
-				parsed := strings.TrimSpace(escapeComma(part))
+				parsed := strings.TrimSpace(unescapeCommas(part))
 				if parsed != "" {
 					final = append(final, parsed)
 				}
@@ -883,7 +883,7 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 			}
 		}
 		remainder := s[lastMatch:]
-		parsedRemainder := strings.TrimSpace(escapeComma(remainder))
+		parsedRemainder := strings.TrimSpace(unescapeCommas(remainder))
 		if parsedRemainder != "" {
 			final = append(final, parsedRemainder)
 		}
@@ -924,7 +924,7 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	})
 }
 
-func escapeComma(v string) string {
+func unescapeCommas(v string) string {
 	return strings.ReplaceAll(v, `\,`, ",")
 }
 
