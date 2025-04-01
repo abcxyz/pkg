@@ -883,7 +883,7 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 				lastMatch = indexPair[5]
 			}
 		}
-		remainder := s[lastMatch:len(s)]
+		remainder := s[lastMatch:]
 		parsedRemainder := strings.TrimSpace(escapeComma(remainder))
 		if parsedRemainder != "" {
 			final = append(final, parsedRemainder)
