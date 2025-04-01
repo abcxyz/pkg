@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -41,6 +42,9 @@ import (
 )
 
 const maxLineLength = 80
+
+// var unescapedCommas = regexp.MustCompile(`(?m)(?<!\\),`)
+var unescapedCommas = regexp.MustCompile(`[^\\](,)`)
 
 type (
 	// LookupEnvFunc is the signature of a function for looking up environment
@@ -866,13 +870,18 @@ type StringSliceVar struct {
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	parser := func(s string) ([]string, error) {
 		final := make([]string, 0)
-		parts := strings.Split(s, ",")
-		for _, part := range parts {
-			trimmed := strings.TrimSpace(part)
-			if trimmed != "" {
-				final = append(final, trimmed)
+		indices := unescapedCommas.FindAllStringSubmatchIndex(s, -1)
+		lastMatch := 0
+		for _, indexPair := range indices {
+			part := s[lastMatch : indexPair[0]+1]
+			parsed := strings.TrimSpace(escapeComma(part))
+			if parsed != "" {
+				final = append(final, parsed)
 			}
+			lastMatch = indexPair[1]
 		}
+		remainder := s[lastMatch:len(s)]
+		final = append(final, strings.TrimSpace(escapeComma(remainder)))
 		return final, nil
 	}
 
@@ -908,6 +917,10 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		AllowFromFile:   i.AllowFromFile,
 		AllowFromPrompt: i.AllowFromPrompt,
 	})
+}
+
+func escapeComma(v string) string {
+	return strings.ReplaceAll(v, `\,`, ",")
 }
 
 type TimeVar struct {
