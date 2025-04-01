@@ -43,8 +43,9 @@ import (
 
 const maxLineLength = 80
 
-// var unescapedCommas = regexp.MustCompile(`(?m)(?<!\\),`)
-var unescapedCommas = regexp.MustCompile(`[^\\](,)`)
+// unescapedCommas finds all unescaped commas.
+// var unescapedCommas = regexp.MustCompile(`[^\\](,)`)
+var unescapedCommas = regexp.MustCompile(`(\\.)|(,)`)
 
 type (
 	// LookupEnvFunc is the signature of a function for looking up environment
@@ -873,15 +874,20 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		indices := unescapedCommas.FindAllStringSubmatchIndex(s, -1)
 		lastMatch := 0
 		for _, indexPair := range indices {
-			part := s[lastMatch : indexPair[0]+1]
-			parsed := strings.TrimSpace(escapeComma(part))
-			if parsed != "" {
-				final = append(final, parsed)
+			if indexPair[4] != -1 {
+				part := s[lastMatch:indexPair[4]]
+				parsed := strings.TrimSpace(escapeComma(part))
+				if parsed != "" {
+					final = append(final, parsed)
+				}
+				lastMatch = indexPair[5]
 			}
-			lastMatch = indexPair[1]
 		}
 		remainder := s[lastMatch:len(s)]
-		final = append(final, strings.TrimSpace(escapeComma(remainder)))
+		parsedRemainder := strings.TrimSpace(escapeComma(remainder))
+		if parsedRemainder != "" {
+			final = append(final, parsedRemainder)
+		}
 		return final, nil
 	}
 

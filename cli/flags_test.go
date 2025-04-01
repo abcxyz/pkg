@@ -319,7 +319,13 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 			name: "empty_flag_value",
 			args: []string{"-test", ""},
 			def:  []string{"one"},
-			exp:  []string{""},
+			exp:  []string{},
+		},
+		{
+			name: "one_empty_value_and_one_non_empty",
+			args: []string{"-test", ",me"},
+			def:  []string{"one"},
+			exp:  []string{"me"},
 		},
 		{
 			name: "overrides_default_single",
