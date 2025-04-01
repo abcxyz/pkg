@@ -865,15 +865,14 @@ type StringSliceVar struct {
 
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	parser := func(s string) ([]string, error) {
-		final := make([]string, 0)
 		parts := strings.Split(s, ",")
-		for _, part := range parts {
-			trimmed := strings.TrimSpace(part)
-			if trimmed != "" {
-				final = append(final, trimmed)
+		for i := len(parts) - 2; i >= 0; i-- {
+			if strings.HasSuffix(parts[i], "\\") {
+				parts[i] = parts[i][:len(parts[i])-1] + "," + parts[i+1]
+				parts = append(parts[:i+1], parts[i+2:]...)
 			}
 		}
-		return final, nil
+		return filterEmpty(trimAll(parts)), nil
 	}
 
 	printer := func(v []string) string {
@@ -908,6 +907,23 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		AllowFromFile:   i.AllowFromFile,
 		AllowFromPrompt: i.AllowFromPrompt,
 	})
+}
+
+func trimAll(v []string) []string {
+	for i, p := range v {
+		v[i] = strings.TrimSpace(p)
+	}
+	return v
+}
+
+func filterEmpty(v []string) []string {
+	final := make([]string, 0)
+	for _, p := range v {
+		if p != "" {
+			final = append(final, p)
+		}
+	}
+	return final
 }
 
 type TimeVar struct {
