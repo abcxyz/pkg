@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,9 +41,6 @@ import (
 )
 
 const maxLineLength = 80
-
-// unescapedCommas finds all unescaped commas.
-var unescapedCommas = regexp.MustCompile(`(\\.)|(,)`)
 
 type (
 	// LookupEnvFunc is the signature of a function for looking up environment
@@ -869,25 +865,14 @@ type StringSliceVar struct {
 
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	parser := func(s string) ([]string, error) {
-		final := make([]string, 0)
-		indices := unescapedCommas.FindAllStringSubmatchIndex(s, -1)
-		lastMatch := 0
-		for _, indexPair := range indices {
-			if indexPair[4] != -1 {
-				part := s[lastMatch:indexPair[4]]
-				parsed := strings.TrimSpace(unescapeCommas(part))
-				if parsed != "" {
-					final = append(final, parsed)
-				}
-				lastMatch = indexPair[5]
+		parts := strings.Split(s, ",")
+		for i := len(parts) - 2; i >= 0; i-- {
+			if strings.HasSuffix(parts[i], "\\") {
+				parts[i] = parts[i][:len(parts[i])-1] + "," + parts[i+1]
+				parts = append(parts[:i+1], parts[i+2:]...)
 			}
 		}
-		remainder := s[lastMatch:]
-		parsedRemainder := strings.TrimSpace(unescapeCommas(remainder))
-		if parsedRemainder != "" {
-			final = append(final, parsedRemainder)
-		}
-		return final, nil
+		return filterEmpty(trimAll(parts)), nil
 	}
 
 	printer := func(v []string) string {
@@ -924,8 +909,21 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	})
 }
 
-func unescapeCommas(v string) string {
-	return strings.ReplaceAll(v, `\,`, ",")
+func trimAll(v []string) []string {
+	for i, p := range v {
+		v[i] = strings.TrimSpace(p)
+	}
+	return v
+}
+
+func filterEmpty(v []string) []string {
+	final := make([]string, 0)
+	for _, p := range v {
+		if p != "" {
+			final = append(final, p)
+		}
+	}
+	return final
 }
 
 type TimeVar struct {
