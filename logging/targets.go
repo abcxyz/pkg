@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	targetSTDOUTName = "STDOUT"
-	targetSTDERRName = "STDERR"
+	targetStdoutName = "STDOUT"
+	targetStderrName = "STDERR"
 )
 
 var targetNames = []string{
-	targetSTDOUTName,
-	targetSTDERRName,
+	targetStdoutName,
+	targetStderrName,
 }
 
 // TargetNames returns the list of all log target names.
@@ -43,9 +43,9 @@ func LookupTarget(name string) (*os.File, error) {
 	switch v := strings.ToUpper(strings.TrimSpace(name)); v {
 	case "":
 		return os.Stdout, nil
-	case targetSTDOUTName:
+	case targetStdoutName:
 		return os.Stdout, nil
-	case targetSTDERRName:
+	case targetStderrName:
 		return os.Stderr, nil
 	default:
 		return nil, fmt.Errorf("no such target %q, valid targets are %q", name, targetNames)
