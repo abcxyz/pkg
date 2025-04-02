@@ -870,27 +870,23 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		var escaped bool
 
 		for _, r := range s {
-			if r == '\\' {
-				if escaped {
-					b.WriteRune(r)
-					escaped = false
-				} else {
-					escaped = true
-				}
+			if escaped {
+				escaped = false
+				b.WriteRune(r)
 				continue
 			}
 
-			if !escaped && r == ',' {
-				escaped = false
+			switch r {
+			case '\\':
+				escaped = true
+			case ',':
 				if v := strings.TrimSpace(b.String()); v != "" {
 					parts = append(parts, v)
 				}
 				b.Reset()
-				continue
+			default:
+				b.WriteRune(r)
 			}
-
-			escaped = false
-			b.WriteRune(r)
 		}
 
 		if v := strings.TrimSpace(b.String()); v != "" {
