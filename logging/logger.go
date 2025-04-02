@@ -117,7 +117,14 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 		}
 	}
 
-	return New(os.Stdout, level, format, debug)
+	logTargetKey := envPrefix + "LOG_TARGET"
+	logTargetValue := strings.TrimSpace(getenv(logTargetKey))
+	target, err := LookupTarget(logTargetValue)
+	if err != nil {
+		panic(fmt.Sprintf("invalid value for %s: %s", logTargetKey, err))
+	}
+
+	return New(target, level, format, debug)
 }
 
 // SetLevel adjusts the level on the provided logger. The handler on the given
