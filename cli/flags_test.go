@@ -318,13 +318,11 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 		{
 			name: "empty_flag_value",
 			args: []string{"-test", ""},
-			def:  []string{"one"},
 			exp:  []string{},
 		},
 		{
 			name: "one_empty_value_and_one_non_empty",
 			args: []string{"-test", ",me"},
-			def:  []string{"one"},
 			exp:  []string{"me"},
 		},
 		{
@@ -372,8 +370,12 @@ func TestFlagSection_StringSliceVar(t *testing.T) {
 		{
 			name: "given_escaped_delimiter",
 			args: []string{"-test", `a\,b`, "-test", "c"},
-			def:  []string{"a", "b"},
 			exp:  []string{`a,b`, "c"},
+		},
+		{
+			name: "given_escaped_escaped_delimiter",
+			args: []string{"-test", `a\\,b`, "-test", "c"},
+			exp:  []string{`a\`, `b`, "c"},
 		},
 	}
 

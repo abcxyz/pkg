@@ -865,14 +865,35 @@ type StringSliceVar struct {
 
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	parser := func(s string) ([]string, error) {
-		parts := strings.Split(s, ",")
-		for i := len(parts) - 2; i >= 0; i-- {
-			if strings.HasSuffix(parts[i], "\\") {
-				parts[i] = parts[i][:len(parts[i])-1] + "," + parts[i+1]
-				parts = append(parts[:i+1], parts[i+2:]...)
+		var parts []string
+		var b strings.Builder
+		var escaped bool
+
+		for _, r := range s {
+			if escaped {
+				escaped = false
+				b.WriteRune(r)
+				continue
+			}
+
+			switch r {
+			case '\\':
+				escaped = true
+			case ',':
+				if v := strings.TrimSpace(b.String()); v != "" {
+					parts = append(parts, v)
+				}
+				b.Reset()
+			default:
+				b.WriteRune(r)
 			}
 		}
-		return filterEmpty(trimAll(parts)), nil
+
+		if v := strings.TrimSpace(b.String()); v != "" {
+			parts = append(parts, v)
+		}
+
+		return parts, nil
 	}
 
 	printer := func(v []string) string {
@@ -907,23 +928,6 @@ func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 		AllowFromFile:   i.AllowFromFile,
 		AllowFromPrompt: i.AllowFromPrompt,
 	})
-}
-
-func trimAll(v []string) []string {
-	for i, p := range v {
-		v[i] = strings.TrimSpace(p)
-	}
-	return v
-}
-
-func filterEmpty(v []string) []string {
-	final := make([]string, 0)
-	for _, p := range v {
-		if p != "" {
-			final = append(final, p)
-		}
-	}
-	return final
 }
 
 type TimeVar struct {
