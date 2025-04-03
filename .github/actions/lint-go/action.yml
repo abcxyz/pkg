@@ -43,16 +43,45 @@ runs:
       with:
         go-version: '${{ inputs.go_version }}'
         go-version-file: '${{ inputs.go_version_file }}'
+        cache: false
 
-    - name: 'Check modules'
-      shell: 'bash'
-      working-directory: '${{ inputs.directory }}'
+    - name: 'Lint (download default configuration)'
+      id: 'load-default-config'
+      if: |-
+        ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
       run: |-
-        for d in $(find . -name go.mod); do
-          (cd $(dirname $d) && go mod tidy)
-        done
-        if [ -n "$(git status -s -uall)" ]; then
-          echo "::error title=Go module changes::Detected go module changes"
-          git -c color.ui=always diff
-          exit 1
-        fi
+        # Create a unique output file outside of the checkout.
+        GOLANGCI_YML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.golangci.yml"
+
+        # Download the file, passing in authentication to get a higher rate
+        # limit: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#rate-limits-for-requests-from-github-actions
+        curl "${{ inputs.golangci_url }}" \
+          --silent \
+          --fail \
+          --location \
+          --header "Authorization: Token ${{ github.token }}" \
+          --output "${GOLANGCI_YML}"
+
+        # Save the result to an output.
+        echo "::notice::Wrote configuration file to ${GOLANGCI_YML}"
+        echo "output-file=${GOLANGCI_YML}" >> "${GITHUB_OUTPUT}"
+
+    - name: 'Lint (default configuration)'
+      if: |-
+        ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
+      uses: 'golangci/golangci-lint-action@0adbc47a5910e47adb692df88187ec8c73c76778' # ratchet:golangci/golangci-lint-action@v6
+      with:
+        args: |-
+          --config "${{ steps.load-default-config.outputs.output-file }}"
+        skip-cache: true
+        version: '${{ inputs.golangci_lint_version }}'
+        working-directory: '${{ inputs.directory }}'
+
+    - name: 'Lint (custom configuration)'
+      if: |-
+        ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
+      uses: 'golangci/golangci-lint-action@0adbc47a5910e47adb692df88187ec8c73c76778' # ratchet:golangci/golangci-lint-action@v6
+      with:
+        skip-cache: true
+        version: '${{ inputs.golangci_lint_version }}'
+        working-directory: '${{ inputs.directory }}'
