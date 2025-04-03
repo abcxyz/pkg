@@ -2,23 +2,34 @@
   "name": "multi-approvers",
   "version": "1.0.0",
   "description": "GitHub Action that enforces approver requriements.",
-  "author": "",
+  "author": "Google LLC",
   "license": "Apache-2.0",
-  "main": "src/index.js",
+  "type": "commonjs",
   "scripts": {
-    "tests": "jest",
-    "build-min": "ncc build -o dist/main -m src/index.js",
-    "build": "ncc build -o dist/main src/index.js"
-  },
-  "jest": {
-    "testEnvironment": "node"
+    "build": "ncc build -m src/main.ts -o dist",
+    "clean": "rm -rf dist .tsc",
+    "format": "npm run lint-fix",
+    "lint": "eslint .",
+    "lint-fix": "eslint . --fix",
+    "test": "bash ./bin/test.sh",
+    "tsc": "tsc"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.0"
+    "@actions/github": "^6.0.0",
+    "@octokit/rest": "^21.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@types/node": "^22.13.17",
     "@vercel/ncc": "^0.38.3",
-    "jest": "^29.7.0"
-  }
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.5",
+    "nock": "^14.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.29.0"
+  },
+  "exports": "dist/index.js"
 }

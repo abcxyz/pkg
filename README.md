@@ -263,6 +263,49 @@ jobs:
           token: '${{ steps.minty.outputs.token }}'
 ```
 
+Here's another example using a stored secret to get the token:
+
+```yaml
+name: 'multi-approvers'
+
+on:
+  pull_request:
+    types:
+      - 'opened'
+      - 'edited'
+      - 'reopened'
+      - 'synchronize'
+      - 'ready_for_review'
+      - 'review_requested'
+      - 'review_request_removed'
+  pull_request_review:
+    types:
+      - 'submitted'
+      - 'dismissed'
+
+permissions:
+  actions: 'write'
+  contents: 'read'
+  id-token: 'write'
+  pull-requests: 'read'
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  multi-approvers:
+    if: |-
+      contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name)
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Multi-approvers'
+        uses: 'abcxyz/pkg/.github/actions/multi-approvers'
+        with:
+          team: 'github-team-slug'
+          token: '${{ secrets.MULTI_APPROVERS_TOKEN }}'
+```
+
 ### maybe-build-docker.yml
 
 Use this workflow to build and push docker images to several supported docker
