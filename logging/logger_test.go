@@ -144,6 +144,12 @@ func TestNewFromEnv(t *testing.T) {
 
 		// target
 		{
+			name: "empty_target",
+			env: map[string]string{
+				"LOG_TARGET": "",
+			},
+		},
+		{
 			name: "custom_target",
 			env: map[string]string{
 				"LOG_TARGET": "STDERR",
