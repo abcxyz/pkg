@@ -82,8 +82,9 @@ func New(w io.Writer, level slog.Level, format Format, debug bool) *slog.Logger 
 }
 
 // NewFromEnv is a convenience function for creating a logger that is configured
-// from the environment. It sources the following environment variables,
-// optionally prefixed with the given prefix:
+// from the environment. It sources the following environment variables, first
+// checking any with the prefix, then falling back to the global unprefixed
+// value:
 //
 //   - LOG_LEVEL: string representation of the log level. It panics if no such log level exists.
 //   - LOG_FORMAT: format in which to output logs (e.g. json, text). It panics if no such format exists.
@@ -93,54 +94,49 @@ func NewFromEnv(envPrefix string) *slog.Logger {
 }
 
 // newFromEnv is a helper that makes it easier to test [NewFromEnv].
-func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
-	levelEnvVarKey := envPrefix + "LOG_LEVEL"
-	levelEnvVarValue := strings.TrimSpace(getenv(levelEnvVarKey))
-	if levelEnvVarValue == "" {
-		levelEnvVarKey = "LOG_LEVEL"
-		levelEnvVarValue = strings.TrimSpace(getenv(levelEnvVarKey))
-	}
+func newFromEnv(envPrefix string, getenvFunc func(string) string) *slog.Logger {
+	levelEnvVarKey, levelEnvVarValue := multiGetenv(getenvFunc, envPrefix+"LOG_LEVEL", "LOG_LEVEL")
 	level, err := LookupLevel(levelEnvVarValue)
 	if err != nil {
-		panic(fmt.Sprintf("invalid value for %s: %s", levelEnvVarKey, err))
+		panic(fmt.Sprintf("log level: invalid value for %s: %s", levelEnvVarKey, err))
 	}
 
-	formatEnvVarKey := envPrefix + "LOG_FORMAT"
-	formatEnvVarValue := strings.TrimSpace(getenv(formatEnvVarKey))
-	if formatEnvVarValue == "" {
-		formatEnvVarKey = "LOG_FORMAT"
-		formatEnvVarValue = strings.TrimSpace(getenv(formatEnvVarKey))
-	}
+	formatEnvVarKey, formatEnvVarValue := multiGetenv(getenvFunc, envPrefix+"LOG_FORMAT", "LOG_FORMAT")
 	format, err := LookupFormat(formatEnvVarValue)
 	if err != nil {
-		panic(fmt.Sprintf("invalid value for %s: %s", formatEnvVarKey, err))
+		panic(fmt.Sprintf("log format: invalid value for %s: %s", formatEnvVarKey, err))
 	}
 
-	debugEnvVarKey := envPrefix + "LOG_DEBUG"
-	debugEnvVarValue := strings.TrimSpace(getenv(debugEnvVarKey))
-	if debugEnvVarValue == "" {
-		debugEnvVarKey = "LOG_DEBUG"
-		debugEnvVarValue = strings.TrimSpace(getenv(debugEnvVarKey))
-	}
+	debugEnvVarKey, debugEnvVarValue := multiGetenv(getenvFunc, envPrefix+"LOG_DEBUG", "LOG_DEBUG")
 	debug, err := strconv.ParseBool(debugEnvVarValue)
 	if err != nil {
 		if debugEnvVarValue != "" {
-			panic(fmt.Sprintf("invalid value for %s: %s", debugEnvVarKey, err))
+			panic(fmt.Sprintf("log debug: invalid value for %s: %s", debugEnvVarKey, err))
 		}
 	}
 
-	targetEnvVarKey := envPrefix + "LOG_TARGET"
-	targetEnvVarValue := strings.TrimSpace(getenv(targetEnvVarKey))
-	if targetEnvVarValue == "" {
-		targetEnvVarKey = "LOG_TARGET"
-		targetEnvVarValue = strings.TrimSpace(getenv(targetEnvVarKey))
-	}
+	targetEnvVarKey, targetEnvVarValue := multiGetenv(getenvFunc, envPrefix+"LOG_TARGET", "LOG_TARGET")
 	target, err := LookupTarget(targetEnvVarValue)
 	if err != nil {
-		panic(fmt.Sprintf("invalid value for %s: %s", targetEnvVarKey, err))
+		panic(fmt.Sprintf("log target: invalid value for %s: %s", targetEnvVarKey, err))
 	}
 
 	return New(target, level, format, debug)
+}
+
+// multiGetenv is a helper function for looking up a collection of environment
+// variables.
+func multiGetenv(f func(string) string, ss ...string) (string, string) {
+	if len(ss) == 0 {
+		return "", ""
+	}
+
+	for _, s := range ss {
+		if v := strings.TrimSpace(f(s)); v != "" {
+			return s, v
+		}
+	}
+	return ss[0], ""
 }
 
 // SetLevel adjusts the level on the provided logger. The handler on the given
