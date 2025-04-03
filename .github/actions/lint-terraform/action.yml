@@ -1,0 +1,95 @@
+# Copyright 2025 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'lint-terraform'
+description: 'Lint terraform against the abcxyz style guide.'
+inputs:
+  terraform_version:
+    description: 'The version of Terraform to install and use.'
+    type: 'string'
+    required: true
+  directory:
+    description: 'The directory upon which to lint Terraform configurations.'
+    type: 'string'
+    required: true
+  walk_dirs:
+    description: 'Recursively iteratate the working directory to initialize and validate all child modules.'
+    type: 'boolean'
+    required: false
+    default: true
+  ignored_walk_dirs:
+    description: 'The newline delimited list of directories to ignore when recursively iterating child modules. This input accepts bash globbing.'
+    type: 'string'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Setup Terraform'
+      uses: 'hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd' # ratchet:hashicorp/setup-terraform@v3.1.2
+      with:
+        terraform_version: '${{ inputs.terraform_version }}'
+
+    - name: 'Check formatting'
+      shell: 'bash'
+      working-directory: '${{ inputs.directory }}'
+      run: |-
+        terraform fmt -recursive -check -diff
+
+    - name: 'Initialize and validate sub directories'
+      if: '${{ inputs.walk_dirs }}'
+      shell: 'bash'
+      working-directory: '${{ inputs.directory }}'
+      env:
+        IGNORE_DIRS: '${{ inputs.ignored_walk_dirs }}'
+      run: |-
+        TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
+
+        for DIR in ${TERRAFORM_DIRS}; do
+          IGNORE=false
+          for IGNORE_DIR in ${IGNORE_DIRS}; do
+            if [[ "${DIR}" == $IGNORE_DIR ]]; then
+              IGNORE=true
+              break
+            fi
+          done
+
+          if [[ "${IGNORE}" == "true" ]]; then
+            echo "IGNORE: ${DIR}"
+            continue
+          fi
+
+          echo "::group::${DIR}"
+
+          pushd "${DIR}" &>/dev/null
+          terraform init -backend=false -input=false
+          terraform validate
+          popd &>/dev/null
+
+          echo "::endgroup::"
+        done
+
+    - name: 'Initialize and validate'
+      if: '${{ !inputs.walk_dirs }}'
+      shell: 'bash'
+      working-directory: '${{ inputs.directory }}'
+      run: |-
+        terraform init -backend=false -input=false
+        terraform validate
+
+    - name: 'abcxyz Terraform linter'
+      uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
+      with:
+        paths: '${{ inputs.directory }}'
