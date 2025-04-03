@@ -19,4 +19,4 @@ set -x
 exec node \
   --require ts-node/register \
   --test-reporter spec \
-  --test ${FILES}
+  --test "${FILES}"
