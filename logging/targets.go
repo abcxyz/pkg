@@ -35,9 +35,7 @@ var targetNames = []string{
 // is given, it returns the STDOUT target.
 func LookupTarget(name string) (*os.File, error) {
 	switch v := strings.ToUpper(strings.TrimSpace(name)); v {
-	case "":
-		return os.Stdout, nil
-	case targetStdoutName:
+	case "", targetStdoutName: // "" for backwards-compatibility
 		return os.Stdout, nil
 	case targetStderrName:
 		return os.Stderr, nil
