@@ -129,8 +129,12 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 		}
 	}
 
-	targetEnvVarKey := envPrefix + "LOG_TARGET"
+	targetEnvVarKey := "LOG_TARGET"
 	targetEnvVarValue := strings.TrimSpace(getenv(targetEnvVarKey))
+	if targetEnvVarValue == "" {
+		targetEnvVarKey = envPrefix + "LOG_TARGET"
+		targetEnvVarValue = strings.TrimSpace(getenv(targetEnvVarKey))
+	}
 	target, err := LookupTarget(targetEnvVarValue)
 	if err != nil {
 		panic(fmt.Sprintf("invalid value for %s: %s", targetEnvVarKey, err))
