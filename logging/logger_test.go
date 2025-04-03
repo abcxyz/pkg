@@ -141,6 +141,27 @@ func TestNewFromEnv(t *testing.T) {
 			},
 			wantPanic: "invalid value for LOG_DEBUG: strconv.ParseBool",
 		},
+
+		// target
+		{
+			name: "empty_target",
+			env: map[string]string{
+				"LOG_TARGET": "",
+			},
+		},
+		{
+			name: "custom_target",
+			env: map[string]string{
+				"LOG_TARGET": "STDERR",
+			},
+		},
+		{
+			name: "invalid_target",
+			env: map[string]string{
+				"LOG_TARGET": "ME",
+			},
+			wantPanic: "invalid value for LOG_TARGET: no such target \"ME\"",
+		},
 	}
 
 	for _, tc := range cases {
