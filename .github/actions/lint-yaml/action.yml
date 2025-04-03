@@ -1,0 +1,72 @@
+# Copyright 2025 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'lint-yaml'
+description: 'Lint yaml against the abcxyz style guide.'
+inputs:
+  yamllint_url:
+    description: 'The URL to a yamllint config file. This is only used if no file is found in the local directory.'
+    type: 'string'
+    default: 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml'
+  yamllint_version:
+    description: 'Version of yamllint linter to use'
+    type: 'string'
+    default: '1.35.1'
+  target:
+    description: 'File or directory containing YAML files to lint.'
+    type: 'string'
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Setup Python'
+      uses: 'actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38' # ratchet:actions/setup-python@v5
+
+    - name: 'Install yamllint'
+      run: |-
+        pip install --user yamllint==${{ inputs.yamllint_version }}
+
+    - name: 'Lint (download default configuration)'
+      id: 'load-default-config'
+      if: |-
+        ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
+      run: |-
+        # Create a unique output file outside of the checkout.
+        YAMLLINT_YAML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.yamllint.yml"
+
+        # Download the file, passing in authentication to get a higher rate
+        # limit: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#rate-limits-for-requests-from-github-actions
+        curl "${{ inputs.yamllint_url }}" \
+          --silent \
+          --fail \
+          --location \
+          --header "Authorization: Token ${{ github.token }}" \
+          --output "${YAMLLINT_YAML}"
+
+        # Save the result to an output.
+        echo "::notice::Wrote configuration file to ${YAMLLINT_YAML}"
+        echo "output-file=${YAMLLINT_YAML}" >> "${GITHUB_OUTPUT}"
+
+    - name: 'Lint (default configuration)'
+      if: |-
+        ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
+      run: |-
+        yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
+
+    - name: 'Lint (custom configuration)'
+      if: |-
+        ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') != '' }}
+      run: |-
+        yamllint ${{ inputs.target }}
