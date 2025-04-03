@@ -197,9 +197,9 @@ func TestNewFromEnv(t *testing.T) {
 				}
 			}()
 
-			logger := newFromEnv(tc.envPrefix, func(k string) string {
+			logger := newFromEnv(tc.envPrefix, WithGetenv(func(k string) string {
 				return tc.env[k]
-			})
+			}))
 
 			if !logger.Handler().Enabled(ctx, tc.wantLevel) {
 				t.Errorf("expected handler to be at least %s", tc.wantLevel)
