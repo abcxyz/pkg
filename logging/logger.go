@@ -96,6 +96,10 @@ func NewFromEnv(envPrefix string) *slog.Logger {
 func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 	levelEnvVarKey := envPrefix + "LOG_LEVEL"
 	levelEnvVarValue := strings.TrimSpace(getenv(levelEnvVarKey))
+	if levelEnvVarValue == "" {
+		levelEnvVarKey = "LOG_LEVEL"
+		levelEnvVarValue = strings.TrimSpace(getenv(levelEnvVarKey))
+	}
 	level, err := LookupLevel(levelEnvVarValue)
 	if err != nil {
 		panic(fmt.Sprintf("invalid value for %s: %s", levelEnvVarKey, err))
@@ -103,6 +107,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 
 	formatEnvVarKey := envPrefix + "LOG_FORMAT"
 	formatEnvVarValue := strings.TrimSpace(getenv(formatEnvVarKey))
+	if formatEnvVarValue == "" {
+		formatEnvVarKey = "LOG_FORMAT"
+		formatEnvVarValue = strings.TrimSpace(getenv(formatEnvVarKey))
+	}
 	format, err := LookupFormat(formatEnvVarValue)
 	if err != nil {
 		panic(fmt.Sprintf("invalid value for %s: %s", formatEnvVarKey, err))
@@ -110,6 +118,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 
 	debugEnvVarKey := envPrefix + "LOG_DEBUG"
 	debugEnvVarValue := strings.TrimSpace(getenv(debugEnvVarKey))
+	if debugEnvVarValue == "" {
+		debugEnvVarKey = "LOG_DEBUG"
+		debugEnvVarValue = strings.TrimSpace(getenv(debugEnvVarKey))
+	}
 	debug, err := strconv.ParseBool(debugEnvVarValue)
 	if err != nil {
 		if debugEnvVarValue != "" {
@@ -119,6 +131,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 
 	targetEnvVarKey := envPrefix + "LOG_TARGET"
 	targetEnvVarValue := strings.TrimSpace(getenv(targetEnvVarKey))
+	if targetEnvVarValue == "" {
+		targetEnvVarKey = "LOG_TARGET"
+		targetEnvVarValue = strings.TrimSpace(getenv(targetEnvVarKey))
+	}
 	target, err := LookupTarget(targetEnvVarValue)
 	if err != nil {
 		panic(fmt.Sprintf("invalid value for %s: %s", targetEnvVarKey, err))

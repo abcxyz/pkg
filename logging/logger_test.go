@@ -162,6 +162,25 @@ func TestNewFromEnv(t *testing.T) {
 			},
 			wantPanic: "invalid value for LOG_TARGET: no such target \"ME\"",
 		},
+
+		// globals override
+		{
+			name:      "local_overrides_global",
+			envPrefix: "CUSTOM_",
+			env: map[string]string{
+				"LOG_LEVEL":        "warn",
+				"CUSTOM_LOG_LEVEL": "debug",
+			},
+			wantLevel: LevelDebug,
+		},
+		{
+			name:      "global_used_if_no_local",
+			envPrefix: "CUSTOM_",
+			env: map[string]string{
+				"LOG_LEVEL": "warn",
+			},
+			wantLevel: LevelWarning,
+		},
 	}
 
 	for _, tc := range cases {
