@@ -1,4 +1,4 @@
-// Copyright 2023 The Authors (see AUTHORS file)
+// Copyright 2025 The Authors (see AUTHORS file)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package logging
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 )
 
@@ -29,11 +28,6 @@ const (
 var targetNames = []string{
 	targetStdoutName,
 	targetStderrName,
-}
-
-// TargetNames returns the list of all log target names.
-func TargetNames() []string {
-	return slices.Clone(targetNames)
 }
 
 // LookupTarget attempts to get the target that corresponds to the given
