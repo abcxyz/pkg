@@ -165,21 +165,21 @@ func TestNewFromEnv(t *testing.T) {
 
 		// globals override
 		{
-			name:      "global_overrides_local",
+			name:      "local_overrides_global",
 			envPrefix: "CUSTOM_",
 			env: map[string]string{
 				"LOG_LEVEL":        "warn",
 				"CUSTOM_LOG_LEVEL": "debug",
 			},
-			wantLevel: LevelWarning,
+			wantLevel: LevelDebug,
 		},
 		{
-			name:      "local_used_if_no_global",
+			name:      "global_used_if_no_local",
 			envPrefix: "CUSTOM_",
 			env: map[string]string{
-				"CUSTOM_LOG_LEVEL": "debug",
+				"LOG_LEVEL": "warn",
 			},
-			wantLevel: LevelDebug,
+			wantLevel: LevelWarning,
 		},
 	}
 

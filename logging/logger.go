@@ -94,10 +94,10 @@ func NewFromEnv(envPrefix string) *slog.Logger {
 
 // newFromEnv is a helper that makes it easier to test [NewFromEnv].
 func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
-	levelEnvVarKey := "LOG_LEVEL"
+	levelEnvVarKey := envPrefix + "LOG_LEVEL"
 	levelEnvVarValue := strings.TrimSpace(getenv(levelEnvVarKey))
 	if levelEnvVarValue == "" {
-		levelEnvVarKey = envPrefix + "LOG_LEVEL"
+		levelEnvVarKey = "LOG_LEVEL"
 		levelEnvVarValue = strings.TrimSpace(getenv(levelEnvVarKey))
 	}
 	level, err := LookupLevel(levelEnvVarValue)
@@ -105,10 +105,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 		panic(fmt.Sprintf("invalid value for %s: %s", levelEnvVarKey, err))
 	}
 
-	formatEnvVarKey := "LOG_FORMAT"
+	formatEnvVarKey := envPrefix + "LOG_FORMAT"
 	formatEnvVarValue := strings.TrimSpace(getenv(formatEnvVarKey))
 	if formatEnvVarValue == "" {
-		formatEnvVarKey = envPrefix + "LOG_FORMAT"
+		formatEnvVarKey = "LOG_FORMAT"
 		formatEnvVarValue = strings.TrimSpace(getenv(formatEnvVarKey))
 	}
 	format, err := LookupFormat(formatEnvVarValue)
@@ -116,10 +116,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 		panic(fmt.Sprintf("invalid value for %s: %s", formatEnvVarKey, err))
 	}
 
-	debugEnvVarKey := "LOG_DEBUG"
+	debugEnvVarKey := envPrefix + "LOG_DEBUG"
 	debugEnvVarValue := strings.TrimSpace(getenv(debugEnvVarKey))
 	if debugEnvVarValue == "" {
-		debugEnvVarKey = envPrefix + "LOG_DEBUG"
+		debugEnvVarKey = "LOG_DEBUG"
 		debugEnvVarValue = strings.TrimSpace(getenv(debugEnvVarKey))
 	}
 	debug, err := strconv.ParseBool(debugEnvVarValue)
@@ -129,10 +129,10 @@ func newFromEnv(envPrefix string, getenv func(string) string) *slog.Logger {
 		}
 	}
 
-	targetEnvVarKey := "LOG_TARGET"
+	targetEnvVarKey := envPrefix + "LOG_TARGET"
 	targetEnvVarValue := strings.TrimSpace(getenv(targetEnvVarKey))
 	if targetEnvVarValue == "" {
-		targetEnvVarKey = envPrefix + "LOG_TARGET"
+		targetEnvVarKey = "LOG_TARGET"
 		targetEnvVarValue = strings.TrimSpace(getenv(targetEnvVarKey))
 	}
 	target, err := LookupTarget(targetEnvVarValue)
