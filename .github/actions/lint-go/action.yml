@@ -49,6 +49,7 @@ runs:
       id: 'load-default-config'
       if: |-
         ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
+      shell: 'bash'
       run: |-
         # Create a unique output file outside of the checkout.
         GOLANGCI_YML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.golangci.yml"
