@@ -54,24 +54,14 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
-      - name: 'Setup Go'
-        uses: 'actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34' # ratchet:actions/setup-go@v5
+      - name: 'Lint Go Modules'
+        uses: 'abcxyz/pkg/.github/actions/lint-go-modules@main' # ratchet:exclude
         with:
-          go-version: '${{ inputs.go_version }}'
-          go-version-file: '${{ inputs.go_version_file }}'
-
-      - name: 'Check modules'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          for d in $(find . -name go.mod); do
-            (cd $(dirname $d) && go mod tidy)
-          done
-          if [ -n "$(git status -s -uall)" ]; then
-            echo "::error title=Go module changes::Detected go module changes"
-            git -c color.ui=always diff
-            exit 1
-          fi
+          go_version: '${{ inputs.go_version }}'
+          go_version_file: '${{ inputs.go_version_file }}'
+          golangci_url: '${{ inputs.golangci_url }}'
+          directory: '${{ inputs.directory }}'
+          golangci_lint_version: '${{ inputs.golangci_lint_version }}'
 
   # golangci runs golangci-lint. If a .golangci.yml or .golangci.yaml file
   # exists at the root of the repository, it uses those custom settings. If no
@@ -85,50 +75,11 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
-      - name: 'Setup Go'
-        uses: 'actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34' # ratchet:actions/setup-go@v5
+      - name: 'Lint Go'
+        uses: 'abcxyz/pkg/.github/actions/lint-go@main' # ratchet:exclude
         with:
-          go-version: '${{ inputs.go_version }}'
-          go-version-file: '${{ inputs.go_version_file }}'
-          cache: false
-
-      - name: 'Lint (download default configuration)'
-        id: 'load-default-config'
-        if: |-
-          ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
-        run: |-
-          # Create a unique output file outside of the checkout.
-          GOLANGCI_YML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.golangci.yml"
-
-          # Download the file, passing in authentication to get a higher rate
-          # limit: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#rate-limits-for-requests-from-github-actions
-          curl "${{ inputs.golangci_url }}" \
-            --silent \
-            --fail \
-            --location \
-            --header "Authorization: Token ${{ github.token }}" \
-            --output "${GOLANGCI_YML}"
-
-          # Save the result to an output.
-          echo "::notice::Wrote configuration file to ${GOLANGCI_YML}"
-          echo "output-file=${GOLANGCI_YML}" >> "${GITHUB_OUTPUT}"
-
-      - name: 'Lint (default configuration)'
-        if: |-
-          ${{ hashFiles('.golangci.yml', '.golangci.yaml') == '' }}
-        uses: 'golangci/golangci-lint-action@0adbc47a5910e47adb692df88187ec8c73c76778' # ratchet:golangci/golangci-lint-action@v6
-        with:
-          args: |-
-            --config "${{ steps.load-default-config.outputs.output-file }}"
-          skip-cache: true
-          version: '${{ inputs.golangci_lint_version }}'
-          working-directory: '${{ inputs.directory }}'
-
-      - name: 'Lint (custom configuration)'
-        if: |-
-          ${{ hashFiles('.golangci.yml', '.golangci.yaml') != '' }}
-        uses: 'golangci/golangci-lint-action@0adbc47a5910e47adb692df88187ec8c73c76778' # ratchet:golangci/golangci-lint-action@v6
-        with:
-          skip-cache: true
-          version: '${{ inputs.golangci_lint_version }}'
-          working-directory: '${{ inputs.directory }}'
+          go_version: '${{ inputs.go_version }}'
+          go_version_file: '${{ inputs.go_version_file }}'
+          golangci_url: '${{ inputs.golangci_url }}'
+          directory: '${{ inputs.directory }}'
+          golangci_lint_version: '${{ inputs.golangci_lint_version }}'
