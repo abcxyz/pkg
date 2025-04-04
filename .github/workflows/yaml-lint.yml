@@ -48,7 +48,8 @@ jobs:
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Lint Yaml'
-        uses: 'abcxyz/pkg/.github/actions/lint-yaml@main' # ratchet:exclude
+        uses: './.github/actions/lint-yaml' # ratchet:exclude
+        # uses: 'abcxyz/pkg/.github/actions/lint-yaml@main' # ratchet:exclude
         with:
           yamllint_url: '${{ inputs.yamllint_url }}'
           yamllint_version: '${{ inputs.yamllint_version }}'
