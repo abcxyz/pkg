@@ -62,5 +62,3 @@ jobs:
           directory: '${{ inputs.directory }}'
           walk_dirs: '${{ inputs.walk_dirs }}'
           ignored_walk_dirs: '${{ inputs.ignored_walk_dirs }}'
-
-
