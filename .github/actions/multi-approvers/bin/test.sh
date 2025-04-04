@@ -12,10 +12,11 @@ set -eEuo pipefail
 # stderr/stdout and exit code is appropriately fed to the caller.
 #
 
-readarray -td '' FILES < <(find * -type f -not -path 'node_modules/*' -name '*.test.ts' -print0 | sort -z)
+files_input="$(find ./* -type f -not -path './node_modules/*' -name '*.test.ts' | sort)"
+readarray -td '' files <<<"${files_input}"
 
 set -x
 exec node \
   --require ts-node/register \
   --test-reporter spec \
-  --test "${FILES[@]}"
+  --test "${files[@]}"
