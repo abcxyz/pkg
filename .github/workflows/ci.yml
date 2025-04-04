@@ -44,6 +44,9 @@ jobs:
       - name: 'Lint Go Modules'
         uses: './.github/actions/lint-go-modules' # ratchet:exclude
 
+  go_test:
+    uses: './.github/workflows/go-test.yml'
+
   shell_lint:
     runs-on: 'ubuntu-latest'
     steps:
