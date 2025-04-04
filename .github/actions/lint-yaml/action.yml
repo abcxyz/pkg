@@ -35,6 +35,7 @@ runs:
       uses: 'actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38' # ratchet:actions/setup-python@v5
 
     - name: 'Install yamllint'
+      shell: 'bash'
       run: |-
         pip install --user yamllint==${{ inputs.yamllint_version }}
 
@@ -42,6 +43,7 @@ runs:
       id: 'load-default-config'
       if: |-
         ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
+      shell: 'bash'
       run: |-
         # Create a unique output file outside of the checkout.
         YAMLLINT_YAML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.yamllint.yml"
@@ -62,11 +64,13 @@ runs:
     - name: 'Lint (default configuration)'
       if: |-
         ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
+      shell: 'bash'
       run: |-
         yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
 
     - name: 'Lint (custom configuration)'
       if: |-
         ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') != '' }}
+      shell: 'bash'
       run: |-
         yamllint ${{ inputs.target }}

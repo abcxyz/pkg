@@ -26,6 +26,7 @@ runs:
     - name: 'Lint Shell'
       env:
         TARGET: '${{ inputs.target }}'
+      shell: 'bash'
       run: |-
         find "${TARGET}" \( -type f -name '*.sh' -or -name '*.bash' -or -name '*.zsh' \) -exec \
           shellcheck \
