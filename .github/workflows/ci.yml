@@ -27,19 +27,46 @@ concurrency:
 
 jobs:
   go_lint:
-    uses: './.github/workflows/go-lint.yml'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
-  go_test:
-    uses: './.github/workflows/go-test.yml'
+      - name: 'Lint Go'
+        uses: './.github/actions/lint-go' # ratchet:exclude
+
+  go_modules_lint:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+
+      - name: 'Lint Go Modules'
+        uses: './.github/actions/lint-go-modules' # ratchet:exclude
 
   shell_lint:
-    uses: './.github/workflows/shell-lint.yml'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+
+      - name: 'Lint Shell'
+        uses: './.github/actions/lint-shell' # ratchet:exclude
 
   terraform_lint:
-    uses: './.github/workflows/terraform-lint.yml'
-    with:
-      terraform_version: 1.3
-      directory: 'terraform'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+
+      - name: 'Lint Terraform'
+        uses: './.github/actions/lint-terraform' # ratchet:exclude
 
   yaml_lint:
-    uses: './.github/workflows/yaml-lint.yml'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+
+      - name: 'Lint Yaml'
+        uses: './.github/actions/lint-yaml' # ratchet:exclude
