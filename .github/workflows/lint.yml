@@ -143,9 +143,19 @@ jobs:
 
       - name: '[GOLANG] Lint Go'
         if: |
-          matrix.lint-target == 'golang'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-go' || 'abcxyz/pkg/.github/actions/lint-go@main' }}
+          matrix.lint-target == 'golang' && github.repository != 'abcxyz/pkg'
+        uses:  'abcxyz/pkg/.github/actions/lint-go@main'
+        with:
+          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+
+      - name: '[GOLANG] Lint Go abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'golang' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-go'
         with:
           go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
@@ -155,9 +165,19 @@ jobs:
 
       - name: '[GOLANG] Lint Go modules'
         if: |
-          matrix.lint-target == 'golang-modules'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-go-modules' || 'abcxyz/pkg/.github/actions/lint-go-modules@main' }}
+          matrix.lint-target == 'golang-modules' && github.repository != 'abcxyz/pkg'
+        uses: 'abcxyz/pkg/.github/actions/lint-go-modules@main'
+        with:
+          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+
+      - name: '[GOLANG] Lint Go modules abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'golang-modules' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-go-modules'
         with:
           go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
@@ -167,9 +187,18 @@ jobs:
 
       - name: '[JAVA] Lint Java'
         if: |
-          matrix.lint-target == 'java'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-java' || 'abcxyz/pkg/.github/actions/lint-java@main' }}
+          matrix.lint-target == 'java' && github.repository != 'abcxyz/pkg'
+        uses: 'abcxyz/pkg/.github/actions/lint-java@main'
+        with:
+          java_version: '${{ env.JAVA_LINT_JAVA_VERSION }}'
+          java_distribution: '${{ env.JAVA_LINT_JAVA_DISTRIBUTION }}'
+          google_java_format_version: '${{ env.JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION }}'
+          directory: '${{ env.JAVA_LINT_DIRECTORY }}'
+
+      - name: '[JAVA] Lint Java abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'java' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-java'
         with:
           java_version: '${{ env.JAVA_LINT_JAVA_VERSION }}'
           java_distribution: '${{ env.JAVA_LINT_JAVA_DISTRIBUTION }}'
@@ -178,29 +207,56 @@ jobs:
 
       - name: '[JAVASCRIPT] Lint Javascript'
         if: |
-          matrix.lint-target == 'javascript'
+          matrix.lint-target == 'javascript' && github.repository != 'abcxyz/pkg'
+        run: |-
+          echo "TODO: Lint javascript"
+
+      - name: '[JAVASCRIPT] Lint Javascript abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'javascript' && github.repository == 'abcxyz/pkg'
         run: |-
           echo "TODO: Lint javascript"
 
       - name: '[TYPESCRIPT] Lint Typescript'
         if: |
-          matrix.lint-target == 'typescript'
+          matrix.lint-target == 'typescript' && github.repository != 'abcxyz/pkg'
+        run: |-
+          echo "TODO: Lint typescript"
+
+      - name: '[TYPESCRIPT] Lint Typescript abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'typescript' && github.repository == 'abcxyz/pkg'
         run: |-
           echo "TODO: Lint typescript"
 
       - name: '[SHELL] Lint Shell'
         if: |
-          matrix.lint-target == 'shell'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-shell' || 'abcxyz/pkg/.github/actions/lint-shell@main' }}
+          matrix.lint-target == 'shell' && github.repository != 'abcxyz/pkg'
+        uses:  'abcxyz/pkg/.github/actions/lint-shell@main'
+        with:
+          target: '${{ env.LINT_SHELL_TARGET }}'
+
+      - name: '[SHELL] Lint Shell abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'shell' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-shell'
         with:
           target: '${{ env.LINT_SHELL_TARGET }}'
 
       - name: '[TERRAFORM] Lint Terraform'
         if: |
-          matrix.lint-target == 'terraform'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-terraform' || 'abcxyz/pkg/.github/actions/lint-terraform@main' }}
+          matrix.lint-target == 'terraform' && github.repository != 'abcxyz/pkg'
+        uses: 'abcxyz/pkg/.github/actions/lint-terraform@main'
+        with:
+          terraform_version: '${{ env.TERRAFORM_LINT_TERRAFORM_VERSION }}'
+          directory: '${{ env.TERRAFORM_LINT_DIRECTORY }}'
+          walk_dirs: '${{ env.TERRAFORM_LINT_WALK_DIRS }}'
+          ignored_walk_dirs: '${{ env.TERRAFORM_LINT_IGNORED_WALK_DIRS }}'
+
+      - name: '[TERRAFORM] Lint Terraform abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'terraform' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-terraform'
         with:
           terraform_version: '${{ env.TERRAFORM_LINT_TERRAFORM_VERSION }}'
           directory: '${{ env.TERRAFORM_LINT_DIRECTORY }}'
@@ -209,9 +265,17 @@ jobs:
 
       - name: '[YAML] lint yaml'
         if: |
-          matrix.lint-target == 'yaml'
-        uses: |-
-          ${{ github.repository == 'abcxyz/pkg' && './.github/actions/lint-yaml' || 'abcxyz/pkg/.github/actions/lint-yaml@main' }}
+          matrix.lint-target == 'yaml' && github.repository != 'abcxyz/pkg'
+        uses: 'abcxyz/pkg/.github/actions/lint-yaml@main'
+        with:
+          yamllint_url: '${{ env.YAML_LINT_YAMLLINT_URL }}'
+          yamllint_version: '${{ env.YAML_LINT_YAMLLINT_VERSION }}'
+          target: '${{ env.YAML_LINT_TARGET }}'
+
+      - name: '[YAML] lint yaml abcxyz/pkg'
+        if: |
+          matrix.lint-target == 'yaml' && github.repository == 'abcxyz/pkg'
+        uses: './.github/actions/lint-yaml'
         with:
           yamllint_url: '${{ env.YAML_LINT_YAMLLINT_URL }}'
           yamllint_version: '${{ env.YAML_LINT_YAMLLINT_VERSION }}'
