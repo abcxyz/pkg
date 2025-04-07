@@ -110,18 +110,18 @@ jobs:
       ## SHELL #####
       ##############
       LINT_SHELL_TARGET: |-
-        ${{ LINT_SHELL_TARGET || '.' }}
+        ${{ vars.LINT_SHELL_TARGET || '.' }}
       ##############
       ## TERRAFORM #
       ##############
       TERRAFORM_LINT_TERRAFORM_VERSION: |-
-        ${{ env.TERRAFORM_LINT_TERRAFORM_VERSION }}
+        ${{ vars.TERRAFORM_LINT_TERRAFORM_VERSION }}
       TERRAFORM_LINT_DIRECTORY: |-
-        ${{ env.TERRAFORM_LINT_DIRECTORY }}
+        ${{ vars.TERRAFORM_LINT_DIRECTORY }}
       TERRAFORM_LINT_WALK_DIRS: |-
-        ${{ env.TERRAFORM_LINT_WALK_DIRS || true }}
+        ${{ vars.TERRAFORM_LINT_WALK_DIRS || true }}
       TERRAFORM_LINT_IGNORED_WALK_DIRS: |-
-        ${{ env.TERRAFORM_LINT_IGNORED_WALK_DIRS || '' }}
+        ${{ vars.TERRAFORM_LINT_IGNORED_WALK_DIRS || '' }}
       ##############
       ## YAML ######
       ##############
