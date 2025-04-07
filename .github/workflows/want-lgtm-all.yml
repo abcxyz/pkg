@@ -38,16 +38,41 @@ permissions:
   actions: 'write'
   pull-requests: 'read'
 
+env:
+  TAGREP_VERSION: '0.0.5'
+
 jobs:
   want-lgtm-all:
+    # TODO: Support merge_group event.
     if: |-
       ${{ contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name) }}
     runs-on: 'ubuntu-latest'
     steps:
+      - name: 'Setup Tagrep'
+        uses: 'abcxyz/pkg/.github/actions/setup-binary@main' # ratchet:exclude
+        with:
+          download_url: 'https://github.com/abcxyz/tagrep/releases/download/v${{ env.TAGREP_VERSION }}/tagrep_${{ env.TAGREP_VERSION }}_linux_amd64.tar.gz'
+          install_path: '${{ runner.temp }}/.tagrep'
+          binary_subpath: 'tagrep'
+          cache_key: '${{ runner.os }}_${{ runner.arch }}_tagrep_${{ env.TAGREP_VERSION }}'
+          add_to_path: true
+
+      - name: 'Tagrep PR vars'
+        id: 'tagrep'
+        shell: 'bash'
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          TAGREP_LOG_TARGET: 'STDERR'
+        run: |
+          tags="$(tagrep parse -type=request -format=raw -duplicate-key-strategy=take-last 2> tagrep.log)"
+          cat tagrep.log
+          echo "tags -> $tags"
+          echo "$tags" >> "$GITHUB_ENV"
+
       - id: 'want-lgtm'
         name: 'Validate Reviews'
         if: |-
-          ${{ contains(github.event.pull_request.body, 'want_lgtm=all') }}
+          ${{ env.WANT_LGTM == 'all' }}
         uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
@@ -133,7 +158,7 @@ jobs:
       - id: 'rerun-status-checks'
         name: 'Re-run Status Checks'
         if: |-
-          ${{ contains(github.event.pull_request.body, 'want_lgtm=all') && github.event_name == 'pull_request_review' }}
+          ${{ env.WANT_LGTM == 'all' && github.event_name == 'pull_request_review' }}
         uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
         with:
           retries: 3
