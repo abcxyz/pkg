@@ -13,7 +13,7 @@ set -eEuo pipefail
 #
 
 files_input="$(find ./* -type f -not -path './node_modules/*' -name '*.test.ts' | sort)"
-readarray -td '' files <<<"${files_input}"
+readarray -t files <<<"${files_input}"
 
 set -x
 exec node \
