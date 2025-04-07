@@ -11,6 +11,7 @@
     "format": "npm run lint-fix",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
+    "pre-submit": "npm run clean && npm run lint-fix && npm run build && npm run test",
     "test": "bash ./bin/test.sh",
     "tsc": "tsc"
   },

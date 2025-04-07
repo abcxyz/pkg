@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// The purpose of this file is to kick off the action from a GitHub context
+// (i.e. using the @actions/core.* and @actions/github.context).
+
 import * as ghCore from "@actions/core";
 import { context as ghContext } from "@actions/github";
 import {

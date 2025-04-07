@@ -12,9 +12,12 @@ users are external.
 
 `npm run lint`: Displays lint errors.
 
-`npm run {lint-fix|format}`: Fixes lint errors.
+`npm run [lint-fix|format]`: Fixes lint errors.
 
 `npm run build`: Generates minimized versions of Javascript source code.
 This MUST be run after making changes to code under the `src` directory.
 
 `npm run test`: runs tests.
+
+`npm run pre-submit`: Cleans, lints, formats, builds, and tests. Can/should be
+run before submitting.
