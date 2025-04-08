@@ -147,44 +147,44 @@ jobs:
           matrix.lint-target == 'golang' && github.repository != 'abcxyz/pkg'
         uses: 'abcxyz/pkg/.github/actions/lint-go@main'
         with:
-          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
-          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
-          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
-          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
-          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+          go_version: '${{ env.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ env.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ env.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ env.GO_LINT_GOLANGCI_LINT_VERSION }}'
 
       - name: '[GOLANG] Lint Go abcxyz/pkg'
         if: |
           matrix.lint-target == 'golang' && github.repository == 'abcxyz/pkg'
         uses: './.github/actions/lint-go'
         with:
-          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
-          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
-          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
-          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
-          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+          go_version: '${{ env.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ env.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ env.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ env.GO_LINT_GOLANGCI_LINT_VERSION }}'
 
       - name: '[GOLANG] Lint Go modules'
         if: |
           matrix.lint-target == 'golang-modules' && github.repository != 'abcxyz/pkg'
         uses: 'abcxyz/pkg/.github/actions/lint-go-modules@main'
         with:
-          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
-          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
-          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
-          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
-          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+          go_version: '${{ env.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ env.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ env.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ env.GO_LINT_GOLANGCI_LINT_VERSION }}'
 
       - name: '[GOLANG] Lint Go modules abcxyz/pkg'
         if: |
           matrix.lint-target == 'golang-modules' && github.repository == 'abcxyz/pkg'
         uses: './.github/actions/lint-go-modules'
         with:
-          go_version: '${{ inputs.GO_LINT_GO_VERSION }}'
-          go_version_file: '${{ inputs.GO_LINT_GO_VERSION_FILE }}'
-          golangci_url: '${{ inputs.GO_LINT_GOLANGCI_URL }}'
-          directory: '${{ inputs.GO_LINT_DIRECTORY }}'
-          golangci_lint_version: '${{ inputs.GO_LINT_GOLANGCI_LINT_VERSION }}'
+          go_version: '${{ env.GO_LINT_GO_VERSION }}'
+          go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
+          golangci_url: '${{ env.GO_LINT_GOLANGCI_URL }}'
+          directory: '${{ env.GO_LINT_DIRECTORY }}'
+          golangci_lint_version: '${{ env.GO_LINT_GOLANGCI_LINT_VERSION }}'
 
       - name: '[JAVA] Lint Java'
         if: |
