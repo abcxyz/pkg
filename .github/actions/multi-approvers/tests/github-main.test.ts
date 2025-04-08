@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import assert from "node:assert/strict";
-import { mock, test } from "node:test";
+import { test } from "node:test";
 import * as ghCore from "@actions/core";
 import { context as ghContext } from "@actions/github";
 import { main } from "../src/github-main";
@@ -31,10 +31,6 @@ function newFakeCore(inputs: { [key: string]: string }): Core {
 }
 
 test("#github-main", { concurrency: true }, async (suite) => {
-  suite.beforeEach(async () => {
-    mock.reset();
-  });
-
   await suite.test("should fail on unsupported event", async (t) => {
     const inputs = {
       team: "fake-team",
