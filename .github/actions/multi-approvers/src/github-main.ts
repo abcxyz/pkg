@@ -42,14 +42,14 @@ export async function main(core: Core = ghCore, context: Context = ghContext) {
     const eventName = getEventName(context.eventName);
 
     const multiApproversAction = new MultiApproversAction({
-      eventName,
+      eventName: eventName,
       runId: context.runId,
       branch: payload.pull_request!.head.ref,
       pullNumber: payload.pull_request!.number,
       repoName: payload.repository!.name,
       repoOwner: payload.repository!.owner.login,
-      token,
-      team,
+      token: token,
+      team: team,
       logDebug: core.debug,
       logInfo: core.info,
     });
