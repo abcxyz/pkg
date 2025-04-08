@@ -70,9 +70,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       logInfo: (_: string) => {},
     });
 
-    const result = await multiApproversAction.validate();
-
-    assert(result.isSuccess);
+    await assert.doesNotReject(() => multiApproversAction.validate());
   });
 
   await suite.test(
@@ -114,13 +112,10 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
         logInfo: (_: string) => {},
       });
 
-      const result = await multiApproversAction.validate();
-
-      assert(!result.isSuccess);
-      assert.equal(
-        result.errorMessage,
-        "This pull request has 0 of 2 required internal approvals.",
-      );
+      await assert.rejects(() => multiApproversAction.validate(), {
+        name: "Error",
+        message: "This pull request has 0 of 2 required internal approvals.",
+      });
     },
   );
 
@@ -196,9 +191,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
         logInfo: (_: string) => {},
       });
 
-      const result = await multiApproversAction.validate();
-
-      assert(result.isSuccess);
+      await assert.doesNotReject(() => multiApproversAction.validate());
     },
   );
 
@@ -272,13 +265,10 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       logInfo: (_: string) => {},
     });
 
-    const result = await multiApproversAction.validate();
-
-    assert(!result.isSuccess);
-    assert.equal(
-      result.errorMessage,
-      "This pull request has 1 of 2 required internal approvals.",
-    );
+    await assert.rejects(() => multiApproversAction.validate(), {
+      name: "Error",
+      message: "This pull request has 1 of 2 required internal approvals.",
+    });
   });
 
   await suite.test("should handle rescinded approval", async () => {
@@ -366,13 +356,10 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       logInfo: (_: string) => {},
     });
 
-    const result = await multiApproversAction.validate();
-
-    assert(!result.isSuccess);
-    assert.equal(
-      result.errorMessage,
-      "This pull request has 1 of 2 required internal approvals.",
-    );
+    await assert.rejects(() => multiApproversAction.validate(), {
+      name: "Error",
+      message: "This pull request has 1 of 2 required internal approvals.",
+    });
   });
 
   await suite.test("should fail with pending member approval", async () => {
@@ -445,13 +432,10 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       logInfo: (_: string) => {},
     });
 
-    const result = await multiApproversAction.validate();
-
-    assert(!result.isSuccess);
-    assert.equal(
-      result.errorMessage,
-      "This pull request has 1 of 2 required internal approvals.",
-    );
+    await assert.rejects(() => multiApproversAction.validate(), {
+      name: "Error",
+      message: "This pull request has 1 of 2 required internal approvals.",
+    });
   });
 
   await suite.test("should re-run failed runs on PR reviews", async () => {
@@ -551,12 +535,9 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       logInfo: (_: string) => {},
     });
 
-    const result = await multiApproversAction.validate();
-
-    assert(!result.isSuccess);
-    assert.equal(
-      result.errorMessage,
-      "This pull request has 1 of 2 required internal approvals.",
-    );
+    await assert.rejects(() => multiApproversAction.validate(), {
+      name: "Error",
+      message: "This pull request has 1 of 2 required internal approvals.",
+    });
   });
 });

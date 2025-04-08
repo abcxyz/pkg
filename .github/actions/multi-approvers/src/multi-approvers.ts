@@ -18,7 +18,6 @@ import { getOctokit } from "@actions/github";
 import { OctokitOptions } from "@octokit/core";
 import { RestEndpointMethodTypes } from "@octokit/rest";
 import { RequestError } from "@octokit/request-error";
-import { Fail, Result, Success } from "./result";
 
 type PullRequestReview =
   RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"];
@@ -163,7 +162,7 @@ export class MultiApproversAction {
   }
 
   /** Checks that approval requirements are satisfied. */
-  private async validateApprovers(): Promise<Result> {
+  private async validateApprovers() {
     const prResponse = await this.octokit.rest.pulls.get({
       owner: this.repoOwner,
       repo: this.repoName,
@@ -179,7 +178,7 @@ export class MultiApproversAction {
           prLogin
         } is an internal member, therefore no special approval rules apply.`,
       );
-      return Success.INSTANCE;
+      return;
     }
     const submittedReviews: PullRequestReview = await this.octokit.paginate(
       this.octokit.rest.pulls.listReviews,
@@ -198,14 +197,12 @@ export class MultiApproversAction {
     this.logInfo(`Found ${approvedCount} ${APPROVED} internal reviews.`);
 
     if (approvedCount < MIN_APPROVED_COUNT) {
-      return new Fail(
+      throw new Error(
         `This pull request has ${approvedCount} of ${
           MIN_APPROVED_COUNT
         } required internal approvals.`,
       );
     }
-
-    return Success.INSTANCE;
   }
 
   /**
@@ -256,11 +253,8 @@ export class MultiApproversAction {
     return response.data.workflow_id;
   }
 
-  async validate(): Promise<Result> {
-    const result = await this.validateApprovers();
-    if (!result.isSuccess) {
-      return result;
-    }
+  async validate() {
+    await this.validateApprovers();
 
     // If this action was triggered by a review, we want to re-run for previous
     // failed runs.
@@ -268,7 +262,5 @@ export class MultiApproversAction {
       const workflowId = await this.getWorkflowId();
       await this.revalidateApprovers(workflowId);
     }
-
-    return Success.INSTANCE;
   }
 }
