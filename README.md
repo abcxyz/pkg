@@ -223,8 +223,6 @@ concurrency:
 
 jobs:
   multi-approvers:
-    if: |-
-      contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name)
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Authenticate to Google Cloud'
@@ -295,8 +293,6 @@ concurrency:
 
 jobs:
   multi-approvers:
-    if: |-
-      contains(fromJSON('["pull_request", "pull_request_review"]'), github.event_name)
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Multi-approvers'
