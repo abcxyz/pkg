@@ -7,13 +7,9 @@
   "type": "commonjs",
   "scripts": {
     "build": "ncc build -m src/main.ts -o dist",
-    "clean": "rm -rf dist .tsc",
-    "format": "npm run lint-fix",
+    "format": "eslint . --fix",
     "lint": "eslint .",
-    "lint-fix": "eslint . --fix",
-    "pre-submit": "npm run clean && npm run lint-fix && npm run build && npm run test",
-    "test": "bash ./bin/test.sh",
-    "tsc": "tsc"
+    "test": "bash ./bin/test.sh"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",

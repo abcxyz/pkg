@@ -41,3 +41,7 @@ override.tf.json
 
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json
+
+### Node related ###
+# Module cache.
+**/node_modules/
