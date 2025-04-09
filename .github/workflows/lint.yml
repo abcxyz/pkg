@@ -101,6 +101,7 @@ jobs:
       ##############
       ## JAVA ######
       ##############
+      # DO_NOT_SUBMIT
       JAVA_LINT_JAVA_VERSION: |-
         ${{ vars.JAVA_LINT_JAVA_VERSION }}
       JAVA_LINT_JAVA_DISTRIBUTION: |-

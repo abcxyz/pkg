@@ -245,7 +245,7 @@ jobs:
       - name: 'Confirm template unchanged'
         shell: 'bash'
         run: |
-          abc upgrade -manifest-filter="template_location == \"abc.templates/lint-pkg\"" -accept-defaults
+          abc templates render --dest=. ./abc.templates/lint-pkg/ -force-overwrite -accept-defaults
           if [[ `git status --porcelain . -- ':!.abc/'` ]]; then
             echo "[ERROR] Changed files:"
             git status --porcelain . -- ':!.abc/'
