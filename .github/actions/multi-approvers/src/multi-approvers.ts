@@ -138,6 +138,7 @@ export class MultiApproversAction {
 
       // Ignore the PR user.
       if (reviewerLogin === prLogin) {
+        this.logDebug(`Ignoring review from ${prLogin} (self)`);
         continue;
       }
 
