@@ -52,6 +52,7 @@ export async function main(core: Core = ghCore, context: Context = ghContext) {
       team: team,
       logDebug: core.debug,
       logInfo: core.info,
+      logNotice: core.notice,
     });
 
     await multiApproversAction.validate();

@@ -17,7 +17,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import nock from "nock";
-import { MultiApproversAction } from "../src/multi-approvers";
+import {
+  MultiApproversAction,
+  MultiApproversParams,
+} from "../src/multi-approvers";
 
 const GITHUB_API_BASE_URL = "https://api.github.com";
 
@@ -68,6 +71,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       octokitOptions: { request: fetch },
       logDebug: (_: string) => {},
       logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
     });
 
     await assert.doesNotReject(() => multiApproversAction.validate());
@@ -110,6 +114,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
         octokitOptions: { request: fetch },
         logDebug: (_: string) => {},
         logInfo: (_: string) => {},
+        logNotice: (_: string) => {},
       });
 
       await assert.rejects(() => multiApproversAction.validate(), {
@@ -189,6 +194,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
         octokitOptions: { request: fetch },
         logDebug: (_: string) => {},
         logInfo: (_: string) => {},
+        logNotice: (_: string) => {},
       });
 
       await assert.doesNotReject(() => multiApproversAction.validate());
@@ -263,6 +269,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       octokitOptions: { request: fetch },
       logDebug: (_: string) => {},
       logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
     });
 
     await assert.rejects(() => multiApproversAction.validate(), {
@@ -354,6 +361,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       octokitOptions: { request: fetch },
       logDebug: (_: string) => {},
       logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
     });
 
     await assert.rejects(() => multiApproversAction.validate(), {
@@ -430,6 +438,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       octokitOptions: { request: fetch },
       logDebug: (_: string) => {},
       logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
     });
 
     await assert.rejects(() => multiApproversAction.validate(), {
@@ -533,11 +542,98 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       octokitOptions: { request: fetch },
       logDebug: (_: string) => {},
       logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
     });
 
     await assert.rejects(() => multiApproversAction.validate(), {
       name: "Error",
       message: "This pull request has 1 of 2 required internal approvals.",
     });
+  });
+
+  await suite.test("handles review with unset user", async (t) => {
+    const eventName = "pull_request";
+    const org = "test-org";
+    const repoName = "test-repo";
+    const pullNumber = 1;
+    const prLogin = "pr-owner";
+    const team = "test-team";
+    const approver1 = "approver-1";
+    const approver2 = "approver-2";
+
+    nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+      .reply(200, {
+        owner: org,
+        pull_number: pullNumber,
+        repoName,
+        user: {
+          login: prLogin,
+        },
+      })
+      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .reply(404)
+      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .reply(200, [
+        {
+          submitted_at: 1714636804,
+          state: "approved",
+        },
+        {
+          submitted_at: 1714636800,
+          user: {
+            login: approver1,
+          },
+          state: "approved",
+        },
+        {
+          submitted_at: 1714636801,
+          user: {
+            login: approver2,
+          },
+          state: "approved",
+        },
+      ])
+      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .reply(200, {
+        org,
+        team_slug: team,
+        username: approver1,
+        role: "member",
+        state: "active",
+      })
+      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .reply(200, {
+        org,
+        team_slug: team,
+        username: approver2,
+        role: "member",
+        state: "pending",
+      });
+
+    const params = {
+      eventName,
+      runId: 12,
+      branch: "twig",
+      pullNumber,
+      repoName,
+      repoOwner: org,
+      token: "fake-token",
+      team,
+      octokitOptions: { request: fetch },
+      logDebug: (_: string) => {},
+      logInfo: (_: string) => {},
+      logNotice: (_: string) => {},
+    } as MultiApproversParams;
+    const mockLogNotice = t.mock.method(params, "logNotice");
+    const multiApproversAction = new MultiApproversAction(params);
+
+    await assert.rejects(() => multiApproversAction.validate());
+
+    assert.equal(mockLogNotice.mock.callCount(), 1);
+    const msg = mockLogNotice.mock.calls[0].arguments[0];
+    assert(
+      msg.startsWith("Ignoring pull request review because user is unset: "),
+    );
   });
 });

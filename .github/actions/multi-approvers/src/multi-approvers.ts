@@ -34,7 +34,7 @@ const COMMENTED = "commented";
 const ALLOWED_TEAM_MEMBER_ROLES = ["maintainer", "member"];
 const ACTIVE = "active";
 
-interface MultiApproversParams {
+export interface MultiApproversParams {
   eventName: EventName;
   runId: number;
   branch: string;
@@ -46,6 +46,7 @@ interface MultiApproversParams {
   octokitOptions?: OctokitOptions;
   logDebug: (_: string) => void;
   logInfo: (_: string) => void;
+  logNotice: (_: string) => void;
 }
 
 export class MultiApproversAction {
@@ -68,6 +69,7 @@ export class MultiApproversAction {
     this.team = params.team;
     this.logDebug = params.logDebug;
     this.logInfo = params.logInfo;
+    this.logNotice = params.logNotice;
 
     this.octokit = getOctokit(params.token, params.octokitOptions);
   }
@@ -77,6 +79,9 @@ export class MultiApproversAction {
 
   // Set in the constructor.
   private logInfo: (_: string) => void;
+
+  // Set in the constructor.
+  private logNotice: (_: string) => void;
 
   // Tests whether the given login is an active member of the team.
   private async isInternal(login: string): Promise<boolean> {
@@ -122,7 +127,14 @@ export class MultiApproversAction {
     const reviewStateByLogin = new Map<string, string>();
 
     for (const r of sortedReviews) {
-      const reviewerLogin = r.user!.login;
+      if (!r.user) {
+        this.logNotice(
+          `Ignoring pull request review because user is unset: ${JSON.stringify(r)}`,
+        );
+        continue;
+      }
+
+      const reviewerLogin = r.user.login;
 
       // Ignore the PR user.
       if (reviewerLogin === prLogin) {
