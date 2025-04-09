@@ -2,15 +2,15 @@
 api_version: cli.abcxyz.dev/v1beta6
 kind: Manifest
 creation_time: 2025-04-09T16:28:16.284699461Z
-modification_time: 2025-04-09T19:42:59.159643367Z
+modification_time: 2025-04-09T19:44:03.609898858Z
 template_location: abc.templates/lint-pkg
 location_type: local_git
-template_version: a2cad5ca9c9bf42e18fa7f22c376ebda79e2a656
+template_version: efb6c65e76c49c52e17a347e22db4bf808198389
 upgrade_channel: ""
-template_dirhash: h1:8jwIp6UlK2uUhV8hIolGslFWlxvHg5I8V6+uep1KN8I=
+template_dirhash: h1:K/3NTdHH2qYTXYqRfOxf69A8cLdJg/W8kQDL0Cu6Ny8=
 inputs:
     - name: abc_version
       value: 0.10.1
 output_files:
     - file: .github/workflows/lint-pkg.yml
-      hash: h1:zSiQa1SO9JkK9nWM3h6dqznuRER6wwpMfWSte3kbUXk=
+      hash: h1:5DkSL7TwWxCDbgMEy1I1G0jS/wIU4mgk8HdTLbl1mMk=

@@ -79,10 +79,10 @@ steps:
               - name: 'Setup abc'
                 uses: 'abcxyz/pkg/.github/actions/setup-binary@main' # ratchet:ignore
                 with:
-                  download_url: 'https://github.com/abcxyz/guardian/releases/download/v{{.abc_version}}/guardian_{{.abc_version}}_linux_amd64.tar.gz'
-                  install_path: '${{ "{{" }} runner.temp }}/.guardian'
-                  binary_subpath: 'guardian'
-                  cache_key: '${{ "{{" }} runner.os }}_${{ "{{" }} runner.arch }}_guardian_{{.abc_version}}'
+                  download_url: 'https://github.com/abcxyz/abc/releases/download/v{{.abc_version}}/abc_{{.abc_version}}_linux_amd64.tar.gz'
+                  install_path: '${{ "{{" }} runner.temp }}/.abc'
+                  binary_subpath: 'abc'
+                  cache_key: '${{ "{{" }} runner.os }}_${{ "{{" }} runner.arch }}_abc_{{.abc_version}}'
                   add_to_path: true
 
               - name: 'Confirm template unchanged'
