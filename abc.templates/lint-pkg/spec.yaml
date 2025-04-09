@@ -36,7 +36,7 @@ steps:
         - '.github/workflows/lint-pkg.yml'
       replacements:
         - to_replace: "!= 'abcxyz/pkg'"
-          with:  "== 'abcxyz/pkg'"
+          with: "== 'abcxyz/pkg'"
         - to_replace: "name: 'lint'"
           with: "name: 'lint-pkg'"
         - to_replace: "uses: 'abcxyz/pkg/.github/actions/"
@@ -61,8 +61,8 @@ steps:
       paths: ['.github/workflows/lint-pkg.yml']
       skip_ensure_newline: false
       with: |-
-        
-        # Job to confirm if the template needs to be re-rendered
+        # REMOVE_IMMEDIATELY
+          # Job to confirm if the template needs to be re-rendered
           check-template:
             runs-on: 'ubuntu-latest'
             permissions:
@@ -82,3 +82,14 @@ steps:
                     echo "  abc upgrade -manifest-filter="template_location == \"abc.templates/lint-pkg\"""
                     exit 1
                   fi
+
+  # This is necessary because we cannot get the correct indentation without the
+  # offset line in the above step.
+  - desc: 'Remove temporary line'
+    action: 'string_replace'
+    params:
+      paths:
+        - '.github/workflows/lint-pkg.yml'
+      replacements:
+        - to_replace: '# REMOVE_IMMEDIATELY'
+          with: '\n'

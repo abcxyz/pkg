@@ -222,7 +222,7 @@ jobs:
           yamllint_version: '${{ env.YAML_LINT_YAMLLINT_VERSION }}'
           target: '${{ env.YAML_LINT_TARGET }}'
 
-# Job to confirm if the template needs to be re-rendered
+  # Job to confirm if the template needs to be re-rendered
   check-template:
     runs-on: 'ubuntu-latest'
     permissions:
