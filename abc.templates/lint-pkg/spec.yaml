@@ -77,7 +77,7 @@ steps:
                   fetch-depth: 1 # shallow clone
 
               - name: 'Setup abc'
-                uses: 'abcxyz/pkg/.github/actions/setup-binary@7644ee667d9096d9b8a5741b2676be9394ba0daf' # ratchet:abcxyz/pkg/.github/actions/setup-binary@main
+                uses: 'abcxyz/pkg/.github/actions/setup-binary@main' # ratchet:ignore
                 with:
                   download_url: 'https://github.com/abcxyz/guardian/releases/download/v{{.abc_version}}/guardian_{{.abc_version}}_linux_amd64.tar.gz'
                   install_path: '${{ "{{" }} runner.temp }}/.guardian'
