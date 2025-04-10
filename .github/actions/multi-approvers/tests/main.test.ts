@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as ghCore from "@actions/core";
 import { context as ghContext } from "@actions/github";
-import { main } from "../src/github-main";
+import { main } from "../src/main";
 
 type Core = typeof ghCore;
 type Context = typeof ghContext;
@@ -30,7 +30,7 @@ function newFakeCore(inputs: { [key: string]: string }): Core {
   } as unknown as Core;
 }
 
-test("#github-main", { concurrency: true }, async (suite) => {
+test("#main", { concurrency: true }, async (suite) => {
   await suite.test("should fail on unsupported event", async (t) => {
     const core = newFakeCore({ token: "fake-token", team: "fake-team" });
     const setFailed = t.mock.method(core, "setFailed", () => {});

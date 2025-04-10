@@ -12,6 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { main } from "./github-main";
+// The purpose of this file is to kick off the action from a GitHub context
+// (i.e. using the @actions/core.* and @actions/github.context).
 
-main();
+import * as ghCore from "@actions/core";
+import { context as ghContext } from "@actions/github";
+import { errorMessage } from "@google-github-actions/actions-utils";
+import {
+  EventName,
+  isEventName,
+  MultiApproversAction,
+} from "./multi-approvers";
+
+type Core = typeof ghCore;
+type Context = typeof ghContext;
+
+function getEventName(rawEventName: string): EventName {
+  if (!isEventName(rawEventName)) {
+    throw new Error(`Unexpected event [${rawEventName}].`);
+  }
+  return rawEventName as EventName;
+}
+
+export async function main(core: Core = ghCore, context: Context = ghContext) {
+  try {
+    const payload = context.payload;
+    const token = core.getInput("token", { required: true });
+    const team = core.getInput("team", { required: true });
+    const eventName = getEventName(context.eventName);
+
+    const multiApproversAction = new MultiApproversAction({
+      eventName: eventName,
+      runId: context.runId,
+      branch: payload.pull_request!.head.ref,
+      pullNumber: payload.pull_request!.number,
+      repoName: payload.repository!.name,
+      repoOwner: payload.repository!.owner.login,
+      token: token,
+      team: team,
+      logDebug: core.debug,
+      logInfo: core.info,
+      logNotice: core.notice,
+    });
+
+    await multiApproversAction.validate();
+  } catch (err) {
+    core.setFailed(`Multi-approvers action failed: ${errorMessage(err)}`);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
