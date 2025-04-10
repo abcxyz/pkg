@@ -24,6 +24,51 @@ import {
 
 const GITHUB_API_BASE_URL = "https://api.github.com";
 
+const BASE_PARAMS = {
+  eventName: "pull_request",
+  runId: 1,
+  branch: "twig",
+  pullNumber: 12,
+  repoName: "speed-trap",
+  repoOwner: "acme-org",
+  token: "fake-token",
+  team: "roadrunners",
+  octokitOptions: { request: fetch },
+  logDebug: (_: string) => {},
+  logInfo: (_: string) => {},
+  logNotice: (_: string) => {},
+} as MultiApproversParams;
+
+async function assertDoesNotReject(
+  nockScope: any,
+  paramOverrides: Partial<MultiApproversParams> = {},
+) {
+  const params = Object.assign({}, BASE_PARAMS, paramOverrides);
+  const multiApproversAction = new MultiApproversAction(params);
+  await assert.doesNotReject(() => multiApproversAction.validate());
+  assert(
+    nockScope.isDone(),
+    `Unexecuted nock HTTP mocks: ${nockScope.pendingMocks()}`,
+  );
+}
+
+async function assertRejects(
+  nockScope: any,
+  message: string,
+  paramOverrides: Partial<MultiApproversParams> = {},
+) {
+  const params = Object.assign({}, BASE_PARAMS, paramOverrides);
+  const multiApproversAction = new MultiApproversAction(params);
+  await assert.rejects(() => multiApproversAction.validate(), {
+    name: "Error",
+    message,
+  });
+  assert(
+    nockScope.isDone(),
+    `Unexecuted nock HTTP mocks: ${nockScope.pendingMocks()}`,
+  );
+}
+
 // Note that the { request: fetch } OctokitOptions are required for nock to work
 // with octokit. This is because, by default, octokit uses a non-standard http
 // library that nock does not recognize.
@@ -33,122 +78,80 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
   });
 
   await suite.test("should ignore PRs from internal users", async () => {
-    const eventName = "pull_request";
-    const org = "acme";
-    const repoName = "anvils";
-    const pullNumber = 12;
-    const team = "hunters";
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
     const prLogin = "wile-e-coyote";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: prLogin,
         role: "member",
         state: "active",
       });
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 1,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.doesNotReject(() => multiApproversAction.validate());
+    await assertDoesNotReject(nockScope);
   });
 
   await suite.test(
     "should reject PRs from external users and no internal approvals",
     async () => {
-      const eventName = "pull_request";
-      const org = "acme";
-      const repoName = "anvils";
-      const pullNumber = 12;
+      const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
       const prLogin = "wile-e-coyote";
-      const team = "hunters";
 
-      nock(GITHUB_API_BASE_URL)
-        .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+      const nockScope = nock(GITHUB_API_BASE_URL)
+        .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
         .reply(200, {
-          owner: org,
+          owner: repoOwner,
           pull_number: pullNumber,
           repoName,
           user: {
             login: prLogin,
           },
         })
-        .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+        .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
         .reply(404)
-        .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+        .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
         .reply(200, []);
 
-      const multiApproversAction = new MultiApproversAction({
-        eventName,
-        runId: 12,
-        branch: "twig",
-        pullNumber,
-        repoName,
-        repoOwner: org,
-        token: "fake-token",
-        team,
-        octokitOptions: { request: fetch },
-        logDebug: (_: string) => {},
-        logInfo: (_: string) => {},
-        logNotice: (_: string) => {},
-      });
-
-      await assert.rejects(() => multiApproversAction.validate(), {
-        name: "Error",
-        message: "This pull request has 0 of 2 required internal approvals.",
-      });
+      await assertRejects(
+        nockScope,
+        "This pull request has 0 of 2 required internal approvals.",
+      );
     },
   );
 
   await suite.test(
     "should succeed for PRs from external users and 2 internal approvals",
     async () => {
-      const eventName = "pull_request";
-      const org = "test-org";
-      const repoName = "test-repo";
-      const pullNumber = 1;
-      const prLogin = "pr-owner";
-      const team = "test-team";
+      const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
+      const prLogin = "wile-e-coyote";
       const approver1 = "approver-1";
       const approver2 = "approver-2";
 
-      nock(GITHUB_API_BASE_URL)
-        .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+      const nockScope = nock(GITHUB_API_BASE_URL)
+        .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
         .reply(200, {
-          owner: org,
+          owner: repoOwner,
           pull_number: pullNumber,
           repoName: repoName,
           user: {
             login: prLogin,
           },
         })
-        .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+        .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
         .reply(404)
-        .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+        .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
         .reply(200, [
           {
             submitted_at: 1714636800,
@@ -165,65 +168,46 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
             state: "approved",
           },
         ])
-        .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+        .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
         .reply(200, {
-          org,
+          org: repoOwner,
           team_slug: team,
           username: approver1,
           role: "member",
           state: "active",
         })
-        .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+        .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
         .reply(200, {
-          org,
+          org: repoOwner,
           team_slug: team,
           username: approver2,
           role: "member",
           state: "active",
         });
 
-      const multiApproversAction = new MultiApproversAction({
-        eventName,
-        runId: 12,
-        branch: "twig",
-        pullNumber,
-        repoName,
-        repoOwner: org,
-        token: "fake-token",
-        team,
-        octokitOptions: { request: fetch },
-        logDebug: (_: string) => {},
-        logInfo: (_: string) => {},
-        logNotice: (_: string) => {},
-      });
-
-      await assert.doesNotReject(() => multiApproversAction.validate());
+      await assertDoesNotReject(nockScope);
     },
   );
 
   await suite.test("should ignore PR review comments", async () => {
-    const eventName = "pull_request";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
-    const prLogin = "pr-owner";
-    const team = "test-team";
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
+    const prLogin = "wile-e-coyote";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636800,
@@ -240,67 +224,48 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "commented",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
         state: "active",
       });
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.rejects(() => multiApproversAction.validate(), {
-      name: "Error",
-      message: "This pull request has 1 of 2 required internal approvals.",
-    });
+    await assertRejects(
+      nockScope,
+      "This pull request has 1 of 2 required internal approvals.",
+    );
   });
 
   await suite.test("should handle rescinded approval", async () => {
-    const eventName = "pull_request";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
     const prLogin = "pr-owner";
-    const team = "test-team";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636800,
@@ -324,75 +289,48 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "request_changes",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
-        team_slug: team,
-        username: approver2,
-        role: "member",
-        state: "active",
-      })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
-      .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
         state: "active",
       });
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.rejects(() => multiApproversAction.validate(), {
-      name: "Error",
-      message: "This pull request has 1 of 2 required internal approvals.",
-    });
+    await assertRejects(
+      nockScope,
+      "This pull request has 1 of 2 required internal approvals.",
+    );
   });
 
   await suite.test("should fail with pending member approval", async () => {
-    const eventName = "pull_request";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
     const prLogin = "pr-owner";
-    const team = "test-team";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636800,
@@ -409,71 +347,53 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "approved",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
         state: "pending",
       });
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.rejects(() => multiApproversAction.validate(), {
-      name: "Error",
-      message: "This pull request has 1 of 2 required internal approvals.",
-    });
+    await assertRejects(
+      nockScope,
+      "This pull request has 1 of 2 required internal approvals.",
+    );
   });
 
   await suite.test("should re-run failed runs on PR reviews", async () => {
+    // DO NOT SUBMIT check runId
+    const { repoOwner, repoName, pullNumber, team, branch, runId } =
+      BASE_PARAMS;
     const eventName = "pull_request_review";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
     const prLogin = "pr-owner";
-    const team = "test-team";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
-    const runId = 21;
     const workflowId = 37;
     const failedRunId = 827;
-    const branch = "test-branch";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636800,
@@ -490,27 +410,29 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "approved",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
-        state: "pending",
+        state: "active",
       })
-      .get(`/repos/${org}/${repoName}/actions/runs/${runId}`)
+      .get(`/repos/${repoOwner}/${repoName}/actions/runs/${runId}`)
       .reply(200, {
         workflow_id: workflowId,
       })
-      .get(`/repos/${org}/${repoName}/actions/workflows/${workflowId}/runs`)
+      .get(
+        `/repos/${repoOwner}/${repoName}/actions/workflows/${workflowId}/runs`,
+      )
       .query({
         branch,
         event: "pull_request",
@@ -527,53 +449,31 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           ],
         },
       ])
-      .post(`/repos/${org}/${repoName}/actions/runs/${failedRunId}/rerun`)
+      .post(`/repos/${repoOwner}/${repoName}/actions/runs/${failedRunId}/rerun`)
       .reply(200, {});
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.rejects(() => multiApproversAction.validate(), {
-      name: "Error",
-      message: "This pull request has 1 of 2 required internal approvals.",
-    });
+    await assertDoesNotReject(nockScope, { eventName });
   });
 
   await suite.test("handles review with unset user", async (t) => {
-    const eventName = "pull_request";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
     const prLogin = "pr-owner";
-    const team = "test-team";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
 
-    nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+    const nockScope = nock(GITHUB_API_BASE_URL)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636804,
@@ -594,41 +494,33 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "approved",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
         state: "pending",
       });
 
-    const params = {
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
+    const overrideParams = {
       logNotice: (_: string) => {},
-    } as MultiApproversParams;
-    const mockLogNotice = t.mock.method(params, "logNotice");
-    const multiApproversAction = new MultiApproversAction(params);
+    };
+    const mockLogNotice = t.mock.method(overrideParams, "logNotice");
 
-    await assert.rejects(() => multiApproversAction.validate());
+    await assertRejects(
+      nockScope,
+      "This pull request has 1 of 2 required internal approvals.",
+      overrideParams,
+    );
 
     assert.equal(mockLogNotice.mock.callCount(), 1);
     const msg = mockLogNotice.mock.calls[0].arguments[0];
@@ -638,28 +530,24 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
   });
 
   await suite.test("caches membership test results", async () => {
-    const eventName = "pull_request";
-    const org = "test-org";
-    const repoName = "test-repo";
-    const pullNumber = 1;
-    const prLogin = "pr-owner";
-    const team = "test-team";
+    const { repoOwner, repoName, pullNumber, team } = BASE_PARAMS;
+    const prLogin = "wile-e-coyote";
     const approver1 = "approver-1";
     const approver2 = "approver-2";
 
     const nockScope = nock(GITHUB_API_BASE_URL)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}`)
       .reply(200, {
-        owner: org,
+        owner: repoOwner,
         pull_number: pullNumber,
         repoName,
         user: {
           login: prLogin,
         },
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${prLogin}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${prLogin}`)
       .reply(404)
-      .get(`/repos/${org}/${repoName}/pulls/${pullNumber}/reviews`)
+      .get(`/repos/${repoOwner}/${repoName}/pulls/${pullNumber}/reviews`)
       .reply(200, [
         {
           submitted_at: 1714636800,
@@ -683,39 +571,23 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           state: "approved",
         },
       ])
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver1}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver1,
         role: "member",
         state: "active",
       })
-      .get(`/orgs/${org}/teams/${team}/memberships/${approver2}`)
+      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
       .reply(200, {
-        org,
+        org: repoOwner,
         team_slug: team,
         username: approver2,
         role: "member",
         state: "active",
       });
 
-    const multiApproversAction = new MultiApproversAction({
-      eventName,
-      runId: 12,
-      branch: "twig",
-      pullNumber,
-      repoName,
-      repoOwner: org,
-      token: "fake-token",
-      team,
-      octokitOptions: { request: fetch },
-      logDebug: (_: string) => {},
-      logInfo: (_: string) => {},
-      logNotice: (_: string) => {},
-    });
-
-    await assert.doesNotReject(() => multiApproversAction.validate());
-    assert(nockScope.isDone());
+    await assertDoesNotReject(nockScope);
   });
 });
