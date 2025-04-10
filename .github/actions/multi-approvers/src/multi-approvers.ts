@@ -27,10 +27,7 @@ export function isEventName(v: string): v is EventName {
 }
 
 const MIN_APPROVED_COUNT = 2;
-const APPROVED = "approved";
-const COMMENTED = "commented";
 const ALLOWED_TEAM_MEMBER_ROLES = ["maintainer", "member"];
-const ACTIVE = "active";
 
 export interface MultiApproversParams {
   eventName: EventName;
@@ -109,7 +106,7 @@ export class MultiApproversAction {
       });
       return (
         ALLOWED_TEAM_MEMBER_ROLES.includes(response.data.role) &&
-        response.data.state === ACTIVE
+        response.data.state === "active"
       );
     } catch (err) {
       if (err instanceof RequestError && err.status === 404) {
@@ -171,22 +168,22 @@ export class MultiApproversAction {
       }
 
       // Always update state if not approved.
-      if (reviewStateByLogin.get(reviewerLogin) !== APPROVED) {
+      if (reviewStateByLogin.get(reviewerLogin) !== "APPROVED") {
         reviewStateByLogin.set(reviewerLogin, r.state);
         continue;
       }
 
       // Do not update approved state for a comment.
       if (
-        reviewStateByLogin.get(reviewerLogin) === APPROVED &&
-        r.state !== COMMENTED
+        reviewStateByLogin.get(reviewerLogin) === "APPROVED" &&
+        r.state !== "COMMENTED"
       ) {
         reviewStateByLogin.set(reviewerLogin, r.state);
         continue;
       }
     }
 
-    return Array.from(reviewStateByLogin.values()).filter((s) => s === APPROVED)
+    return Array.from(reviewStateByLogin.values()).filter((s) => s === "APPROVED")
       .length;
   }
 
@@ -223,7 +220,7 @@ export class MultiApproversAction {
       prLogin,
     );
 
-    this.logInfo(`Found ${approvedCount} ${APPROVED} internal reviews.`);
+    this.logInfo(`Found ${approvedCount} APPROVED internal reviews.`);
 
     if (approvedCount < MIN_APPROVED_COUNT) {
       throw new Error(

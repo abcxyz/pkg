@@ -159,14 +159,14 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
             user: {
               login: approver1,
             },
-            state: "approved",
+            state: "APPROVED",
           },
           {
             submitted_at: 1714636801,
             user: {
               login: approver2,
             },
-            state: "approved",
+            state: "APPROVED",
           },
         ])
         .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
@@ -215,14 +215,14 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "commented",
+          state: "COMMENTED",
         },
       ])
       .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
@@ -273,14 +273,14 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636802,
@@ -338,14 +338,14 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
       ])
       .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
@@ -401,14 +401,14 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
       ])
       .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
@@ -478,21 +478,21 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       .reply(200, [
         {
           submitted_at: 1714636804,
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636800,
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
       ])
       .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
@@ -556,21 +556,21 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
           user: {
             login: approver1,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636801,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
         {
           submitted_at: 1714636802,
           user: {
             login: approver2,
           },
-          state: "approved",
+          state: "APPROVED",
         },
       ])
       .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver1}`)
