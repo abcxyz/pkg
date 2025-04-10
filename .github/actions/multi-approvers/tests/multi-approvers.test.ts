@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_$" }]*/
-
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import nock from "nock";
@@ -34,8 +32,11 @@ const BASE_PARAMS = {
   token: "fake-token",
   team: "roadrunners",
   octokitOptions: { request: fetch },
+  // eslint-disable-next-line no-unused-vars
   logDebug: (_: string) => {},
+  // eslint-disable-next-line no-unused-vars
   logInfo: (_: string) => {},
+  // eslint-disable-next-line no-unused-vars
   logNotice: (_: string) => {},
 } as MultiApproversParams;
 
@@ -512,6 +513,7 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
       });
 
     const overrideParams = {
+      // eslint-disable-next-line no-unused-vars
       logNotice: (_: string) => {},
     };
     const mockLogNotice = t.mock.method(overrideParams, "logNotice");

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_$" }]*/
-
 import { getOctokit } from "@actions/github";
 import { OctokitOptions } from "@octokit/core";
 import { RestEndpointMethodTypes } from "@octokit/rest";
@@ -44,8 +42,11 @@ export interface MultiApproversParams {
   token: string;
   team: string;
   octokitOptions?: OctokitOptions;
+  // eslint-disable-next-line no-unused-vars
   logDebug: (_: string) => void;
+  // eslint-disable-next-line no-unused-vars
   logInfo: (_: string) => void;
+  // eslint-disable-next-line no-unused-vars
   logNotice: (_: string) => void;
 }
 
@@ -76,12 +77,15 @@ export class MultiApproversAction {
   }
 
   // Set in the constructor.
+  // eslint-disable-next-line no-unused-vars
   private logDebug: (_: string) => void;
 
   // Set in the constructor.
+  // eslint-disable-next-line no-unused-vars
   private logInfo: (_: string) => void;
 
   // Set in the constructor.
+  // eslint-disable-next-line no-unused-vars
   private logNotice: (_: string) => void;
 
   // TODO(ishafer): Consider using a memoization library.
