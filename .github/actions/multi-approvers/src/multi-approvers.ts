@@ -232,13 +232,17 @@ export class MultiApproversAction {
   }
 
   /**
-   * Re-runs the approval checks on pull request review.
+   * Re-runs the most-recent pull_request-triggered workflow, if one exists.
    *
    * This is required because GitHub treats checks made by pull_request and
    * pull_request_review as different status checks.
+   *
+   * Without this, the "multi-approvers (pull_request_review)" and
+   * "multi-approvers (pull_request)" checks would get out of sync.
    */
-  private async revalidateApprovers(workflowId: number) {
-    // Get all failed runs.
+  private async rerunLatestPullRequestWorkflow() {
+    const workflowId = await this.getWorkflowId();
+    // Get all potential runs.
     const runs = await this.octokit.paginate(
       this.octokit.rest.actions.listWorkflowRuns,
       {
@@ -247,25 +251,26 @@ export class MultiApproversAction {
         workflow_id: workflowId,
         branch: this.branch,
         event: "pull_request",
-        status: "failure",
         per_page: 100,
-      },
-    );
+      });
 
-    const failedRuns = runs
+    const prRuns = runs
+      // Remove any runs not associated with this.pullNumber.
       .filter((r) =>
         (r.pull_requests || [])
           .map((pr) => pr.number)
           .includes(this.pullNumber),
       )
-      .sort((v) => v.id);
+      .sort((a, b) => a.run_number - b.run_number)
+      // Reverse the array so the latest is at the head.
+      .reverse();
 
-    // If there are failed runs for this PR, re-run the workflow.
-    if (failedRuns.length > 0) {
+    // Re-run the latest if there is one.
+    if (prRuns.length > 0) {
       await this.octokit.rest.actions.reRunWorkflow({
         owner: this.repoOwner,
         repo: this.repoName,
-        run_id: failedRuns[0].id,
+        run_id: prRuns[0].id,
       });
     }
   }
@@ -280,13 +285,12 @@ export class MultiApproversAction {
   }
 
   async validate() {
-    await this.validateApprovers();
-
-    // If this action was triggered by a review, we want to re-run for previous
-    // failed runs.
     if (this.eventName === "pull_request_review") {
-      const workflowId = await this.getWorkflowId();
-      await this.revalidateApprovers(workflowId);
+      // Re-run the latest pull_request-triggered workflow to keep the checks
+      // (pull_request and pull_request_review)in sync.
+      await this.rerunLatestPullRequestWorkflow();
     }
+
+    await this.validateApprovers();
   }
 }
