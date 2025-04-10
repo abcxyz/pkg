@@ -39,7 +39,7 @@ permissions:
   pull-requests: 'read'
 
 env:
-  TAGREP_VERSION: '0.0.5'
+  TAGREP_VERSION: '0.0.6'
 
 jobs:
   want-lgtm-all:
