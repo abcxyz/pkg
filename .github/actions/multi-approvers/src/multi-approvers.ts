@@ -27,7 +27,6 @@ export function isEventName(v: string): v is EventName {
 }
 
 const MIN_APPROVED_COUNT = 2;
-const ALLOWED_TEAM_MEMBER_ROLES = ["maintainer", "member"];
 
 export interface MultiApproversParams {
   eventName: EventName;
@@ -104,10 +103,17 @@ export class MultiApproversAction {
         team_slug: this.team,
         username: login,
       });
-      return (
-        ALLOWED_TEAM_MEMBER_ROLES.includes(response.data.role) &&
-        response.data.state === "active"
-      );
+      const state = response.data.state;
+      if (state !== "active") {
+        this.logDebug(`Skipping because state is not active: ${state}`);
+        return false;
+      }
+      const role = response.data.role;
+      if (role !== "maintainer" && role !== "member") {
+        this.logDebug(`Skipping because role does not match: ${role}`);
+        return false;
+      }
+      return true;
     } catch (err) {
       if (err instanceof RequestError && err.status === 404) {
         this.logDebug(
@@ -158,6 +164,9 @@ export class MultiApproversAction {
       // Only consider internal users.
       const isInternalUser = await this.isInternal(reviewerLogin);
       if (!isInternalUser) {
+        this.logDebug(
+          `Ignoring reviewer ${reviewerLogin} because they are not a member of ${this.team}`,
+        );
         continue;
       }
 
@@ -183,8 +192,9 @@ export class MultiApproversAction {
       }
     }
 
-    return Array.from(reviewStateByLogin.values()).filter((s) => s === "APPROVED")
-      .length;
+    return Array.from(reviewStateByLogin.values()).filter(
+      (s) => s === "APPROVED",
+    ).length;
   }
 
   /** Checks that approval requirements are satisfied. */
@@ -252,7 +262,8 @@ export class MultiApproversAction {
         branch: this.branch,
         event: "pull_request",
         per_page: 100,
-      });
+      },
+    );
 
     const prRuns = runs
       // Remove any runs not associated with this.pullNumber.
