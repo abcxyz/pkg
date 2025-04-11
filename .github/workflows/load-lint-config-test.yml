@@ -38,7 +38,7 @@ jobs:
       - name: 'Test'
         shell: 'bash'
         run: |-
-          printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_" > got.env
+          printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|TYPESCRIPT_LINT_" > got.env
           cat > want.env << EOF
           GO_LINT_ENABLED=true
           GO_LINT_GO_VERSION=1.20
