@@ -39,7 +39,7 @@ permissions:
   pull-requests: 'read'
 
 env:
-  TAGREP_VERSION: '0.0.6'
+  TAGREP_VERSION: '0.0.7'
 
 jobs:
   want-lgtm-all:
@@ -64,7 +64,7 @@ jobs:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           TAGREP_LOG_TARGET: 'STDERR'
         run: |
-          tags="$(tagrep parse -type=request -format=raw -duplicate-key-strategy=take-last 2> tagrep.log)"
+          tags="$(tagrep parse -type=request -format=raw -string-tags=WANT_LGTM 2> tagrep.log)"
           cat tagrep.log
           echo "tags -> $tags"
           echo "$tags" >> "$GITHUB_ENV"
