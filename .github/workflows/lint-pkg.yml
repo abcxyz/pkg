@@ -44,6 +44,12 @@ jobs:
           fetch-depth: 1 # shallow checkout
           ref: '${{ github.event.pull_request.head.sha }}'
 
+      - name: 'Load Config'
+        uses: './.github/actions/load-lint-config' # ratchet:exclude
+        with:
+          filepath: 'lint.yml'
+          fail_on_missing: false
+
       - name: 'Identify Lint Targets'
         id: 'lint-targets'
         env:
@@ -52,25 +58,39 @@ jobs:
         run: |-
           declare -a TARGETS=()
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '(go.mod|/.*\.go$)' >/dev/null; then
-            TARGETS+=("golang" "golang-modules")
+            if [[ "$GO_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("golang" "golang-modules")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(java)$' >/dev/null; then
-            TARGETS+=("java")
+            if [[ "$JAVA_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("java")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(js)$' >/dev/null; then
-            TARGETS+=("javascript")
+            if [[ "$JAVASCRIPT_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("javascript")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(ts)$' >/dev/null; then
-            TARGETS+=("typescript")
+            if [[ "$TYPESCRIPT_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("typescript")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(sh)$' >/dev/null; then
-            TARGETS+=("shell")
+            if [[ "$SHELL_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("shell")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(tf)$' >/dev/null; then
-            TARGETS+=("terraform")
+            if [[ "$TERRAFORM_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("terraform")
+            fi
           fi
           if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(yaml|yml)$' >/dev/null; then
-            TARGETS+=("yaml")
+            if [[ "$YAML_LINT_ENABLED" == "true" ]]; then
+              TARGETS+=("yaml")
+            fi
           fi
           LINT_TARGETS="$(jq --compact-output --null-input '$ARGS.positional' --args -- "${TARGETS[@]}")"
           echo "lint-targets -> ${LINT_TARGETS}"
@@ -90,76 +110,22 @@ jobs:
       max-parallel: 100
       matrix:
         lint-target: '${{ fromJSON(needs.init.outputs.lint-targets) }}'
-    # TODO: Consider parsing from config file in the repo.
-    env:
-      ##############
-      ## GOLANG ####
-      ##############
-      # The version of Go to install and use.
-      GO_LINT_GO_VERSION: |-
-        ${{ vars.GO_LINT_GO_VERSION }}
-      # Path to the go.mod file to extract a version.
-      GO_LINT_GO_VERSION_FILE: |-
-        ${{ vars.GO_LINT_GO_VERSION_FILE || 'go.mod' }}
-      # The URL to a golangci file. This is only used if no file is found in the local directory.
-      GO_LINT_GOLANGCI_URL: |-
-        ${{ vars.GO_LINT_GOLANGCI_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
-      # Directory in which Go files reside.
-      GO_LINT_DIRECTORY: |-
-        ${{ vars.GO_LINT_DIRECTORY || '.' }}
-      # Version of golangci linter to use.
-      GO_LINT_GOLANGCI_LINT_VERSION: |-
-        ${{ vars.GO_LINT_GOLANGCI_LINT_VERSION || 'v1.64' }}
-      ##############
-      ## JAVA ######
-      ##############
-      JAVA_LINT_JAVA_VERSION: |-
-        ${{ vars.JAVA_LINT_JAVA_VERSION }}
-      JAVA_LINT_JAVA_DISTRIBUTION: |-
-        ${{ vars.JAVA_LINT_JAVA_VERSION || 'zulu' }}
-      JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION: |-
-        ${{ vars.JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION || '1.25.2' }}
-      JAVA_LINT_DIRECTORY: |-
-        ${{ vars.JAVA_LINT_DIRECTORY || '.' }}
-      ##############
-      ## SHELL #####
-      ##############
-      LINT_SHELL_TARGET: |-
-        ${{ vars.LINT_SHELL_TARGET || '.' }}
-      ##############
-      ## TERRAFORM #
-      ##############
-      TERRAFORM_LINT_TERRAFORM_VERSION: |-
-        ${{ vars.TERRAFORM_LINT_TERRAFORM_VERSION }}
-      TERRAFORM_LINT_DIRECTORY: |-
-        ${{ vars.TERRAFORM_LINT_DIRECTORY }}
-      TERRAFORM_LINT_WALK_DIRS: |-
-        ${{ vars.TERRAFORM_LINT_WALK_DIRS || true }}
-      TERRAFORM_LINT_IGNORED_WALK_DIRS: |-
-        ${{ vars.TERRAFORM_LINT_IGNORED_WALK_DIRS || '' }}
-      ##############
-      ## YAML ######
-      ##############
-      # The URL to a yamllint config file. This is only used if no file is found in the local directory.
-      YAML_LINT_YAMLLINT_URL: |-
-        ${{ vars.YAML_LINT_YAMLLINT_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml' }}
-      # Version of yamllint linter to use
-      YAML_LINT_YAMLLINT_VERSION: |-
-        ${{ vars.YAML_LINT_YAMLLINT_VERSION || '1.32.0' }}
-      # File or directory containing YAML files to lint.
-      YAML_LINT_TARGET: |-
-        ${{ vars.YAML_LINT_TARGET || '.' }}
-
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332' # ratchet:actions/checkout@v4
         with:
           fetch-depth: 1 # shallow clone
 
+      - name: 'Load Config'
+        uses: './.github/actions/load-lint-config' # ratchet:exclude
+        with:
+          filepath: 'lint.yml'
+          fail_on_missing: false
+
       - name: '[GOLANG] Lint Go'
         if: |
           matrix.lint-target == 'golang'
-        uses: './.github/actions/lint-go'
+        uses: './.github/actions/lint-go' # ratchet:exclude
         with:
           go_version: '${{ env.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
@@ -170,7 +136,7 @@ jobs:
       - name: '[GOLANG] Lint Go modules'
         if: |
           matrix.lint-target == 'golang-modules'
-        uses: './.github/actions/lint-go-modules'
+        uses: './.github/actions/lint-go-modules' # ratchet:exclude
         with:
           go_version: '${{ env.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
@@ -181,7 +147,7 @@ jobs:
       - name: '[JAVA] Lint Java'
         if: |
           matrix.lint-target == 'java'
-        uses: './.github/actions/lint-java'
+        uses: './.github/actions/lint-java' # ratchet:exclude
         with:
           java_version: '${{ env.JAVA_LINT_JAVA_VERSION }}'
           java_distribution: '${{ env.JAVA_LINT_JAVA_DISTRIBUTION }}'
@@ -203,14 +169,14 @@ jobs:
       - name: '[SHELL] Lint Shell'
         if: |
           matrix.lint-target == 'shell'
-        uses: './.github/actions/lint-shell'
+        uses: './.github/actions/lint-shell' # ratchet:exclude
         with:
           target: '${{ env.LINT_SHELL_TARGET }}'
 
       - name: '[TERRAFORM] Lint Terraform'
         if: |
           matrix.lint-target == 'terraform'
-        uses: './.github/actions/lint-terraform'
+        uses: './.github/actions/lint-terraform' # ratchet:exclude
         with:
           terraform_version: '${{ env.TERRAFORM_LINT_TERRAFORM_VERSION }}'
           directory: '${{ env.TERRAFORM_LINT_DIRECTORY }}'
@@ -220,7 +186,7 @@ jobs:
       - name: '[YAML] lint yaml'
         if: |
           matrix.lint-target == 'yaml'
-        uses: './.github/actions/lint-yaml'
+        uses: './.github/actions/lint-yaml' # ratchet:exclude
         with:
           yamllint_url: '${{ env.YAML_LINT_YAMLLINT_URL }}'
           yamllint_version: '${{ env.YAML_LINT_YAMLLINT_VERSION }}'

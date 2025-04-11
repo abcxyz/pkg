@@ -1,0 +1,31 @@
+go:
+  enabled: true
+  go_version: '1.20'
+  go_version_file: 'go.mod'
+  golangci_url: 'https://raw.githubusercontent.com/abcxyz/pkg/main/madeup.golangci.yml'
+  directory: 'pkg'
+  golangci_lint_version: 'v1.54'
+java:
+  enabled: true
+  java_version: 'foo'
+  java_distribution: 'bar'
+  java_format_version: '1.25.1'
+  directory: 'src'
+javascript:
+  enabled: true
+typescript:
+  enabled: true
+shell:
+  enabled: true
+  target: 'scripts'
+terraform:
+  enabled: true
+  terraform_version: '1.30'
+  directory: 'terraform'
+  walk_dirs: true
+  ignored_walk_dirs: ''
+yaml:
+  enabled: true
+  yamllint_url: 'https://raw.githubusercontent.com/abcxyz/pkg/main/madeup.yamllint.yml'
+  yamllint_version: '1.3.0'
+  target: '.github'

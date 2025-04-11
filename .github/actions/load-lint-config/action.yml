@@ -1,0 +1,151 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Override Workflow Variables'
+description: |-
+  Use this action to load/override variables into GITHUB_ENV.
+
+inputs:
+  filepath:
+    description: 'The YAML filepath to load the configuration from. Must be a relative path on the default branch of the repository.'
+    required: false
+    default: 'env.yml'
+  fail_on_missing:
+    description: 'If true, the process will exit with a non-zero exit code indicating failure when a value is not found.'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    # Removes "./" from the input filepath, if exists. This avoids an issue with
+    # the sparse-checkout option in the Checkout step, where a relative path,
+    # e.g. "./env.yml", will not match with the expected "env.yml" file.
+    - name: 'Sanitize Input Filepath'
+      id: 'sanitize_filepath'
+      shell: 'bash'
+      env:
+        CONFIG_REL_PATH: '${{ inputs.filepath }}'
+      run: |-
+        relpath=${CONFIG_REL_PATH}
+        filepath=$(echo "$relpath" | sed 's/^\.\///')
+        echo "CONFIG_PATH=$filepath" >> "$GITHUB_OUTPUT"
+
+    - name: 'Get Approved Configuration File'
+      uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+      with:
+        ref: '${{ github.event.repository.default_branch }}'
+        path: 'load-workflow-variables/${{ github.sha }}'
+        sparse-checkout: |
+          ${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}
+        sparse-checkout-cone-mode: 'false'
+
+    - name: 'Load Lint Config'
+      id: 'load-config'
+      shell: 'bash'
+      env:
+        FILEPATH: 'load-workflow-variables/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
+        FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
+      run: |-
+        FILEPATH=$(realpath "${FILEPATH}")
+        if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
+            echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
+            exit 1
+        fi
+
+        echo "FILEPATH:${FILEPATH}"
+        echo "cfg=$(yq -o=json < "${FILEPATH}")" >> "$GITHUB_OUTPUT"
+
+    - name: 'Set env vars'
+      shell: 'bash'
+      env:
+        #################
+        ## GOLANG #######
+        #################
+        GO_LINT_ENABLED: |-
+          ${{ vars.GO_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).go.enabled || 'true' }}
+        # The version of Go to install and use.
+        GO_LINT_GO_VERSION: |-
+          ${{ vars.GO_LINT_GO_VERSION || fromJson(steps.load-config.outputs.cfg).go.go_version }}
+        # Path to the go.mod file to extract a version.
+        GO_LINT_GO_VERSION_FILE: |-
+          ${{ vars.GO_LINT_GO_VERSION_FILE || fromJson(steps.load-config.outputs.cfg).go.go_version_file || 'go.mod' }}
+        # The URL to a golangci file. This is only used if no file is found in the local directory.
+        GO_LINT_GOLANGCI_URL: |-
+          ${{ vars.GO_LINT_GOLANGCI_URL || fromJson(steps.load-config.outputs.cfg).go.golangci_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
+        # Directory in which Go files reside.
+        GO_LINT_DIRECTORY: |-
+          ${{ vars.GO_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).go.directory || '.' }}
+        # Version of golangci linter to use.
+        GO_LINT_GOLANGCI_LINT_VERSION: |-
+          ${{ vars.GO_LINT_GOLANGCI_LINT_VERSION || fromJson(steps.load-config.outputs.cfg).go.golangci_lint_version || 'v1.64' }}
+        #################
+        ## JAVA #########
+        #################
+        JAVA_LINT_ENABLED: |-
+          ${{ vars.JAVA_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).java.enabled || 'true' }}
+        JAVA_LINT_JAVA_VERSION: |-
+          ${{ vars.JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_version }}
+        JAVA_LINT_JAVA_DISTRIBUTION: |-
+          ${{ vars.JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_distribution || 'zulu' }}
+        JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION: |-
+          ${{ vars.JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_format_version || '1.25.2' }}
+        JAVA_LINT_DIRECTORY: |-
+          ${{ vars.JAVA_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).java.directory || '.' }}
+        #################
+        ## JAVASCRIPT ###
+        #################
+        JAVASCRIPT_LINT_ENABLED: |-
+          ${{ vars.JAVASCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).javascript.enabled || 'true' }}
+        #################
+        ## TYPESCRIPT ###
+        #################
+        TYPESCRIPT_LINT_ENABLED: |-
+          ${{ vars.TYPESCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).typescript.enabled || 'true' }}
+        #################
+        ## SHELL ########
+        #################
+        SHELL_LINT_ENABLED: |-
+          ${{ vars.SHELL_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).shell.enabled || 'true' }}
+        SHELL_LINT_TARGET: |-
+          ${{ vars.SHELL_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).shell.target || '.' }}
+        #################
+        ## TERRAFORM ####
+        #################
+        TERRAFORM_LINT_ENABLED: |-
+          ${{ vars.TERRAFORM_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).terraform.enabled || 'true' }}
+        TERRAFORM_LINT_TERRAFORM_VERSION: |-
+          ${{ vars.TERRAFORM_LINT_TERRAFORM_VERSION || fromJson(steps.load-config.outputs.cfg).terraform.terraform_version }}
+        TERRAFORM_LINT_DIRECTORY: |-
+          ${{ vars.TERRAFORM_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).terraform.directory }}
+        TERRAFORM_LINT_WALK_DIRS: |-
+          ${{ vars.TERRAFORM_LINT_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.walk_dirs || true }}
+        TERRAFORM_LINT_IGNORED_WALK_DIRS: |-
+          ${{ vars.TERRAFORM_LINT_IGNORED_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.ignored_walk_dirs || '' }}
+        #################
+        ## YAML #########
+        #################
+        YAML_LINT_ENABLED: |-
+          ${{ vars.YAML_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).yaml.enabled || 'true' }}
+        # The URL to a yamllint config file. This is only used if no file is found in the local directory.
+        YAML_LINT_YAMLLINT_URL: |-
+          ${{ vars.YAML_LINT_YAMLLINT_URL || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml' }}
+        # Version of yamllint linter to use
+        YAML_LINT_YAMLLINT_VERSION: |-
+          ${{ vars.YAML_LINT_YAMLLINT_VERSION || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_version || '1.32.0' }}
+        # File or directory containing YAML files to lint.
+        YAML_LINT_TARGET: |-
+          ${{ vars.YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
+      run: |-
+        printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_" >> "$GITHUB_ENV"

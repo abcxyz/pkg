@@ -1,0 +1,66 @@
+# Copyright 2023 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'load-workflow-variables-test'
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/load-lint-config/**'
+      - '.github/workflows/lint-pkg.yml'
+      - '.github/workflows/lint.yml'
+
+jobs:
+  success:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+
+      - name: 'Load Config'
+        uses: './.github/actions/load-lint-config' # ratchet:exclude
+        with:
+          filepath: '.github/actions/load-lint-config/test.env.yml'
+          fail_on_missing: true
+
+      - name: 'Test'
+        shell: 'bash'
+        run: |-
+          printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_" > got.env
+          cat > want.env << EOF
+          GO_LINT_ENABLED=true
+          GO_LINT_GO_VERSION=1.20
+          GO_LINT_GO_VERSION_FILE=go.mod
+          GO_LINT_GOLANGCI_URL=https=raw.githubusercontent.com/abcxyz/pkg/main/madeup.golangci.yml
+          GO_LINT_DIRECTORY=pkg
+          GO_LINT_GOLANGCI_LINT_VERSION=v1.54
+          JAVA_LINT_ENABLED=true
+          JAVA_LINT_JAVA_VERSION=foo
+          JAVA_LINT_JAVA_DISTRIBUTION=bar
+          JAVA_LINT_JAVA_FORMAT_VERSION=1.25.1
+          JAVA_LINT_DIRECTORY=src
+          SHELL_LINT_ENABLED=true
+          SHELL_LINT_TARGET=scripts
+          TERRAFORM_LINT_ENABLED=true
+          TERRAFORM_LINT_TERRAFORM_VERSION=1.30
+          TERRAFORM_LINT_DIRECTORY=terraform
+          TERRAFORM_LINT_WALK_DIRS=ru
+          TERRAFORM_LINT_IGNORED_WALK_DIRS=
+          YAML_LINT_ENABLED=true
+          YAML_LINT_YAMLLINT_URL=https=raw.githubusercontent.com/abcxyz/pkg/main/madeup.yamllint.yml
+          YAML_LINT_YAMLLINT_VERSION=1.3.0
+          YAML_LINT_TARGET=.github
+          EOF
+
+          diff <(cat got.env | sort) <(cat want.env | sort)
