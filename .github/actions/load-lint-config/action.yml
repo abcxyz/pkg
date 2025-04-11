@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'Override Workflow Variables'
+name: 'Load Lint Config'
 description: |-
-  Use this action to load/override variables into GITHUB_ENV.
+  Use this action to load lint configuration into GITHUB_ENV.
 
 inputs:
   filepath:
@@ -25,6 +25,9 @@ inputs:
     description: 'If true, the process will exit with a non-zero exit code indicating failure when a value is not found.'
     required: false
     default: 'true'
+  vars:
+    description: 'A JSON-ified github vars from the parent context.'
+    required: true
 
 runs:
   using: 'composite'
@@ -74,78 +77,78 @@ runs:
         ## GOLANG #######
         #################
         GO_LINT_ENABLED: |-
-          ${{ vars.GO_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).go.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).GO_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).go.enabled || 'true' }}
         # The version of Go to install and use.
         GO_LINT_GO_VERSION: |-
-          ${{ vars.GO_LINT_GO_VERSION || fromJson(steps.load-config.outputs.cfg).go.go_version }}
+          ${{ fromJson(inputs.vars).GO_LINT_GO_VERSION || fromJson(steps.load-config.outputs.cfg).go.go_version }}
         # Path to the go.mod file to extract a version.
         GO_LINT_GO_VERSION_FILE: |-
-          ${{ vars.GO_LINT_GO_VERSION_FILE || fromJson(steps.load-config.outputs.cfg).go.go_version_file || 'go.mod' }}
+          ${{ fromJson(inputs.vars).GO_LINT_GO_VERSION_FILE || fromJson(steps.load-config.outputs.cfg).go.go_version_file || 'go.mod' }}
         # The URL to a golangci file. This is only used if no file is found in the local directory.
         GO_LINT_GOLANGCI_URL: |-
-          ${{ vars.GO_LINT_GOLANGCI_URL || fromJson(steps.load-config.outputs.cfg).go.golangci_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
+          ${{ fromJson(inputs.vars).GO_LINT_GOLANGCI_URL || fromJson(steps.load-config.outputs.cfg).go.golangci_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
         # Directory in which Go files reside.
         GO_LINT_DIRECTORY: |-
-          ${{ vars.GO_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).go.directory || '.' }}
+          ${{ fromJson(inputs.vars).GO_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).go.directory || '.' }}
         # Version of golangci linter to use.
         GO_LINT_GOLANGCI_LINT_VERSION: |-
-          ${{ vars.GO_LINT_GOLANGCI_LINT_VERSION || fromJson(steps.load-config.outputs.cfg).go.golangci_lint_version || 'v1.64' }}
+          ${{ fromJson(inputs.vars).GO_LINT_GOLANGCI_LINT_VERSION || fromJson(steps.load-config.outputs.cfg).go.golangci_lint_version || 'v1.64' }}
         #################
         ## JAVA #########
         #################
         JAVA_LINT_ENABLED: |-
-          ${{ vars.JAVA_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).java.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).java.enabled || 'true' }}
         JAVA_LINT_JAVA_VERSION: |-
-          ${{ vars.JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_version }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_version }}
         JAVA_LINT_JAVA_DISTRIBUTION: |-
-          ${{ vars.JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_distribution || 'zulu' }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_distribution || 'zulu' }}
         JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION: |-
-          ${{ vars.JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_format_version || '1.25.2' }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_format_version || '1.25.2' }}
         JAVA_LINT_DIRECTORY: |-
-          ${{ vars.JAVA_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).java.directory || '.' }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).java.directory || '.' }}
         #################
         ## JAVASCRIPT ###
         #################
         JAVASCRIPT_LINT_ENABLED: |-
-          ${{ vars.JAVASCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).javascript.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).JAVASCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).javascript.enabled || 'true' }}
         #################
         ## TYPESCRIPT ###
         #################
         TYPESCRIPT_LINT_ENABLED: |-
-          ${{ vars.TYPESCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).typescript.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).TYPESCRIPT_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).typescript.enabled || 'true' }}
         #################
         ## SHELL ########
         #################
         SHELL_LINT_ENABLED: |-
-          ${{ vars.SHELL_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).shell.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).SHELL_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).shell.enabled || 'true' }}
         SHELL_LINT_TARGET: |-
-          ${{ vars.SHELL_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).shell.target || '.' }}
+          ${{ fromJson(inputs.vars).SHELL_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).shell.target || '.' }}
         #################
         ## TERRAFORM ####
         #################
         TERRAFORM_LINT_ENABLED: |-
-          ${{ vars.TERRAFORM_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).terraform.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).TERRAFORM_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).terraform.enabled || 'true' }}
         TERRAFORM_LINT_TERRAFORM_VERSION: |-
-          ${{ vars.TERRAFORM_LINT_TERRAFORM_VERSION || fromJson(steps.load-config.outputs.cfg).terraform.terraform_version }}
+          ${{ fromJson(inputs.vars).TERRAFORM_LINT_TERRAFORM_VERSION || fromJson(steps.load-config.outputs.cfg).terraform.terraform_version }}
         TERRAFORM_LINT_DIRECTORY: |-
-          ${{ vars.TERRAFORM_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).terraform.directory }}
+          ${{ fromJson(inputs.vars).TERRAFORM_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).terraform.directory }}
         TERRAFORM_LINT_WALK_DIRS: |-
-          ${{ vars.TERRAFORM_LINT_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.walk_dirs || true }}
+          ${{ fromJson(inputs.vars).TERRAFORM_LINT_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.walk_dirs || true }}
         TERRAFORM_LINT_IGNORED_WALK_DIRS: |-
-          ${{ vars.TERRAFORM_LINT_IGNORED_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.ignored_walk_dirs || '' }}
+          ${{ fromJson(inputs.vars).TERRAFORM_LINT_IGNORED_WALK_DIRS || fromJson(steps.load-config.outputs.cfg).terraform.ignored_walk_dirs || '' }}
         #################
         ## YAML #########
         #################
         YAML_LINT_ENABLED: |-
-          ${{ vars.YAML_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).yaml.enabled || 'true' }}
+          ${{ fromJson(inputs.vars).YAML_LINT_ENABLED || fromJson(steps.load-config.outputs.cfg).yaml.enabled || 'true' }}
         # The URL to a yamllint config file. This is only used if no file is found in the local directory.
         YAML_LINT_YAMLLINT_URL: |-
-          ${{ vars.YAML_LINT_YAMLLINT_URL || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml' }}
+          ${{ fromJson(inputs.vars).YAML_LINT_YAMLLINT_URL || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_url || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml' }}
         # Version of yamllint linter to use
         YAML_LINT_YAMLLINT_VERSION: |-
-          ${{ vars.YAML_LINT_YAMLLINT_VERSION || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_version || '1.32.0' }}
+          ${{ fromJson(inputs.vars).YAML_LINT_YAMLLINT_VERSION || fromJson(steps.load-config.outputs.cfg).yaml.yamllint_version || '1.32.0' }}
         # File or directory containing YAML files to lint.
         YAML_LINT_TARGET: |-
-          ${{ vars.YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
+          ${{ fromJson(inputs.vars).YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
       run: |-
         printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_" >> "$GITHUB_ENV"

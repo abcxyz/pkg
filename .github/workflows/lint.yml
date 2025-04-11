@@ -41,6 +41,7 @@ jobs:
         with:
           filepath: 'lint.yml'
           fail_on_missing: false
+          vars: '${{ toJson(vars) }}'
 
       - name: 'Identify Lint Targets'
         id: 'lint-targets'
@@ -113,6 +114,7 @@ jobs:
         with:
           filepath: 'lint.yml'
           fail_on_missing: false
+          vars: '${{ toJson(vars) }}'
 
       - name: '[GOLANG] Lint Go'
         if: |

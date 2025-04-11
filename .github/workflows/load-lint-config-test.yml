@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'load-workflow-variables-test'
+name: 'load-lint-config-test'
 
 on:
   pull_request:
@@ -33,6 +33,7 @@ jobs:
         with:
           filepath: '.github/actions/load-lint-config/test.env.yml'
           fail_on_missing: true
+          vars: '${{ toJson(vars) }}'
 
       - name: 'Test'
         shell: 'bash'
