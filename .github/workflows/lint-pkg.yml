@@ -103,7 +103,7 @@ jobs:
         ${{ vars.GO_LINT_GO_VERSION_FILE || 'go.mod' }}
       # The URL to a golangci file. This is only used if no file is found in the local directory.
       GO_LINT_GOLANGCI_URL: |-
-        ${{ vars.GO_LINT_GOLANGCI_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.golangci.yml' }}
+        ${{ vars.GO_LINT_GOLANGCI_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
       # Directory in which Go files reside.
       GO_LINT_DIRECTORY: |-
         ${{ vars.GO_LINT_DIRECTORY || '.' }}
