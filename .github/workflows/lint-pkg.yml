@@ -26,6 +26,10 @@ on:
   pull_request:
   merge_group:
 
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
 jobs:
   init:
     runs-on: 'ubuntu-latest'
