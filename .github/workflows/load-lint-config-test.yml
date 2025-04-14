@@ -31,7 +31,7 @@ jobs:
       - name: 'Load Config'
         uses: './.github/actions/load-lint-config' # ratchet:exclude
         with:
-          filepath: '.github/actions/load-lint-config/test.env.yml'
+          filepath: '.github/actions/load-lint-config/test.lint.yml'
           fail_on_missing: true
           vars: '${{ toJson(vars) }}'
           ref: '${{ github.ref }}'
