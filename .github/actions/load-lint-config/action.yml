@@ -62,6 +62,10 @@ runs:
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
         FILEPATH=$(realpath "${FILEPATH}" || true)
+        if [[ "$FAIL_ON_MISSING" != "true" && "$FILEPATH" == "" ]]; then
+          echo "cfg={}" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
@@ -152,3 +156,10 @@ runs:
           ${{ fromJson(inputs.vars).YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
       run: |-
         printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|TYPESCRIPT_LINT_" | sort >> "$GITHUB_ENV"
+
+    - name: 'Cleanup checkout'
+      if: |
+        always()
+      shell: 'bash'
+      run: |-
+        rm -rf ./load-lint-config
