@@ -67,13 +67,15 @@ runs:
       run: |-
         FILEPATH=$(realpath "${FILEPATH}" || true)
         if [[ "$FAIL_ON_MISSING" != "true" && "$FILEPATH" == "" ]]; then
-          echo "cfg=$(echo '{}')" >> "$GITHUB_OUTPUT"
+          echo "cfg={}" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: '${FILEPATH}' is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
         fi
+
+        echo "cfg -> $(yq -o=json < "${FILEPATH}")"
 
         echo "FILEPATH:${FILEPATH}"
         echo "cfg=$(yq -o=json < "${FILEPATH}" || echo '{}')" >> "$GITHUB_OUTPUT"
