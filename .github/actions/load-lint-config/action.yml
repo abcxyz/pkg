@@ -68,7 +68,7 @@ runs:
         fi
 
         echo "FILEPATH:${FILEPATH}"
-        echo "cfg=$(yq -o=json < "${FILEPATH}" || '{}')" >> "$GITHUB_OUTPUT"
+        echo "cfg=$(yq -o=json < "${FILEPATH}" || echo '{}')" >> "$GITHUB_OUTPUT"
 
     - name: 'Set env vars'
       shell: 'bash'
