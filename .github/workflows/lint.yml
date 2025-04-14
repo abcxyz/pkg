@@ -165,7 +165,7 @@ jobs:
           matrix.lint-target == 'shell'
         uses: 'abcxyz/pkg/.github/actions/lint-shell@main' # ratchet:exclude
         with:
-          target: '${{ env.LINT_SHELL_TARGET }}'
+          target: '${{ env.SHELL_LINT_TARGET }}'
 
       - name: '[TERRAFORM] Lint Terraform'
         if: |
