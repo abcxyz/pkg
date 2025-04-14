@@ -75,10 +75,11 @@ runs:
             exit 1
         fi
 
-        echo "cfg -> $(yq -o=json < "${FILEPATH}")"
+        cfg="$(yq -o=json -I=0 < "${FILEPATH}")"
 
         echo "FILEPATH:${FILEPATH}"
-        echo "cfg=$(yq -o=json < "${FILEPATH}" || echo '{}')" >> "$GITHUB_OUTPUT"
+        echo "cfg -> $cfg"
+        echo "cfg=$cfg" >> "$GITHUB_OUTPUT"
 
     - name: 'Set env vars'
       shell: 'bash'
