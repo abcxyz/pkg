@@ -33,33 +33,33 @@ jobs:
         with:
           filepath: '.github/actions/load-lint-config/test.lint.yml'
           fail_on_missing: true
-          vars: '${{ toJson(vars) }}'
+          vars: '{}'
           ref: '${{ github.ref }}'
 
       - name: 'Test'
         shell: 'bash'
         run: |-
-          printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|TYPESCRIPT_LINT_" > got.env
+          printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|SHELL_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|TYPESCRIPT_LINT_" > got.env
           cat > want.env << EOF
-          GO_LINT_ENABLED=true
+          GO_LINT_ENABLED=false
           GO_LINT_GO_VERSION=1.20
           GO_LINT_GO_VERSION_FILE=go.mod
           GO_LINT_GOLANGCI_URL=https=raw.githubusercontent.com/abcxyz/pkg/main/madeup.golangci.yml
           GO_LINT_DIRECTORY=pkg
           GO_LINT_GOLANGCI_LINT_VERSION=v1.54
-          JAVA_LINT_ENABLED=true
+          JAVA_LINT_ENABLED=false
           JAVA_LINT_JAVA_VERSION=foo
           JAVA_LINT_JAVA_DISTRIBUTION=bar
           JAVA_LINT_JAVA_FORMAT_VERSION=1.25.1
           JAVA_LINT_DIRECTORY=src
-          SHELL_LINT_ENABLED=true
+          SHELL_LINT_ENABLED=false
           SHELL_LINT_TARGET=scripts
-          TERRAFORM_LINT_ENABLED=true
+          TERRAFORM_LINT_ENABLED=false
           TERRAFORM_LINT_TERRAFORM_VERSION=1.30
           TERRAFORM_LINT_DIRECTORY=terraform
-          TERRAFORM_LINT_WALK_DIRS=ru
+          TERRAFORM_LINT_WALK_DIRS=false
           TERRAFORM_LINT_IGNORED_WALK_DIRS=
-          YAML_LINT_ENABLED=true
+          YAML_LINT_ENABLED=false
           YAML_LINT_YAMLLINT_URL=https=raw.githubusercontent.com/abcxyz/pkg/main/madeup.yamllint.yml
           YAML_LINT_YAMLLINT_VERSION=1.3.0
           YAML_LINT_TARGET=.github
