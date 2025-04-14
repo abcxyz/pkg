@@ -66,6 +66,7 @@ runs:
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
         FILEPATH="$(realpath "${FILEPATH}" || true)"
+        echo "FILEPATH:${FILEPATH}"
         if [[ "$FAIL_ON_MISSING" != "true" && "$FILEPATH" == "" ]]; then
           echo "cfg={}" >> "$GITHUB_OUTPUT"
           exit 0
@@ -76,8 +77,6 @@ runs:
         fi
 
         cfg="$(yq -o=json -I=0 < "${FILEPATH}")"
-
-        echo "FILEPATH:${FILEPATH}"
         echo "cfg -> $cfg"
         echo "cfg=$cfg" >> "$GITHUB_OUTPUT"
 
