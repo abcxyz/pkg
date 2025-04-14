@@ -53,7 +53,7 @@ runs:
         done
         if [ -n "$(git status -s -uall)" ]; then
           echo "::error title=Go module changes::Detected go module changes"
-          echo "$(git diff)"
-          echo "$(git -c color.ui=always diff)"
+          echo "git-status: $(git status -s -uall)"
+          echo "git-diff:   $(git -c color.ui=always diff)"
           exit 1
         fi

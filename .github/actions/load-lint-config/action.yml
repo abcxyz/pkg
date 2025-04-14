@@ -61,7 +61,7 @@ runs:
         FILEPATH: 'load-lint-config/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
-        FILEPATH=$(realpath "${FILEPATH}")
+        FILEPATH=$(realpath "${FILEPATH}" || true)
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
             echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
