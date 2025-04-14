@@ -65,7 +65,7 @@ runs:
         FILEPATH: 'load-lint-config/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
-        FILEPATH=$(realpath "${FILEPATH}" || true)
+        FILEPATH="$(realpath "${FILEPATH}" || true)"
         if [[ "$FAIL_ON_MISSING" != "true" && "$FILEPATH" == "" ]]; then
           echo "cfg={}" >> "$GITHUB_OUTPUT"
           exit 0
