@@ -9,7 +9,7 @@ java:
   enabled: false
   java_version: 'foo'
   java_distribution: 'bar'
-  java_format_version: '1.25.1'
+  google_java_format_version: '1.25.1'
   directory: 'src'
 javascript:
   enabled: false

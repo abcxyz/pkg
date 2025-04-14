@@ -114,7 +114,7 @@ runs:
         JAVA_LINT_JAVA_DISTRIBUTION: |-
           ${{ fromJson(inputs.vars).JAVA_LINT_JAVA_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_distribution || 'zulu' }}
         JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION: |-
-          ${{ fromJson(inputs.vars).JAVA_LINT_GOOGLE_JAVA_FORMAT_VERSION || fromJson(steps.load-config.outputs.cfg).java.java_format_version || '1.25.2' }}
+          ${{ fromJson(inputs.vars).JAVA_LINT_JAVA_FORMAT_VERSION || fromJson(steps.load-config.outputs.cfg).java.google_java_format_version || '1.25.2' }}
         JAVA_LINT_DIRECTORY: |-
           ${{ fromJson(inputs.vars).JAVA_LINT_DIRECTORY || fromJson(steps.load-config.outputs.cfg).java.directory || '.' }}
         #################
