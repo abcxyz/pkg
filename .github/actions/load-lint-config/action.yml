@@ -49,7 +49,7 @@ runs:
       uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
       with:
         ref: '${{ github.event.repository.default_branch }}'
-        path: 'load-workflow-variables/${{ github.sha }}'
+        path: 'load-lint-config/${{ github.sha }}'
         sparse-checkout: |
           ${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}
         sparse-checkout-cone-mode: 'false'
@@ -58,7 +58,7 @@ runs:
       id: 'load-config'
       shell: 'bash'
       env:
-        FILEPATH: 'load-workflow-variables/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
+        FILEPATH: 'load-lint-config/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
         FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
       run: |-
         FILEPATH=$(realpath "${FILEPATH}")
@@ -151,4 +151,4 @@ runs:
         YAML_LINT_TARGET: |-
           ${{ fromJson(inputs.vars).YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
       run: |-
-        printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|JAVASCRIPT_LINT_" | sort >> "$GITHUB_ENV"
+        printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|TYPESCRIPT_LINT_" | sort >> "$GITHUB_ENV"
