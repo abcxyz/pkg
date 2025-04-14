@@ -34,6 +34,7 @@ jobs:
           filepath: '.github/actions/load-lint-config/test.env.yml'
           fail_on_missing: true
           vars: '${{ toJson(vars) }}'
+          ref: '${{ github.ref }}'
 
       - name: 'Test'
         shell: 'bash'

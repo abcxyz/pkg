@@ -21,6 +21,10 @@ inputs:
     description: 'The YAML filepath to load the configuration from. Must be a relative path on the default branch of the repository.'
     required: false
     default: 'env.yml'
+  ref:
+    description: 'The ref to checkout.'
+    required: false
+    default: '${{ github.event.repository.default_branch }}'
   fail_on_missing:
     description: 'If true, the process will exit with a non-zero exit code indicating failure when a value is not found.'
     required: false
@@ -48,7 +52,7 @@ runs:
     - name: 'Get Approved Configuration File'
       uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
       with:
-        ref: '${{ github.event.repository.default_branch }}'
+        ref: '${{ inputs.ref }}'
         path: 'load-lint-config/${{ github.sha }}'
         sparse-checkout: |
           ${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}
@@ -67,7 +71,7 @@ runs:
           exit 0
         fi
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
-            echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
+            echo "ERROR: '${FILEPATH}' is not a sub-directory of ${GITHUB_WORKSPACE}"
             exit 1
         fi
 
