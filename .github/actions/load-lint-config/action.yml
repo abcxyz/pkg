@@ -67,7 +67,7 @@ runs:
       run: |-
         FILEPATH=$(realpath "${FILEPATH}" || true)
         if [[ "$FAIL_ON_MISSING" != "true" && "$FILEPATH" == "" ]]; then
-          echo "cfg={}" >> "$GITHUB_OUTPUT"
+          echo "cfg='{}'" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
