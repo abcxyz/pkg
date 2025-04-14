@@ -151,4 +151,4 @@ runs:
         YAML_LINT_TARGET: |-
           ${{ fromJson(inputs.vars).YAML_LINT_TARGET || fromJson(steps.load-config.outputs.cfg).yaml.target || '.' }}
       run: |-
-        printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|JAVASCRIPT_LINT_" >> "$GITHUB_ENV"
+        printenv | grep -E "GO_LINT_|JAVA_LINT_|TERRAFORM_LINT_|YAML_LINT_|JAVASCRIPT_LINT_|JAVASCRIPT_LINT_" | sort >> "$GITHUB_ENV"
