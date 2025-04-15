@@ -18,6 +18,7 @@ on:
   pull_request:
     paths:
       - '.github/actions/setup-binary/**'
+      - '.github/workflows/setup-binary-test.yml'
 
 jobs:
   setup-binary-test:
