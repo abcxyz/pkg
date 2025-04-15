@@ -29,16 +29,37 @@ jobs:
           # checksums generated from sha512sum
           - os: 'ubuntu-latest'
             name: 'linux'
+            arch: 'amd64'
             ext: 'tar.gz'
-            checksum: '952a9b7bb8b044f5229207f173dfc2e25134781e0470bc7fcfb1eae914bebfc84ac25287f0fa2fb696c7c19526fe02e70c86434adb8d5a969c78912b5ad155b3'
+            checksum: '3e7405d3e1b34a97a33a47b22d1a95309c3f889f3f5edcaa72a1d421ea3348e6ba148ccf49e9a3f35d762f5f4f0ebb71e5b270b990486ad78628887034e56a67'
+          - os: 'ubuntu-24.04-arm'
+            name: 'linux'
+            arch: 'arm64'
+            ext: 'tar.gz'
+            checksum: '7a0d86fd0d1256820088199e637f803aadb74db5500626108da54bff71cd3cd3a0bf6bec8fa4a98dd416f0891cf7e208a60819f95e1246d4b02e210b8fdd9ec5'
+
           - os: 'windows-latest'
             name: 'windows'
+            arch: 'amd64'
             ext: 'zip'
-            checksum: '52d965a26c1300a54ed66ceb9037b141f2af5f3ffdc91a3613dad2c51941bd0aa222d220681d114fd5d2baec3f068ec88acfe96cff65d383b26ea73b52f02406'
+            checksum: 'fa32586defb8dc3149eb665bcf4520ae0a203eb8c75538e516bca6174bb78f8cb2e25436c41c473d67528d24ed363d7e6d7140e840d948a96dc6a0a934120457'
+          - os: 'windows-11-arm'
+            name: 'windows'
+            arch: 'arm64'
+            ext: 'zip'
+            checksum: '9a173bf6fd9d7fc4d81182c7bf738cec796cb6828f22ed16da088fa6f54e870150e594389bc2c3f9f520c6d28d9bc9502d4585ebd7db64f5b3e591682d1c730a'
+
+          # Macs can run Intel and AMD binaries
           - os: 'macos-latest'
             name: 'darwin'
+            arch: 'amd64'
             ext: 'tar.gz'
-            checksum: '3ad1258d5ad844ca29101916d07b428eaa6bb9400cb9dcd4d016e63b278ca85446115d45b0ea87678a4eb00c6eb7b8e63c9f29860a39aa6bb51af1b52dd59b04'
+            checksum: '68e721c78b8a7302e872e5df49784ea4e1fccbeca7d1d6f6ec2df2b4f163f2944da9b253a2d97a80ac7e18742c8667d219b792e50e96197796105a2579687e1d'
+          - os: 'macos-latest'
+            name: 'darwin'
+            arch: 'arm64'
+            ext: 'tar.gz'
+            checksum: '1bd94ae9b19963dca7e4958017a8ce030388c57505e1ddb48b059cd2389a6c203439852939c12256c3dcd6193411268b2c0cdcc2a8eb40c416584a70f1b4b6a9'
     runs-on: '${{ matrix.os }}'
     steps:
       - name: 'Checkout'
@@ -60,18 +81,18 @@ jobs:
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.11.1/ratchet_0.11.1_${{ matrix.name }}_${{ matrix.arch }}.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ matrix.arch }}_ratchet_${{ github.sha }}'
           binary_subpath: 'ratchet'
 
       - name: 'Setup binary (restore cache)'
         uses: './.github/actions/setup-binary' # ratchet:exclude
         with:
           install_path: '${{ steps.path.outputs.path }}'
-          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.6.0/ratchet_0.6.0_${{ matrix.name }}_amd64.${{ matrix.ext }}'
+          download_url: 'https://github.com/sethvargo/ratchet/releases/download/v0.11.1/ratchet_0.11.1_${{ matrix.name }}_${{ matrix.arch }}.${{ matrix.ext }}'
           checksum: '${{ matrix.checksum }}'
-          cache_key: '${{ runner.os }}_${{ runner.arch }}_ratchet_${{ github.sha }}'
+          cache_key: '${{ runner.os }}_${{ matrix.arch }}_ratchet_${{ github.sha }}'
           add_to_path: true
           binary_subpath: 'ratchet'
           destination_subpath: 'renamed_ratchet'
@@ -81,7 +102,7 @@ jobs:
         run: |
           renamed_ratchet -version
           GOT=$(renamed_ratchet -version 2>&1) # abcxyz/pkg/cli writes help to stderr
-          WANT="ratchet 0.6.0"
+          WANT="ratchet 0.11.1"
 
           if [[ "${GOT}" != "${WANT}"* ]]; then
             echo "::error ::Expected ${GOT} to contain ${WANT}"

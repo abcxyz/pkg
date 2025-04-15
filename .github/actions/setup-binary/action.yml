@@ -91,36 +91,53 @@ runs:
         steps.cache-guardian.outputs.cache-hit != 'true'
       shell: 'bash'
       env:
-        GOGETTER_VERSION: '1.7.1'
+        GOGETTER_VERSION: '1.7.8'
+        GH_TOKEN: '${{ github.token }}'
       run: |-
-        # Install hashicorp/go-getter
-        if [[ "${RUNNER_OS}" == "Linux" ]]
-        then
-          TEMP_DIR="${RUNNER_TEMP}/go-getter"
-          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_linux_amd64.zip"
-        elif [[ "${RUNNER_OS}" == "macOS" ]]
-        then
-          TEMP_DIR="${RUNNER_TEMP}/go-getter"
-          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_darwin_amd64.zip"
-        elif [[ "${RUNNER_OS}" == "Windows" ]]
-        then
-          TEMP_DIR="${RUNNER_TEMP}\go-getter"
-          RELEASE_URL="https://github.com/hashicorp/go-getter/releases/download/v${GOGETTER_VERSION}/go-getter_${GOGETTER_VERSION}_windows_amd64.zip"
+        # Create a unique output file outside of the checkout.
+        TEMP_DIR="${RUNNER_TEMP}/go-getter-${GITHUB_SHA:0:7}"
+
+        if [[ -f "${TEMP_DIR}/go-getter*" ]]; then
+          echo "::notice::Skipping go-getter installation (already installed)"
+          echo "path=${TEMP_DIR}" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        OS=""
+        if [[ "${RUNNER_OS}" == "Linux" ]]; then
+          OS="linux"
+        elif [[ "${RUNNER_OS}" == "macOS" ]]; then
+          OS="darwin"
+        elif [[ "${RUNNER_OS}" == "Windows" ]]; then
+          OS="windows"
         else
-          echo "::error ::Unsupported operating system ${RUNNER_OS}"
+          echo "::error::Unsupported operating system ${RUNNER_OS}"
           exit 1
         fi
 
-        if [[ -f "${TEMP_DIR}/go-getter" ]]; then
-          echo "Skipping, go-getter is already downloaded"
+        ARCH=""
+        if [[ "${RUNNER_ARCH}" == "X64" ]]; then
+          ARCH="amd64"
+        elif [[ "${RUNNER_ARCH}" == "ARM64" ]]; then
+          ARCH="arm64"
         else
-          echo "Downloading hashicorp/go-getter from ${RELEASE_URL}"
-          mkdir -p "${TEMP_DIR}" && cd "${TEMP_DIR}"
-          curl -sfL "${RELEASE_URL}" -o go-getter.zip
-          unzip go-getter.zip
+          echo "::error::Unsupported system architecture ${RUNNER_ARCH}"
+          exit 1
         fi
 
-        echo "path=${TEMP_DIR}" >> $GITHUB_OUTPUT
+        # Download the file
+        mkdir -p "${TEMP_DIR}" && cd "${TEMP_DIR}"
+        gh --repo hashicorp/go-getter release download \
+          --pattern "go-getter_${GOGETTER_VERSION}_${OS}_${ARCH}.zip" \
+          --clobber \
+          --output "go-getter.zip"
+
+        # Unzip
+        unzip "go-getter.zip"
+
+        # Save the result to an output.
+        echo "::notice::Downloaded binary to ${TEMP_DIR}"
+        echo "path=${TEMP_DIR}" >> "${GITHUB_OUTPUT}"
 
     - name: 'Download binary'
       if: |
