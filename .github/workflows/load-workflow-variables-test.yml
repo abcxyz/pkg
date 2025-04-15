@@ -18,6 +18,7 @@ on:
   pull_request:
     paths:
       - '.github/actions/load-workflow-variables/**'
+      - '.github/workflows/load-workflow-variables-test.yml'
 
 jobs:
   success:
