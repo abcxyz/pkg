@@ -97,7 +97,7 @@ runs:
 
     - id: 'create-release'
       name: 'run abcxyz/actions'
-      uses: 'github.com/abcxyz/actions/.github/actions/create-release@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/create-release@main' # ratchet:exclude
       with:
         github_token: '${{ inputs.github_token }}'
         expected_email: '${{ inputs.expected_email }}'

@@ -50,7 +50,7 @@ runs:
         echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
     - name: 'run abcxyz/actions'
-      uses: 'github.com/abcxyz/actions/.github/actions/setup-binary@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/setup-binary@main' # ratchet:exclude
       with:
         download_url: '${{ inputs.download_url }}'
         install_path: '${{ inputs.install_path }}'

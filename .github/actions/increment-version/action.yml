@@ -76,7 +76,7 @@ runs:
 
     - name: 'run abcxyz/actions'
       id: 'increment-version'
-      uses: 'github.com/abcxyz/actions/.github/actions/increment-version@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/increment-version@main' # ratchet:exclude
       with:
         version_strategy: '${{ inputs.version_strategy }}'
         prerelease_identifier: '${{ inputs.prerelease_identifier }}'

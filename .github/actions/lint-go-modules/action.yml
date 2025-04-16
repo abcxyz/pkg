@@ -44,7 +44,7 @@ runs:
         echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
     - name: 'run abcxyz/actions'
-      uses: 'github.com/abcxyz/actions/.github/actions/lint-go-modules@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/lint-go-modules@main' # ratchet:exclude
       with:
         go_version: '${{ inputs.go_version }}'
         go_version_file: '${{ inputs.go_version_file }}'

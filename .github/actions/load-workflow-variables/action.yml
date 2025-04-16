@@ -39,7 +39,7 @@ runs:
         echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
     - name: 'run abcxyz/actions'
-      uses: 'github.com/abcxyz/actions/.github/actions/load-workflow-variables@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/load-workflow-variables@main' # ratchet:exclude
       with:
         working_directory: '${{ inputs.working_directory }}'
         filepath: '${{ inputs.filepath }}'

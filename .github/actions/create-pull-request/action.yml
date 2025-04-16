@@ -77,7 +77,7 @@ runs:
         echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
     - name: 'run abcxyz/actions'
-      uses: 'github.com/abcxyz/actions/.github/actions/create-pull-request@main' # ratchet:exclude
+      uses: 'abcxyz/actions/.github/actions/create-pull-request@main' # ratchet:exclude
       with:
         token: '${{ inputs.token }}'
         head_branch: '${{ inputs.head_branch }}'
