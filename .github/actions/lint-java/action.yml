@@ -35,35 +35,15 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Setup Java'
-      uses: 'actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12' # ratchet:actions/setup-java@v4
+    - name: 'Emit deprecation warning'
+      shell: 'bash'
+      run: |-
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/lint-java instead."
+
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/lint-java@main' # ratchet:exclude
       with:
-        distribution: '${{ inputs.java_distribution }}'
-        java-version: '${{ inputs.java_version }}'
-
-    - name: 'Download google-java-format'
-      shell: 'bash'
-      run: |-
-        BIN='${{ runner.tool_cache }}/google-java-format-${{ inputs.google_java_format_version }}'
-
-        if [[ -x "${BIN}" ]]; then
-          echo "Already installed!"
-        else
-          curl -sLfo "${BIN}" \
-            "https://github.com/google/google-java-format/releases/download/v${{ inputs.google_java_format_version }}/google-java-format-${{ inputs.google_java_format_version }}-all-deps.jar"
-          chmod +x "${BIN}"
-        fi
-
-    - name: 'Check formatting'
-      shell: 'bash'
-      working-directory: '${{ inputs.directory }}'
-      run: |-
-        shopt -s globstar
-
-        java -jar ${{ runner.tool_cache }}/google-java-format-${{ inputs.google_java_format_version }} -i **/*.java
-
-        if [ -n "$(git status -s -uall)" ]; then
-          echo "::error title=Java formatting::Detected unformatted Java"
-          git -c color.ui=always diff
-          exit 1
-        fi
+        java_version: '${{ inputs.java_version }}'
+        java_distribution: '${{ inputs.java_distribution }}'
+        google_java_format_version: '${{ inputs.google_java_format_version }}'
+        directory: '${{ inputs.directory }}'

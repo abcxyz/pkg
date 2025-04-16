@@ -23,16 +23,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Lint Shell'
-      env:
-        TARGET: '${{ inputs.target }}'
+    - name: 'Emit deprecation warning'
       shell: 'bash'
       run: |-
-        find "${TARGET}" \( -type f -name '*.sh' -or -name '*.bash' -or -name '*.zsh' \) -exec \
-          shellcheck \
-            --check-sourced \
-            --enable=all \
-            --severity=style \
-            --format=tty \
-            --color=always \
-            {} +
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/lint-shell instead."
+
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/lint-shell@main' # ratchet:exclude
+      with:
+        target: '${{ inputs.target }}'
