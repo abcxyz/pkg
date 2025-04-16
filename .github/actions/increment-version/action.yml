@@ -69,31 +69,13 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
-
-    - name: 'Increment version'
-      id: 'increment-version'
-      env:
-        PRERELEASE_IDENTIFIER: '${{ inputs.prerelease_identifier }}'
-        VERSION_STRATEGY: '${{ inputs.version_strategy }}'
-      shell: 'bash'
+    - name: 'Emit deprecation warning'
       run: |-
-        npm install -g --silent --quiet --no-progress semver@7.6.0
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
-        CURRENT_VERSION="0.0.0"
-        if [ -f "${GITHUB_WORKSPACE}/VERSION" ]; then
-          CURRENT_VERSION="$(< "${GITHUB_WORKSPACE}/VERSION")"
-        fi
-        echo "CURRENT_VERSION: ${CURRENT_VERSION}"
-        echo "current_version=${CURRENT_VERSION}" >> "${GITHUB_OUTPUT}"
-        echo "CURRENT_VERSION=${CURRENT_VERSION}" >> "${GITHUB_ENV}"
-
-        NEXT_VERSION="$(semver "${CURRENT_VERSION}" \
-          --increment "${VERSION_STRATEGY}" \
-          --preid "${PRERELEASE_IDENTIFIER}" \
-          -n 1)"
-        echo "NEXT_VERSION: ${NEXT_VERSION}"
-
-        echo "next_version=${NEXT_VERSION}" >> "${GITHUB_OUTPUT}"
-        echo "NEXT_VERSION=${NEXT_VERSION}" >> "${GITHUB_ENV}"
-        echo "${NEXT_VERSION}" > "${GITHUB_WORKSPACE}/VERSION"
+    - name: 'run abcxyz/actions'
+      id: 'increment-version'
+      uses: 'github.com/abcxyz/actions/.github/actions/increment-version@main' # ratchet:exclude
+      with:
+        version_strategy: '${{ inputs.version_strategy }}'
+        prerelease_identifier: '${{ inputs.prerelease_identifier }}'

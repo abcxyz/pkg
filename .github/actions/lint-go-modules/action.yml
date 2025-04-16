@@ -38,21 +38,16 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Setup Go'
-      uses: 'actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34' # ratchet:actions/setup-go@v5
-      with:
-        go-version: '${{ inputs.go_version }}'
-        go-version-file: '${{ inputs.go_version_file }}'
-
-    - name: 'Check modules'
-      shell: 'bash'
-      working-directory: '${{ inputs.directory }}'
+    - name: 'Emit deprecation warning'
       run: |-
-        for d in $(find . -name go.mod); do
-          (cd $(dirname $d) && go mod tidy)
-        done
-        if [ -n "$(git status -s -uall)" ]; then
-          echo "::error title=Go module changes::Detected go module changes"
-          git -c color.ui=always diff
-          exit 1
-        fi
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
+
+    - name: 'run abcxyz/actions'
+      uses: 'github.com/abcxyz/actions/.github/actions/lint-go-modules@main' # ratchet:exclude
+      with:
+        go_version: '${{ inputs.go_version }}'
+        go_version_file: '${{ inputs.go_version_file }}'
+        golangci_url: '${{ inputs.golangci_url }}'
+        directory: '${{ inputs.directory }}'
+        golangci_lint_version: '${{ inputs.golangci_lint_version }}'
+

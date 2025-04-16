@@ -70,60 +70,26 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Checkout'
-      uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
-
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f' # ratchet:google-github-actions/auth@v2
-      with:
-        workload_identity_provider: '${{ inputs.wif_provider }}'
-        service_account: '${{ inputs.wif_service_account }}'
-
-    - name: 'Setup gcloud'
-      uses: 'google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a' # ratchet:google-github-actions/setup-gcloud@v2
-      with:
-        install_components: 'beta'
-
-    - name: 'Deploy Dataflow Pipeline'
-      shell: 'bash'
-      env:
-        IMAGE: '${{ inputs.image }}'
-        TEMPLATE_METADATA_FILE: '${{ inputs.template_metadata_file }}'
-        TEMPLATE_FILE_NAME: '${{ inputs.template_file_name }}'
-        PROJECT: '${{ inputs.project }}'
-        REGION: '${{ inputs.region }}'
-        NETWORK_NAME: '${{ inputs.network_name }}'
-        SUBNET_NAME: '${{ inputs.subnet_name }}'
-        BUCKET_NAME: '${{ inputs.bucket_name }}'
-        PIPELINE_NAME: '${{ inputs.pipeline_name }}'
-        PIPELINE_SDK: '${{ inputs.pipeline_sdk }}'
-        PIPELINE_TYPE: '${{ inputs.pipeline_type }}'
-        PIPELINE_SCHEDULE: '${{ inputs.pipeline_schedule }}'
-        PIPELINE_EXPERIMENTS: '${{ inputs.pipeline_experiments }}'
-        PIPELINE_PARAMETERS: '${{ inputs.pipeline_parameters }}'
+    - name: 'Emit deprecation warning'
       run: |-
-        GCS_TEMPLATE_FILE="gs://${BUCKET_NAME}/templates/${TEMPLATE_FILE_NAME}"
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
 
-        gcloud dataflow flex-template build "${GCS_TEMPLATE_FILE}" \
-          --project="${PROJECT}" \
-          --image="${IMAGE}" \
-          --sdk-language="${PIPELINE_SDK}" \
-          --metadata-file="${TEMPLATE_METADATA_FILE}"
-
-        gcloud beta datapipelines pipeline delete "${PIPELINE_NAME}" \
-          --project="${PROJECT}" \
-          --region="${REGION}" || echo "no pipeline with ${PIPELINE_NAME} to delete"
-
-        gcloud beta datapipelines pipeline create "${PIPELINE_NAME}" \
-          --project="${PROJECT}" \
-          --region="${REGION}" \
-          --pipeline-type="${PIPELINE_TYPE}" \
-          --template-file-gcs-location="${GCS_TEMPLATE_FILE}" \
-          --network="${NETWORK_NAME}" \
-          --subnetwork="https://www.googleapis.com/compute/v1/projects/${PROJECT}/regions/${REGION}/subnetworks/${SUBNET_NAME}" \
-          --schedule="${PIPELINE_SCHEDULE}" \
-          --worker-region="${REGION}" \
-          --disable-public-ips \
-          --additional-experiments=${PIPELINE_EXPERIMENTS} \
-          --parameters="${PIPELINE_PARAMETERS}"
+    - name: 'run abcxyz/actions'
+      uses: 'github.com/abcxyz/actions/.github/actions/deploy-dataflow-pipeline@main' # ratchet:exclude
+      with:
+        wif_provider: '${{ inputs.wif_provider }}'  
+        wif_service_account: '${{ inputs.wif_service_account }}'  
+        image: '${{ inputs.image }}'  
+        template_metadata_file: '${{ inputs.template_metadata_file }}'  
+        template_file_name: '${{ inputs.template_file_name }}'  
+        project: '${{ inputs.project }}'  
+        region: '${{ inputs.region }}'  
+        bucket_name: '${{ inputs.bucket_name }}'  
+        network_name: '${{ inputs.network_name }}'  
+        subnet_name: '${{ inputs.subnet_name }}'  
+        pipeline_name: '${{ inputs.pipeline_name }}'  
+        pipeline_sdk: '${{ inputs.pipeline_sdk }}'  
+        pipeline_type: '${{ inputs.pipeline_type }}'  
+        pipeline_schedule: '${{ inputs.pipeline_schedule }}'  
+        pipeline_experiments: '${{ inputs.pipeline_experiments }}'  
+        pipeline_parameters: '${{ inputs.pipeline_parameters }}'  
