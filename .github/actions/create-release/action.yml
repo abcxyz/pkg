@@ -93,7 +93,7 @@ runs:
     - name: 'Emit deprecation warning'
       shell: 'bash'
       run: |-
-        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to https://github.com/abcxyz/actions... instead."
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/create-release instead."
 
     - id: 'create-release'
       name: 'run abcxyz/actions'
