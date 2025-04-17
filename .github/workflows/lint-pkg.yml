@@ -12,13 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-###############################################################################
-# This workflows acts as a abcxyz/pkg specific version of the lint.yml. Changes
-# should be tested first on this workflow before being propagated to the
-# lint.yml workflow, which runs as a required workflow on all other abcxyz
-# repositories.
-###############################################################################
-
 name: 'lint-pkg'
 
 on:
@@ -38,7 +31,7 @@ jobs:
       lint-targets: '${{ steps.lint-targets.outputs.lint-targets }}'
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
         with:
           fetch-depth: 1 # shallow checkout
           ref: '${{ github.event.pull_request.head.sha }}'
@@ -47,41 +40,53 @@ jobs:
         id: 'lint-targets'
         env:
           REF: '${{ github.event.pull_request.head.sha }}'
+          LC_ALL: 'C'
         shell: 'bash'
         run: |-
+          # match_files determines if the current git repository has any files
+          # matching the given pattern. This has been performance tested
+          # against a shallow checkout of chromium (future changes should be
+          # tested in the same manner).
+          match_files() {
+            local filepattern="${1}"
+            git ls-tree -r --name-only "${REF}" | grep -m 1 -E "${filepattern}" >/dev/null
+          }
           declare -a TARGETS=()
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '(go.mod|/.*\.go$)' >/dev/null; then
+          if match_files '(go.mod$|/.*\.go$)'; then
             TARGETS+=("golang" "golang-modules")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(java)$' >/dev/null; then
+          if match_files '.*\.(java)$'; then
             TARGETS+=("java")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(js)$' >/dev/null; then
+          if match_files '.*\.(js)$'; then
             TARGETS+=("javascript")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(ts)$' >/dev/null; then
+          if match_files '.*\.(ts)$'; then
             TARGETS+=("typescript")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(sh)$' >/dev/null; then
+          if match_files '.*\.(sh)$'; then
             TARGETS+=("shell")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(tf)$' >/dev/null; then
+          if match_files '.*\.(tf)$'; then
             TARGETS+=("terraform")
           fi
-          if git ls-tree -r --name-only "$REF" | LC_ALL=C grep --with-filename -E '.*\.(yaml|yml)$' >/dev/null; then
+          if match_files '.*\.(yaml|yml)$'; then
             TARGETS+=("yaml")
+          fi
+          if match_files '.github/(actions|workflows)/.*\.(yaml|yml)$'; then
+            TARGETS+=("github" "ratchet")
           fi
           LINT_TARGETS="$(jq --compact-output --null-input '$ARGS.positional' --args -- "${TARGETS[@]}")"
           echo "lint-targets -> ${LINT_TARGETS}"
-          echo "lint-targets=${LINT_TARGETS}" >> $GITHUB_OUTPUT
+          echo "lint-targets=${LINT_TARGETS}" >> "${GITHUB_OUTPUT}"
 
   lint:
     runs-on: |-
-     ${{ vars.LINT_RUNS_ON || 'ubuntu-latest' }}
+      ${{ vars.LINT_RUNS_ON || 'ubuntu-latest' }}
     needs:
       - 'init'
     if: |
-      needs.init.outputs.lint-targets != '[]' && github.repository == 'abcxyz/pkg'
+      needs.init.outputs.lint-targets != '[]' && github.repository != 'abcxyz/actions'
     permissions:
       contents: 'read'
     strategy:
@@ -102,7 +107,7 @@ jobs:
         ${{ vars.GO_LINT_GO_VERSION_FILE || 'go.mod' }}
       # The URL to a golangci file. This is only used if no file is found in the local directory.
       GO_LINT_GOLANGCI_URL: |-
-        ${{ vars.GO_LINT_GOLANGCI_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/default.golangci.yml' }}
+        'https://raw.githubusercontent.com/abcxyz/actions/main/default.golangci.yml'
       # Directory in which Go files reside.
       GO_LINT_DIRECTORY: |-
         ${{ vars.GO_LINT_DIRECTORY || '.' }}
@@ -132,16 +137,12 @@ jobs:
         ${{ vars.TERRAFORM_LINT_TERRAFORM_VERSION }}
       TERRAFORM_LINT_DIRECTORY: |-
         ${{ vars.TERRAFORM_LINT_DIRECTORY || 'terraform' }}
-      TERRAFORM_LINT_WALK_DIRS: |-
-        ${{ vars.TERRAFORM_LINT_WALK_DIRS || true }}
-      TERRAFORM_LINT_IGNORED_WALK_DIRS: |-
-        ${{ vars.TERRAFORM_LINT_IGNORED_WALK_DIRS || '' }}
       ##############
       ## YAML ######
       ##############
       # The URL to a yamllint config file. This is only used if no file is found in the local directory.
       YAML_LINT_YAMLLINT_URL: |-
-        ${{ vars.YAML_LINT_YAMLLINT_URL || 'https://raw.githubusercontent.com/abcxyz/pkg/main/.yamllint.yml' }}
+        'https://raw.githubusercontent.com/abcxyz/actions/main/.yamllint.yml'
       # Version of yamllint linter to use
       YAML_LINT_YAMLLINT_VERSION: |-
         ${{ vars.YAML_LINT_YAMLLINT_VERSION || '1.32.0' }}
@@ -151,14 +152,14 @@ jobs:
 
     steps:
       - name: 'Checkout'
-        uses: 'actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332' # ratchet:actions/checkout@v4
+        uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
         with:
           fetch-depth: 1 # shallow clone
 
       - name: '[GOLANG] Lint Go'
         if: |
           matrix.lint-target == 'golang'
-        uses: './.github/actions/lint-go'
+        uses: 'abcxyz/actions/.github/actions/lint-go@main' # ratchet:exclude
         with:
           go_version: '${{ env.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
@@ -169,7 +170,7 @@ jobs:
       - name: '[GOLANG] Lint Go modules'
         if: |
           matrix.lint-target == 'golang-modules'
-        uses: './.github/actions/lint-go-modules'
+        uses: 'abcxyz/actions/.github/actions/lint-go-modules@main' # ratchet:exclude
         with:
           go_version: '${{ env.GO_LINT_GO_VERSION }}'
           go_version_file: '${{ env.GO_LINT_GO_VERSION_FILE }}'
@@ -180,7 +181,7 @@ jobs:
       - name: '[JAVA] Lint Java'
         if: |
           matrix.lint-target == 'java'
-        uses: './.github/actions/lint-java'
+        uses: 'abcxyz/actions/.github/actions/lint-java@main' # ratchet:exclude
         with:
           java_version: '${{ env.JAVA_LINT_JAVA_VERSION }}'
           java_distribution: '${{ env.JAVA_LINT_JAVA_DISTRIBUTION }}'
@@ -202,25 +203,35 @@ jobs:
       - name: '[SHELL] Lint Shell'
         if: |
           matrix.lint-target == 'shell'
-        uses: './.github/actions/lint-shell'
+        uses: 'abcxyz/actions/.github/actions/lint-shell@main' # ratchet:exclude
         with:
           target: '${{ env.LINT_SHELL_TARGET }}'
 
       - name: '[TERRAFORM] Lint Terraform'
         if: |
           matrix.lint-target == 'terraform'
-        uses: './.github/actions/lint-terraform'
+        uses: 'abcxyz/actions/.github/actions/lint-terraform@main' # ratchet:exclude
         with:
           terraform_version: '${{ env.TERRAFORM_LINT_TERRAFORM_VERSION }}'
           directory: '${{ env.TERRAFORM_LINT_DIRECTORY }}'
-          walk_dirs: '${{ env.TERRAFORM_LINT_WALK_DIRS }}'
-          ignored_walk_dirs: '${{ env.TERRAFORM_LINT_IGNORED_WALK_DIRS }}'
 
       - name: '[YAML] lint yaml'
         if: |
           matrix.lint-target == 'yaml'
-        uses: './.github/actions/lint-yaml'
+        uses: 'abcxyz/actions/.github/actions/lint-yaml@main' # ratchet:exclude
         with:
           yamllint_url: '${{ env.YAML_LINT_YAMLLINT_URL }}'
           yamllint_version: '${{ env.YAML_LINT_YAMLLINT_VERSION }}'
           target: '${{ env.YAML_LINT_TARGET }}'
+
+      - name: '[GITHUB] lint ratchet'
+        if: |
+          matrix.lint-target == 'ratchet'
+        uses: 'sethvargo/ratchet@main' # ratchet:exclude
+        with:
+          files: './.github/actions/**/*.yml ./.github/workflows/*.yml'
+
+      - name: '[GITHUB] lint actions'
+        if: |
+          matrix.lint-target == 'github'
+        uses: 'abcxyz/actions/.github/actions/lint-github-actions@main' # ratchet:exclude
