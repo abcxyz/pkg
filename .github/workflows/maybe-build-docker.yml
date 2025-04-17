@@ -138,20 +138,20 @@ jobs:
           GH_IMAGE: '${{ inputs.github_image_name }}'
           GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
         run: |
-          if [[ ! -f "$DOCKERFILE" ]]; then
-            "[Error] Unable to find dockerfile: $DOCKERFILE."
+          if [[ ! -f "${DOCKERFILE}" ]]; then
+            echo "[Error] Unable to find dockerfile: ${DOCKERFILE}."
             exit 1
           fi
-          if [[ "$EXTRA_HASH_FILE1" != "" && ! -f "$EXTRA_HASH_FILE1" ]]; then
-            "[Error] Unable to find extra file: $EXTRA_HASH_FILE1."
+          if [[ "${EXTRA_HASH_FILE1}" != "" && ! -f "${EXTRA_HASH_FILE1}" ]]; then
+            echo "[Error] Unable to find extra file: ${EXTRA_HASH_FILE1}."
             exit 1
           fi
-          if [[ "$EXTRA_HASH_FILE2" != "" && ! -f "$EXTRA_HASH_FILE2" ]]; then
-            "[Error] Unable to find extra file: $EXTRA_HASH_FILE2."
+          if [[ "${EXTRA_HASH_FILE2}" != "" && ! -f "${EXTRA_HASH_FILE2}" ]]; then
+            echo "[Error] Unable to find extra file: ${EXTRA_HASH_FILE2}."
             exit 1
           fi
-          if [[ "$GH_IMAGE" == "" && "$GAR_IMAGE" == "" ]]; then
-            "[Error] At least one of github_image_name or artifact_registry_image_name must be provided."
+          if [[ "${GH_IMAGE}" == "" && "${GAR_IMAGE}" == "" ]]; then
+            echo "[Error] At least one of github_image_name or artifact_registry_image_name must be provided."
             exit 1
           fi
 
@@ -160,8 +160,8 @@ jobs:
         id: 'docker-tag'
         shell: 'bash'
         run: |
-          echo "tag=${{ hashFiles(inputs.dockerfile, inputs.extra_hash_file1, inputs.extra_hash_file2) }}" >> "$GITHUB_OUTPUT"
-          echo "branch_tag=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF}}" | sed 's/refs\/heads\///g' | sed 's/\//-/g')" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ hashFiles(inputs.dockerfile, inputs.extra_hash_file1, inputs.extra_hash_file2) }}" >> "${GITHUB_OUTPUT}"
+          echo "branch_tag=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF}}" | sed 's/refs\/heads\///g' | sed 's/\//-/g')" >> "${GITHUB_OUTPUT}"
 
       - id: 'gcp-auth'
         if: |-
@@ -190,8 +190,8 @@ jobs:
         env:
           GAR_IMAGE: '${{ inputs.artifact_registry_image_name }}'
         run: |
-          GAR_IMAGE_REGISTRY=$(echo "$GAR_IMAGE" | cut -d '/' -f 1)
-          echo '${{ steps.gcp-auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin "https://$GAR_IMAGE_REGISTRY"
+          GAR_IMAGE_REGISTRY=$(echo "${GAR_IMAGE}" | cut -d '/' -f 1)
+          echo '${{ steps.gcp-auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin "https://${GAR_IMAGE_REGISTRY}"
 
       - name: 'Check dockerfile exists'
         id: 'cache-dockerfile'
@@ -204,22 +204,22 @@ jobs:
           #  1. if the dockerfile has changed and never been previously built on any PR/branch.
           #  2. if the main branch hasn't built this particular hash before.
 
-          if [[ "$GH_IMAGE" != "" ]]; then
-            DOCKER_CHECK=$(docker manifest inspect "$GH_IMAGE:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
-            DOCKER_BRANCH_CHECK=$(docker manifest inspect "$GH_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
-          elif [[ "$GAR_IMAGE" != "" ]]; then
-            DOCKER_CHECK=$(docker manifest inspect "$GAR_IMAGE:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
-            DOCKER_BRANCH_CHECK=$(docker manifest inspect "$GAR_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
+          if [[ "${GH_IMAGE}" != "" ]]; then
+            DOCKER_CHECK=$(docker manifest inspect "${GH_IMAGE}:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
+            DOCKER_BRANCH_CHECK=$(docker manifest inspect "${GH_IMAGE}:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
+          elif [[ "${GAR_IMAGE}" != "" ]]; then
+            DOCKER_CHECK=$(docker manifest inspect "${GAR_IMAGE}:${{ steps.docker-tag.outputs.tag }}" | jq --raw-output '.config.digest' || true)
+            DOCKER_BRANCH_CHECK=$(docker manifest inspect "${GAR_IMAGE}:${{ steps.docker-tag.outputs.branch_tag }}" | jq --raw-output '.config.digest' || true)
           fi
 
-          foundTag=$(if [[ "$DOCKER_CHECK" != "" ]]; then echo "true"; fi)
-          tagsMatch=$(if [[ "$DOCKER_CHECK" = "$DOCKER_BRANCH_CHECK" ]]; then echo "true"; fi)
+          foundTag=$(if [[ "${DOCKER_CHECK}" != "" ]]; then echo "true"; fi)
+          tagsMatch=$(if [[ "${DOCKER_CHECK}" = "${DOCKER_BRANCH_CHECK}" ]]; then echo "true"; fi)
           isRunningInPR=$(if [[ "${{ github.ref }}" != 'refs/heads/main' ]]; then echo "true"; fi)
 
-          if [[ $foundTag == 'true' && ($tagsMatch == 'true' || $isRunningInPR == 'true') ]]; then
-            echo "cache-hit=true" >> "$GITHUB_OUTPUT"
+          if [[ "${foundTag}" == "true" && ("${tagsMatch}" == "true" || "${isRunningInPR}" == "true") ]]; then
+            echo "cache-hit=true" >> "${GITHUB_OUTPUT}"
           else
-            echo "cache-hit=false" >> "$GITHUB_OUTPUT"
+            echo "cache-hit=false" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: 'Setup Docker Buildx'
@@ -228,11 +228,11 @@ jobs:
         env:
           PLATFORMS: '${{ inputs.platforms }}'
         run: |
-          if [[ "$PLATFORMS" != "" ]]; then
+          if [[ "${PLATFORMS}" != "" ]]; then
             qemuVer=f654e8c1dda9d99f6ec95db08c5019d8bed9a9f4170c21350ea86692712304ef
-            docker pull -q multiarch/qemu-user-static@sha256:${qemuVer}
-            docker run --rm --privileged multiarch/qemu-user-static@sha256:${qemuVer} --install "$PLATFORMS"
-            docker buildx create --name builder-${GITHUB_SHA} --driver docker-container --use
+            docker pull -q "multiarch/qemu-user-static@sha256:${qemuVer}"
+            docker run --rm --privileged "multiarch/qemu-user-static@sha256:${qemuVer}" --install "${PLATFORMS}"
+            docker buildx create --name "builder-${GITHUB_SHA}" --driver docker-container --use
           fi
           docker buildx ls
 
@@ -248,31 +248,31 @@ jobs:
           DOCKERFILE: '${{ inputs.dockerfile }}'
         run: |
           tags=()
-          if [[ "$GH_IMAGE" != "" ]]; then
-            tags+=(--tag "$GH_IMAGE:${{ steps.docker-tag.outputs.tag }}")
-            tags+=(--tag "$GH_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}")
-            if [[ "$EXTRA_TAG1" != "" ]]; then
-              tags+=(--tag "$GH_IMAGE:$EXTRA_TAG1")
+          if [[ "${GH_IMAGE}" != "" ]]; then
+            tags+=(--tag "${GH_IMAGE}:${{ steps.docker-tag.outputs.tag }}")
+            tags+=(--tag "${GH_IMAGE}:${{ steps.docker-tag.outputs.branch_tag }}")
+            if [[ "${EXTRA_TAG1}" != "" ]]; then
+              tags+=(--tag "${GH_IMAGE}:${EXTRA_TAG1}")
             fi
-            if [[ "$EXTRA_TAG2" != "" ]]; then
-              tags+=(--tag "$GH_IMAGE:$EXTRA_TAG2")
+            if [[ "${EXTRA_TAG2}" != "" ]]; then
+              tags+=(--tag "${GH_IMAGE}:${EXTRA_TAG2}")
             fi
           fi
-          if [[ "$GAR_IMAGE" != "" ]]; then
-            tags+=(--tag "$GAR_IMAGE:${{ steps.docker-tag.outputs.tag }}")
-            tags+=(--tag "$GAR_IMAGE:${{ steps.docker-tag.outputs.branch_tag }}")
-            if [[ "$EXTRA_TAG1" != "" ]]; then
-              tags+=(--tag "$GAR_IMAGE:$EXTRA_TAG1")
+          if [[ "${GAR_IMAGE}" != "" ]]; then
+            tags+=(--tag "${GAR_IMAGE}:${{ steps.docker-tag.outputs.tag }}")
+            tags+=(--tag "${GAR_IMAGE}:${{ steps.docker-tag.outputs.branch_tag }}")
+            if [[ "${EXTRA_TAG1}" != "" ]]; then
+              tags+=(--tag "${GAR_IMAGE}:${EXTRA_TAG1}")
             fi
-            if [[ "$EXTRA_TAG2" != "" ]]; then
-              tags+=(--tag "$GAR_IMAGE:$EXTRA_TAG2")
+            if [[ "${EXTRA_TAG2}" != "" ]]; then
+              tags+=(--tag "${GAR_IMAGE}:${EXTRA_TAG2}")
             fi
           fi
 
-          if [[ "$PLATFORMS" != "" ]]; then
-            docker buildx build . --file "$DOCKERFILE" --platform="$PLATFORMS" "${tags[@]}" --push
+          if [[ "${PLATFORMS}" != "" ]]; then
+            docker buildx build . --file "${DOCKERFILE}" --platform="${PLATFORMS}" "${tags[@]}" --push
           else
-            docker buildx build . --file "$DOCKERFILE" "${tags[@]}" --push
+            docker buildx build . --file "${DOCKERFILE}" "${tags[@]}" --push
           fi
 
       - name: 'Cleanup docker config'

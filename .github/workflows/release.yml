@@ -64,7 +64,7 @@ jobs:
 
       - name: 'Create release'
         id: 'create-release'
-        uses: 'abcxyz/pkg/.github/actions/create-release@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/create-release@main' # ratchet:exclude
         with:
           github_token: '${{ steps.mint-token.outputs.token }}'
           expected_email: '${{ vars.TOKEN_MINTER_GITHUB_EMAIL }}'

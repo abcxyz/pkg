@@ -76,7 +76,7 @@ jobs:
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Lint Go'
-        uses: 'abcxyz/pkg/.github/actions/lint-go@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/lint-go@main' # ratchet:exclude
         with:
           go_version: '${{ inputs.go_version }}'
           go_version_file: '${{ inputs.go_version_file }}'
