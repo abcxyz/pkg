@@ -52,7 +52,7 @@ jobs:
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Lint Java'
-        uses: 'abcxyz/pkg/.github/actions/lint-java@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/lint-java@main' # ratchet:exclude
         with:
           java_version: '${{ inputs.java_version }}'
           java_distribution: '${{ inputs.java_distribution }}'

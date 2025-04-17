@@ -56,7 +56,7 @@ jobs:
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
       - name: 'Lint Terraform'
-        uses: 'abcxyz/pkg/.github/actions/lint-terraform@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/lint-terraform@main' # ratchet:exclude
         with:
           terraform_version: '${{ inputs.terraform_version }}'
           directory: '${{ inputs.directory }}'

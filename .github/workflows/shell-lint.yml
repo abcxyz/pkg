@@ -32,6 +32,6 @@ jobs:
     steps:
       - uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
       - name: 'Lint Shell'
-        uses: 'abcxyz/pkg/.github/actions/lint-shell@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/lint-shell@main' # ratchet:exclude
         with:
           target: '${{ inputs.target }}'
