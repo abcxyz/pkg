@@ -1,12 +1,12 @@
 name: Check PR Description
 
 on:
-  pull_request:
-    types: [opened, edited]
+  workflow_call:
 
 jobs:
   check-description:
     runs-on: ubuntu-latest
+
     steps:
       # Step to check if the pull request description is empty
       - name: Check PR Description Not Empty
