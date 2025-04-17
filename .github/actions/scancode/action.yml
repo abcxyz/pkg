@@ -22,10 +22,22 @@ inputs:
 outputs:
   json:
     description: 'The scancode result json file path'
+    value: '${{ steps.scancode.outputs.json }}'
   csv:
     description: 'The scancode result csv file path'
+    value: '${{ steps.scancode.outputs.csv }}'
+
 runs:
-  using: 'docker'
-  image: '../../../scancode/Dockerfile'
-  args:
-    - '${{ inputs.directory-to-scan }}'
+  using: 'composite'
+  steps:
+    - name: 'Emit deprecation warning'
+      shell: 'bash'
+      run: |-
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/scancode instead."
+
+    - name: 'run abcxyz/actions'
+      id: 'scancode'
+      uses: 'abcxyz/actions/.github/actions/scancode@main' # ratchet:exclude
+      with:
+        directory_to_scan: '${{ inputs.directory-to-scan }}'
+
