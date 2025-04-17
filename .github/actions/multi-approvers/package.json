@@ -1,0 +1,33 @@
+{
+  "name": "multi-approvers",
+  "version": "1.0.0",
+  "description": "GitHub Action that enforces approver requriements.",
+  "author": "Google LLC",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "scripts": {
+    "build": "ncc build -m src/main.ts -o dist",
+    "format": "eslint . --fix",
+    "lint": "eslint .",
+    "test": "bash ./bin/test.sh"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@google-github-actions/actions-utils": "^0.8.6",
+    "@octokit/rest": "^21.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@types/node": "^22.13.17",
+    "@vercel/ncc": "^0.38.3",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.5",
+    "nock": "^14.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.29.0"
+  },
+  "exports": "dist/index.js"
+}
