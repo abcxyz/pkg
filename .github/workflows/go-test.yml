@@ -64,7 +64,7 @@ jobs:
         # Use bash shell here to make it work with Windows host runner.
         shell: 'bash'
         run: |-
-          jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> $GITHUB_ENV
+          jq -r "to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" <<< '${{ inputs.env }}' >> "${GITHUB_ENV}"
 
       - name: 'Checkout'
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
@@ -92,8 +92,8 @@ jobs:
         working-directory: '${{ inputs.directory }}'
         run: |-
           OUTPUT="$(go tool cover -func=./coverage.out)"
-          TOTAL="$(echo $OUTPUT | awk 'END{print $NF}')"
-          tee -a $GITHUB_STEP_SUMMARY > /dev/null <<EOF
+          TOTAL="$(echo "${OUTPUT}" | awk 'END{print $NF}')"
+          tee -a "${GITHUB_STEP_SUMMARY}" > /dev/null <<EOF
             ## Coverage: ${TOTAL}
 
             \`\`\`text

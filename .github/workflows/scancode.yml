@@ -32,7 +32,7 @@
 #
 #   jobs:
 #     scancode:
-#       uses: 'abcxyz/pkg/.github/workflows/scancode.yml@main' # pin tag or sha here.
+#       uses: 'abcxyz/actions/.github/workflows/scancode.yml@main' # pin tag or sha here.
 #       with:
 #         branch: '${{ inputs.branch }}'
 #
