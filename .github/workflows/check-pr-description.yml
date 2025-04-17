@@ -1,17 +1,21 @@
-name: Check PR Description
+name: 'Check PR Description'
 
 on:
   workflow_call:
+    inputs:
+      pull_request_body: 
+        description: 'The body of the pull request'
+        type: string
 
 jobs:
   check-description:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
 
     steps:
       # Step to check if the pull request description is empty
-      - name: Check PR Description Not Empty
+      - name: 'Check PR Description Not Empty'
         run: |
-          if [[ -z "${{ github.event.pull_request.body }}" ]]; then
+          if [[ -z "${{ inputs.pull_request_body }}" ]]; then
             echo "Error: Pull request description cannot be empty."
             exit 1
           else
