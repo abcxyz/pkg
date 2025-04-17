@@ -3,9 +3,9 @@ name: 'Check PR Description'
 on:
   workflow_call:
     inputs:
-      pull_request_body: 
+      pull_request_body:
         description: 'The body of the pull request'
-        type: string
+        type: 'string'
 
 jobs:
   check-description:
