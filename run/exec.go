@@ -136,7 +136,10 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 	}
 	logger.DebugContext(ctx, "set wait delay", "delay", cmd.WaitDelay)
 
-	logger.DebugContext(ctx, "starting command", "args", args, "options", compiledOpts)
+	logger.DebugContext(ctx, "starting command",
+		"args", args,
+		"options", compiledOpts,
+	)
 	err := cmd.Run() // This blocks until the command exits or context is cancelled
 
 	// Exit code -1 if ProcessState is nil (e.g., start failed)
@@ -161,9 +164,12 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 			if stderrBuf != nil {
 				stderrContent = stderrBuf.String()
 			}
-			err = fmt.Errorf("command %v exited non-zero (%d): %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
+			err = fmt.Errorf("command %v exited non-zero (%d): %w (context error: %w)\nstdout:\n%s\nstderr:\n%s",
 				args, exitCode, err, ctx.Err(), stdoutContent, stderrContent)
-			logger.DebugContext(ctx, "command exited non-zero", "exit_code", exitCode, "error", err)
+			logger.DebugContext(ctx, "command exited non-zero",
+				"exit_code", exitCode,
+				"error", err,
+			)
 		} else {
 			// It's an actual execution error (e.g., command not found, context cancelled early)
 			stdoutContent := "[stdout not captured]"
@@ -174,9 +180,12 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 			if stderrBuf != nil {
 				stderrContent = stderrBuf.String()
 			}
-			err = fmt.Errorf("command %v failed: %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
+			err = fmt.Errorf("command %v failed: %w (context error: %w)\nstdout:\n%s\nstderr:\n%s",
 				args, err, ctx.Err(), stdoutContent, stderrContent)
-			logger.DebugContext(ctx, "command failed with execution error", "exit_code", exitCode, "error", err)
+			logger.DebugContext(ctx, "command failed with execution error",
+				"exit_code", exitCode,
+				"error", err,
+			)
 		}
 	} else {
 		// Command ran successfully (exit code 0)

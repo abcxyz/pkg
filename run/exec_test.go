@@ -1,9 +1,11 @@
 package run
 
 import (
-	"github.com/abcxyz/pkg/testutil"
-	"github.com/google/go-cmp/cmp"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/abcxyz/pkg/testutil"
 )
 
 // this may not be portable
