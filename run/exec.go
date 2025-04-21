@@ -190,17 +190,16 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 // It holds all configurable settings for executing a command.
 type Option struct {
 	// Basic execution control
-	allowNonZeroExit bool           // If true, non-zero exit codes are not treated as errors.
-	cwd              string         // Working directory for the command.
-	stdin            io.Reader      // Standard input for the command.
-	stdout           io.Writer      // Standard output destination.
-	stderr           io.Writer      // Standard error destination.
-	waitDelay        *time.Duration // Grace period after context cancel before killing.
+	allowNonZeroExit bool
+	cwd              string
+	stdin            io.Reader
+	stdout           io.Writer
+	stderr           io.Writer
+	waitDelay        *time.Duration
 
-	// Environment control
-	allowedEnvKeys []string // Glob patterns for inherited env vars to allow.
-	deniedEnvKeys  []string // Glob patterns for inherited env vars to deny.
-	additionalEnv  []string // Env vars ("KEY=VALUE") to add/override.
+	allowedEnvKeys []string
+	deniedEnvKeys  []string
+	additionalEnv  []string
 }
 
 // AllowNonzeroExit prevents Run from returning an error
@@ -238,7 +237,7 @@ func WithCwd(cwd string) *Option {
 	return &Option{cwd: cwd}
 }
 
-// WithFilteredEnv returns an option that filters the inherited environment variables.
+// WithFilteredEnv filters the inherited environment variables.
 // allowed is a list of glob patterns for keys to keep (empty means allow all initially).
 // denied is a list of glob patterns for keys to remove (takes precedence).
 func WithFilteredEnv(allowed, denied []string) *Option {
@@ -246,13 +245,13 @@ func WithFilteredEnv(allowed, denied []string) *Option {
 }
 
 // WithAdditionalEnv returns an option that adds or overrides environment variables.
-// vars is a slice of strings in "KEY=VALUE" format.can
+// vars is a slice of strings in "KEY=VALUE" format. Can be added multiple times.
 func WithAdditionalEnv(vars []string) *Option {
 	return &Option{additionalEnv: vars}
 }
 
-// WithWaitDelay returns an option that sets a grace period for the command to
-// exit after the context is cancelled before being forcefully killed.
+// WithWaitDelay sets a grace period for the command to exit after the context
+// is cancelled before being forcefully killed.
 // Default: DefautWaitDelay.
 // See exec.Cmd.WaitDelay for more information.
 func WithWaitDelay(d time.Duration) *Option {
@@ -266,7 +265,6 @@ func WithWaitDelay(d time.Duration) *Option {
 //	return &Option{setProcessGroup: set}
 //}
 
-// compileOpts merges multiple options into a single configuration struct.
 // The last option specified for most fields takes precedence.
 // additionalEnv is appended across options.
 func compileOpts(opts []*Option) *Option {
