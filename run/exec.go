@@ -165,7 +165,7 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 				stderrContent = stderrBuf.String()
 			}
 			err = fmt.Errorf("command %v exited non-zero (%d): %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
-				args, exitCode, err, ctx.Err(), stdoutContent, stderrContent)
+				args, exitCode, err, ctx.Err(), stdoutContent, stderrContent) //nolint:errorlint
 			logger.DebugContext(ctx, "command exited non-zero",
 				"exit_code", exitCode,
 				"error", err,
@@ -181,7 +181,7 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 				stderrContent = stderrBuf.String()
 			}
 			err = fmt.Errorf("command %v failed: %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
-				args, err, ctx.Err(), stdoutContent, stderrContent)
+				args, err, ctx.Err(), stdoutContent, stderrContent) //nolint:errorlint
 			logger.DebugContext(ctx, "command failed with execution error",
 				"exit_code", exitCode,
 				"error", err,
