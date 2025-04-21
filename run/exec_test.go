@@ -24,15 +24,13 @@ func TestSimple(t *testing.T) {
 			wantOut: "foo bar   bazz\n",
 		},
 		{
-			name:     "no_command_error",
-			args:     []string{"echoooocrapimistyped", "foo", "bar   bazz"},
-			wantCode: -1,
-			wantErr:  "not found",
+			name:    "no_command_error",
+			args:    []string{"echoooocrapimistyped", "foo", "bar   bazz"},
+			wantErr: "not found",
 		},
 		{
 			name:       "exit_code_error",
 			args:       []string{"cat", "/fake/file/path/should/fail"},
-			wantCode:   1,
 			wantStdErr: "cat: /fake/file/path/should/fail: No such file or directory\n",
 			wantErr:    "exited non-zero (1): exit status 1 (context error: <nil>)\nstdout:\n\nstderr:\ncat:",
 		},
@@ -42,16 +40,13 @@ func TestSimple(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := t.Context()
-			stdout, stderr, exitCode, err := Simple(ctx, tc.args...)
+			stdout, stderr, err := Simple(ctx, tc.args...)
 
 			if diff := cmp.Diff(stdout, tc.wantOut); diff != "" {
 				t.Errorf("stdout was not as expected(-got,+want): %s", diff)
 			}
 			if diff := cmp.Diff(stderr, tc.wantStdErr); diff != "" {
 				t.Errorf("stderr was not as expected(-got,+want): %s", diff)
-			}
-			if got, want := exitCode, tc.wantCode; got != want {
-				t.Errorf("exit code was not as expected, got: %d, want: %d", got, want)
 			}
 			if diff := testutil.DiffErrString(err, tc.wantErr); diff != "" {
 				t.Error(diff)

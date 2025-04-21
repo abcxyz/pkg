@@ -48,16 +48,16 @@ const DefaultWaitDelay = time.Second
 //
 // If the command fails, the error message will include the contents of stdout
 // and stderr. This saves boilerplate in the caller.
-func Simple(ctx context.Context, args ...string) (stdout, stderr string, exitCode int, _ error) {
+func Simple(ctx context.Context, args ...string) (stdout, stderr string, _ error) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	opts := []*Option{
 		WithStdout(&stdoutBuf),
 		WithStderr(&stderrBuf),
 	}
 
-	exitCode, err := Run(ctx, opts, args...)
+	_, err := Run(ctx, opts, args...)
 
-	return stdoutBuf.String(), stderrBuf.String(), exitCode, err
+	return stdoutBuf.String(), stderrBuf.String(), err
 }
 
 // Run executes the command specified by args, applying configurations from opts.
