@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,6 +44,8 @@ const DefaultWaitDelay = time.Second
 // This is intended to be used for commands that run non-interactively then
 // exit.
 //
+// Sub-command inherits env variables.
+//
 // If the command exits with a nonzero status code, an *exec.ExitError will be
 // returned.
 //
@@ -50,9 +53,10 @@ const DefaultWaitDelay = time.Second
 // and stderr. This saves boilerplate in the caller.
 func Simple(ctx context.Context, args ...string) (stdout, stderr string, _ error) {
 	var stdoutBuf, stderrBuf bytes.Buffer
-	opts := []*Option{
-		WithStdout(&stdoutBuf),
-		WithStderr(&stderrBuf),
+	opts := &Option{
+		Stdout: &stdoutBuf,
+		Stderr: &stderrBuf,
+		Env:    os.Environ(),
 	}
 
 	_, err := Run(ctx, opts, args...)
@@ -73,7 +77,7 @@ func Simple(ctx context.Context, args ...string) (stdout, stderr string, _ error
 //
 // This doesn't execute a shell (unless of course args[0] is the name of a shell
 // binary).
-func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ error) {
+func Run(ctx context.Context, opts *Option, args ...string) (exitCode int, _ error) {
 	logger := logging.FromContext(ctx)
 
 	if len(args) == 0 {
@@ -88,49 +92,27 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 		defer cancel() // Ensure the derived context is cancelled
 	}
 
-	compiledOpts := compileOpts(opts)
-
 	// #nosec G204 -- Execution of external commands is the purpose of this package. Inputs must be trusted by the caller.
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
-	cmd.Dir = compiledOpts.cwd
-	cmd.Stdin = compiledOpts.stdin
-	// Handle stdout/stderr, capturing output if writers are bytes.Buffer for error reporting.
-	var stdoutBuf, stderrBuf *bytes.Buffer
-	if compiledOpts.stdout != nil {
-		cmd.Stdout = compiledOpts.stdout
-		if bb, ok := compiledOpts.stdout.(*bytes.Buffer); ok {
-			stdoutBuf = bb
-		}
+	cmd.Dir = opts.Cwd
+	cmd.Stdin = opts.Stdin
+
+	if opts.Stdout != nil {
+		cmd.Stdout = opts.Stdout
 	} else {
 		cmd.Stdout = os.Stdout
 	}
-	if compiledOpts.stderr != nil {
-		cmd.Stderr = compiledOpts.stderr
-		if bb, ok := compiledOpts.stderr.(*bytes.Buffer); ok {
-			stderrBuf = bb
-		}
+	if opts.Stderr != nil {
+		cmd.Stderr = opts.Stderr
 	} else {
 		cmd.Stderr = os.Stderr
 	}
 
-	useCustomEnv := len(compiledOpts.allowedEnvKeys) > 0 || len(compiledOpts.deniedEnvKeys) > 0 || len(compiledOpts.additionalEnv) > 0
-	if useCustomEnv {
-		currentEnv := os.Environ()
-		logger.DebugContext(ctx, "calculating custom environment",
-			"inherited_count", len(currentEnv),
-			"allowed_patterns", compiledOpts.allowedEnvKeys,
-			"denied_patterns", compiledOpts.deniedEnvKeys,
-			"additional_vars_count", len(compiledOpts.additionalEnv))
-		env := environ(currentEnv, compiledOpts.allowedEnvKeys, compiledOpts.deniedEnvKeys, compiledOpts.additionalEnv)
-		logger.DebugContext(ctx, "computed environment", "env", env)
-		cmd.Env = env
-	} else {
-		logger.DebugContext(ctx, "using inherited environment")
-	}
+	cmd.Env = opts.Env
 
-	if compiledOpts.waitDelay != nil {
-		cmd.WaitDelay = *compiledOpts.waitDelay
+	if opts.WaitDelay != nil {
+		cmd.WaitDelay = *opts.WaitDelay
 	} else {
 		cmd.WaitDelay = DefaultWaitDelay
 	}
@@ -138,7 +120,7 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 
 	logger.DebugContext(ctx, "starting command",
 		"args", args,
-		"options", compiledOpts,
+		"options", opts,
 	)
 	err := cmd.Run() // This blocks until the command exits or context is cancelled
 
@@ -150,42 +132,19 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 
 	if err != nil {
 		var exitErr *exec.ExitError
-		isExitError := errors.As(err, &exitErr)
 
-		if isExitError && compiledOpts.allowNonZeroExit {
-			logger.DebugContext(ctx, "command exited non-zero, but allowed by option", "exit_code", exitCode)
-			err = nil
-		} else if isExitError {
-			stdoutContent := "[stdout not captured]"
-			if stdoutBuf != nil {
-				stdoutContent = stdoutBuf.String()
+		if errors.As(err, &exitErr) {
+			if opts.AllowedExitCodes[0] == -1 || slices.Contains(opts.AllowedExitCodes, exitCode) {
+				logger.DebugContext(ctx, "command exited non-zero, but allowed by option", "exit_code", exitCode)
+				err = nil
+			} else {
+				logger.DebugContext(ctx, "command exited non-zero",
+					"exit_code", exitCode,
+					"error", err,
+				)
+				err = fmt.Errorf("command %v exited non-zero (%d): %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
+					args, exitCode, err, ctx.Err(), cmd.Stdout, cmd.Stderr) //nolint:errorlint
 			}
-			stderrContent := "[stderr not captured]"
-			if stderrBuf != nil {
-				stderrContent = stderrBuf.String()
-			}
-			err = fmt.Errorf("command %v exited non-zero (%d): %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
-				args, exitCode, err, ctx.Err(), stdoutContent, stderrContent) //nolint:errorlint
-			logger.DebugContext(ctx, "command exited non-zero",
-				"exit_code", exitCode,
-				"error", err,
-			)
-		} else {
-			// It's an actual execution error (e.g., command not found, context cancelled early)
-			stdoutContent := "[stdout not captured]"
-			if stdoutBuf != nil {
-				stdoutContent = stdoutBuf.String()
-			}
-			stderrContent := "[stderr not captured]"
-			if stderrBuf != nil {
-				stderrContent = stderrBuf.String()
-			}
-			err = fmt.Errorf("command %v failed: %w (context error: %v)\nstdout:\n%s\nstderr:\n%s",
-				args, err, ctx.Err(), stdoutContent, stderrContent) //nolint:errorlint
-			logger.DebugContext(ctx, "command failed with execution error",
-				"exit_code", exitCode,
-				"error", err,
-			)
 		}
 	} else {
 		// Command ran successfully (exit code 0)
@@ -198,118 +157,29 @@ func Run(ctx context.Context, opts []*Option, args ...string) (exitCode int, _ e
 // Option implements the functional options pattern for [Run].
 // It holds all configurable settings for executing a command.
 type Option struct {
-	// Basic execution control
-	allowNonZeroExit bool
-	cwd              string
-	stdin            io.Reader
-	stdout           io.Writer
-	stderr           io.Writer
-	waitDelay        *time.Duration
+	// AllowNonzeroExitCodes prevents Run from returning error when one of
+	// the listed non-zero status codes appear. If AllowedExitCodes[0] == -1,
+	// all exit codes are allowed.
+	AllowedExitCodes []int
 
-	allowedEnvKeys []string
-	deniedEnvKeys  []string
-	additionalEnv  []string
-}
-
-// AllowNonzeroExit prevents Run from returning an error
-// when the command exits with a non-zero status code.
-func AllowNonzeroExit() *Option {
-	return &Option{allowNonZeroExit: true}
-}
-
-// WithStdin provides the given reader as the command's
-// standard input.
-func WithStdin(stdin io.Reader) *Option {
-	return &Option{stdin: stdin}
-}
-
-// WithStdinStr is a convenience option that uses the given string as the
-// command's standard input.
-func WithStdinStr(stdin string) *Option {
-	return WithStdin(bytes.NewBufferString(stdin))
-}
-
-// WithStdout directs the command's standard output
-// to the given writer.
-func WithStdout(stdout io.Writer) *Option {
-	return &Option{stdout: stdout}
-}
-
-// WithStderr directs the command's standard error
-// to the given writer.
-func WithStderr(stderr io.Writer) *Option {
-	return &Option{stderr: stderr}
-}
-
-// WithCwd runs the command in the specified working directory.
-func WithCwd(cwd string) *Option {
-	return &Option{cwd: cwd}
-}
-
-// WithFilteredEnv filters the inherited environment variables.
-// allowed is a list of glob patterns for keys to keep (empty means allow all initially).
-// denied is a list of glob patterns for keys to remove (takes precedence).
-func WithFilteredEnv(allowed, denied []string) *Option {
-	return &Option{allowedEnvKeys: allowed, deniedEnvKeys: denied}
-}
-
-// WithAdditionalEnv returns an option that adds or overrides environment variables.
-// vars is a slice of strings in "KEY=VALUE" format. Can be added multiple times.
-func WithAdditionalEnv(vars []string) *Option {
-	return &Option{additionalEnv: vars}
-}
-
-// WithWaitDelay sets a grace period for the command to exit after the context
-// is cancelled before being forcefully killed.
-// Default: DefautWaitDelay.
-// See exec.Cmd.WaitDelay for more information.
-func WithWaitDelay(d time.Duration) *Option {
-	return &Option{waitDelay: &d}
+	// Runs command in specified working directory.
+	Cwd string
+	// Env contains the list of env vars in KEY=VALUE form. Default is no env vars.
+	Env []string
+	// Sets the cmd's Stdin. Defaults is no Stdin.
+	Stdin io.Reader
+	// Sets the cmd's Stdout. Default is os.Stdout.
+	Stdout io.Writer
+	// Sets the cmd's Stderr. Default is os.Stderr.
+	Stderr io.Writer
+	// Sets a grace period for the command to exit after the context
+	// is cancelled before being forcefully killed.
+	// Default: DefautWaitDelay. 0 is no wait delay.
+	// See exec.Cmd.WaitDelay for more information.
+	WaitDelay *time.Duration
 }
 
 // TODO: handle process group and cancel semantics.
-// WithProcessGroup returns an option that attempts to run the command in a new
-// process group (primarily effective on Unix-like systems).
-//func WithProcessGroup(set bool) *Option {
-//	return &Option{setProcessGroup: set}
-//}
-
-// The last option specified for most fields takes precedence.
-// additionalEnv is appended across options.
-func compileOpts(opts []*Option) *Option {
-	out := Option{}
-
-	for _, opt := range opts {
-		if opt.allowNonZeroExit {
-			out.allowNonZeroExit = true
-		}
-		if opt.cwd != "" {
-			out.cwd = opt.cwd
-		}
-		if opt.stdin != nil {
-			out.stdin = opt.stdin
-		}
-		if opt.stdout != nil {
-			out.stdout = opt.stdout
-		}
-		if opt.stderr != nil {
-			out.stderr = opt.stderr
-		}
-		if opt.waitDelay != nil {
-			out.waitDelay = opt.waitDelay
-		}
-		if opt.allowedEnvKeys != nil {
-			out.allowedEnvKeys = opt.allowedEnvKeys
-		}
-		if opt.deniedEnvKeys != nil {
-			out.deniedEnvKeys = opt.deniedEnvKeys
-		}
-		if len(opt.additionalEnv) > 0 {
-			out.additionalEnv = append(out.additionalEnv, opt.additionalEnv...)
-		}
-	}
-	return &out
-}
 
 // anyGlobMatch checks if string s matches any of the glob patterns.
 func anyGlobMatch(s string, patterns []string) bool {
@@ -326,10 +196,10 @@ func anyGlobMatch(s string, patterns []string) bool {
 	return false
 }
 
-// environ compiles the appropriate environment to pass to the child process.
+// Environ is a utility to compile environment variables to pass to the child.
 // The overridden environment is always added, even if not explicitly
 // allowed/denied.
-func environ(osEnv, allowedKeys, deniedKeys, overrideEnv []string) []string {
+func Environ(osEnv, allowedKeys, deniedKeys, overrideEnv []string) []string {
 	finalEnv := make([]string, 0, len(osEnv)+len(overrideEnv))
 
 	// Select keys that match the allow filter (if given) but not the deny filter.
