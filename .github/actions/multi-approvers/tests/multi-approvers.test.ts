@@ -232,14 +232,6 @@ test("#multi-approvers", { concurrency: true }, async (suite) => {
         username: approver1,
         role: "member",
         state: "active",
-      })
-      .get(`/orgs/${repoOwner}/teams/${team}/memberships/${approver2}`)
-      .reply(200, {
-        org: repoOwner,
-        team_slug: team,
-        username: approver2,
-        role: "member",
-        state: "active",
       });
 
     await assertRejects(

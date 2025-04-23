@@ -14,11 +14,10 @@
 
 import { getOctokit } from "@actions/github";
 import { OctokitOptions } from "@octokit/core";
-import { RestEndpointMethodTypes } from "@octokit/rest";
 import { RequestError } from "@octokit/request-error";
+import { components } from "@octokit/openapi-types";
 
-type PullRequestReview =
-  RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"];
+type PullRequestReview = components["schemas"]["pull-request-review"];
 type Octokit = ReturnType<typeof getOctokit>;
 export type EventName = "pull_request" | "pull_request_review";
 
@@ -132,69 +131,119 @@ export class MultiApproversAction {
     }
   }
 
-  // Returns the number of approvals from members in the given list.
-  private async internalApprovedCount(
-    submittedReviews: PullRequestReview,
-    prLogin: string,
-  ): Promise<number> {
-    // Sort by chronological order.
-    const sortedReviews = submittedReviews.sort(
-      (a, b) =>
-        new Date(a.submitted_at || 0).getTime() -
-        new Date(b.submitted_at || 0).getTime(),
-    );
-    const reviewStateByLogin = new Map<string, string>();
+  private async fetchReviews(): Promise<Array<PullRequestReview>> {
+    return await this.octokit.paginate(this.octokit.rest.pulls.listReviews, {
+      owner: this.repoOwner,
+      repo: this.repoName,
+      pull_number: this.pullNumber,
+    });
+  }
 
-    for (const r of sortedReviews) {
-      if (!r.user) {
-        this.logNotice(
-          `Ignoring pull request review because user is unset: ${JSON.stringify(r)}`,
-        );
-        continue;
+  /**
+   * Group reviews by reviewer.
+   *
+   * This method assumes that all reviews have a user.
+   *
+   * Object.groupBy can be used once it becomes available. It would look like
+   * this: Object.groupBy(reviews, (r) => r.user!.login);
+   */
+  private groupReviewsByReviewer(reviews: Array<PullRequestReview>): {
+    [key: string]: Array<PullRequestReview>;
+  } {
+    return reviews.reduce((acc, r) => {
+      const reviewerLogin = r.user!.login;
+      let reviews = acc[reviewerLogin];
+      if (reviews === undefined) {
+        reviews = [];
+        acc[reviewerLogin] = reviews;
       }
+      reviews.push(r);
+      return acc;
+    }, Object.create(null));
+  }
 
-      const reviewerLogin = r.user.login;
-
+  /**
+   * Returns the number of approvals from unique internal reviewers.
+   *
+   * Steps:
+   *
+   * 1. Fetch all reviews for the PR.
+   * 2. Filter out reviews that do not have a `user` field (this case is not
+   *    expected, but possible according to the type system).
+   * 3. Filter out reviews from the PR author.
+   * 4. Filter out comments -- we only care about approvals and change requests.
+   * 5. Group reviews by reviewer.
+   * 6. Ignore reviews by external reviewers.
+   * 7. Sort all reviews by a single reviewer and get the last (non-comment)
+   *    review status.
+   * 8. Return the count of unique reviewers who's last (non-comment) review is
+   *    approved.
+   *
+   * Written in functional pseudocode, this would look like this:
+   *
+   * fetchReviews()
+   * .filter(r => !!r.user)
+   * .filter(r => r.user.login !== prLogin)
+   * .filter(r.state !== "COMMENTED")
+   * .groupBy(r => r.user.login)
+   * .filter([login, reviews] => isInternal(login))
+   * .map([login, reviews] => [login, reviews.sort(r => r.submitted_at).reverse())
+   * .map([login, reviews] => reviews[0].state)
+   * .filter(s => s === "APPROVED")
+   * .count();
+   */
+  private async internalApprovedCount(prLogin: string): Promise<number> {
+    const reviews = (await this.fetchReviews())
+      // Filter out reviews that do not have a user.
+      .filter((r) => {
+        if (!r.user) {
+          this.logNotice(
+            `Ignoring pull request review because user is unset: ${JSON.stringify(r)}`,
+          );
+          return false;
+        }
+        return true;
+      })
       // Ignore the PR user.
-      if (reviewerLogin === prLogin) {
-        this.logDebug(`Ignoring review from ${prLogin} (self)`);
-        continue;
-      }
+      .filter((r) => {
+        if (r.user!.login === prLogin) {
+          this.logDebug(`Ignoring review from ${prLogin} (self)`);
+          return false;
+        }
+        return true;
+      })
+      // Filter out comments -- we only care about APPROVED and CHANGES_REQUESTED.
+      .filter((r) => r.state !== "COMMENTED");
 
-      // Only consider internal users.
-      const isInternalUser = await this.isInternal(reviewerLogin);
-      if (!isInternalUser) {
+    // Group reviews by reviewer.
+    const groups = this.groupReviewsByReviewer(reviews);
+
+    let approvedCount = 0;
+    for (const [reviewerLogin, reviews] of Object.entries(groups)) {
+      // Only consider internal reviewers.
+      const isInternal = await this.isInternal(reviewerLogin);
+      if (!isInternal) {
         this.logDebug(
           `Ignoring reviewer ${reviewerLogin} because they are not a member of ${this.team}`,
         );
         continue;
       }
 
-      // Set state if it does not exist.
-      if (!reviewStateByLogin.has(reviewerLogin)) {
-        reviewStateByLogin.set(reviewerLogin, r.state);
-        continue;
-      }
+      // Get the most recent (non-comment) review by this reviewer.
+      const mostRecentReview = reviews
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.submitted_at || 0).getTime() -
+            new Date(b.submitted_at || 0).getTime(),
+        )
+        .reverse()[0];
 
-      // Always update state if not approved.
-      if (reviewStateByLogin.get(reviewerLogin) !== "APPROVED") {
-        reviewStateByLogin.set(reviewerLogin, r.state);
-        continue;
-      }
-
-      // Do not update approved state for a comment.
-      if (
-        reviewStateByLogin.get(reviewerLogin) === "APPROVED" &&
-        r.state !== "COMMENTED"
-      ) {
-        reviewStateByLogin.set(reviewerLogin, r.state);
-        continue;
+      if (mostRecentReview.state === "APPROVED") {
+        approvedCount++;
       }
     }
 
-    return Array.from(reviewStateByLogin.values()).filter(
-      (s) => s === "APPROVED",
-    ).length;
+    return approvedCount;
   }
 
   /** Checks that approval requirements are satisfied. */
@@ -216,19 +265,8 @@ export class MultiApproversAction {
       );
       return;
     }
-    const submittedReviews: PullRequestReview = await this.octokit.paginate(
-      this.octokit.rest.pulls.listReviews,
-      {
-        owner: this.repoOwner,
-        repo: this.repoName,
-        pull_number: this.pullNumber,
-      },
-    );
 
-    const approvedCount = await this.internalApprovedCount(
-      submittedReviews,
-      prLogin,
-    );
+    const approvedCount = await this.internalApprovedCount(prLogin);
 
     this.logInfo(`Found ${approvedCount} APPROVED internal reviews.`);
 
