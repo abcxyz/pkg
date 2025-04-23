@@ -104,19 +104,23 @@ export class MultiApproversAction {
       });
       const state = response.data.state;
       if (state !== "active") {
-        this.logDebug(`Skipping because state is not active: ${state}`);
+        this.logDebug(
+          `Skipping because ${login} membership state is not active: ${state}`,
+        );
         return false;
       }
       const role = response.data.role;
       if (role !== "maintainer" && role !== "member") {
-        this.logDebug(`Skipping because role does not match: ${role}`);
+        this.logDebug(
+          `Skipping because ${login} membership role does not match: ${role}`,
+        );
         return false;
       }
       return true;
     } catch (err) {
       if (err instanceof RequestError && err.status === 404) {
         this.logDebug(
-          `Received 404 testing membership; assuming user is not a member: ${JSON.stringify(
+          `Received 404 testing membership; assuming ${login} is not a member: ${JSON.stringify(
             err,
           )}`,
         );
