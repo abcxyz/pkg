@@ -100,7 +100,7 @@ export class MultiApproversAction {
       const role = response.data.role;
       if (role !== "maintainer" && role !== "member") {
         this.logDebug(
-          `Skipping because ${login} membership role does not match: ${role}`,
+          `Skipping because ${login} membership role "${role}" is not in ["maintainer", "member"]`,
         );
         return false;
       }
