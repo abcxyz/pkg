@@ -1,6 +1,6 @@
 {
   "name": "multi-approvers",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "GitHub Action that enforces approver requriements.",
   "author": "Google LLC",
   "license": "Apache-2.0",
