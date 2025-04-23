@@ -46,7 +46,6 @@ export interface MultiApproversParams {
 }
 
 export class MultiApproversAction {
-  private readonly isInternalCache = new Map<string, boolean>();
   private readonly eventName: string;
   private readonly runId: number;
   private readonly branch: string;
@@ -83,19 +82,8 @@ export class MultiApproversAction {
   // eslint-disable-next-line no-unused-vars
   private logNotice: (_: string) => void;
 
-  // TODO(ishafer): Consider using a memoization library.
-  private async isInternal(login: string): Promise<boolean> {
-    const cachedValue = this.isInternalCache.get(login);
-    if (cachedValue !== undefined) {
-      return cachedValue;
-    }
-    const value = await this._isInternal(login);
-    this.isInternalCache.set(login, value);
-    return value;
-  }
-
   // Tests whether the given login is an active member of the team.
-  private async _isInternal(login: string): Promise<boolean> {
+  private async isInternal(login: string): Promise<boolean> {
     try {
       const response = await this.octokit.rest.teams.getMembershipForUserInOrg({
         org: this.repoOwner,
