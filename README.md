@@ -178,7 +178,22 @@ approval from all requested reviewers.
 An admin will need to create a new ruleset within the repo to add want_lgtm_all to be included
 as a required status check.
 
-#### multi-approvers.yml
+#### [DEPRECATED] multi-approvers.yml
+
+> [!CAUTION]
+> This workflow will be deprecated on **September 2nd, 2025**.
+
+> [!WARNING]
+> Use the new [multi-approvers Action](https://github.com/abcxyz/actions/tree/main/.github/actions/multi-approvers) instead. 
+
+**Migration instructions**
+
+To migrate from this deprecated workflow to the new action one must translate
+the JSON member file to a GitHub Team. The new action does not support JSON
+member files and is therefore not backward compatible with the original
+multi-approver workflow.
+
+**[DEPRECATED] Instructions**
 
 Use this workflow to require two in-org approvers for pull requests sent from an
 out-of-org user. This prevents in-org users from creating "sock puppet" accounts
