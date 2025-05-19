@@ -47,42 +47,9 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
-      - name: 'Setup Python'
-        uses: 'actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38' # ratchet:actions/setup-python@v5
-
-      - name: 'Install yamllint'
-        run: |-
-          pip install --user yamllint==${{ inputs.yamllint_version }}
-
-      - name: 'Lint (download default configuration)'
-        id: 'load-default-config'
-        if: |-
-          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
-        run: |-
-          # Create a unique output file outside of the checkout.
-          YAMLLINT_YAML="${RUNNER_TEMP}/${GITHUB_SHA:0:7}.yamllint.yml"
-
-          # Download the file, passing in authentication to get a higher rate
-          # limit: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#rate-limits-for-requests-from-github-actions
-          curl "${{ inputs.yamllint_url }}" \
-            --silent \
-            --fail \
-            --location \
-            --header "Authorization: Token ${{ github.token }}" \
-            --output "${YAMLLINT_YAML}"
-
-          # Save the result to an output.
-          echo "::notice::Wrote configuration file to ${YAMLLINT_YAML}"
-          echo "output-file=${YAMLLINT_YAML}" >> "${GITHUB_OUTPUT}"
-
-      - name: 'Lint (default configuration)'
-        if: |-
-          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') == '' }}
-        run: |-
-          yamllint -c "${{ steps.load-default-config.outputs.output-file }}" ${{ inputs.target }}
-
-      - name: 'Lint (custom configuration)'
-        if: |-
-          ${{ hashFiles('.yamllint.yml', '.yamllint.yaml') != '' }}
-        run: |-
-          yamllint ${{ inputs.target }}
+      - name: 'Lint Yaml'
+        uses: 'abcxyz/actions/.github/actions/lint-yaml@main' # ratchet:exclude
+        with:
+          yamllint_url: '${{ inputs.yamllint_url }}'
+          yamllint_version: '${{ inputs.yamllint_version }}'
+          target: '${{ inputs.target }}'

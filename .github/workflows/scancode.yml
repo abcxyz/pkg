@@ -32,7 +32,7 @@
 #
 #   jobs:
 #     scancode:
-#       uses: 'abcxyz/pkg/.github/workflows/scancode.yml@main' # pin tag or sha here.
+#       uses: 'abcxyz/actions/.github/workflows/scancode.yml@main' # pin tag or sha here.
 #       with:
 #         branch: '${{ inputs.branch }}'
 #
@@ -76,13 +76,13 @@ jobs:
 
       - name: 'Scan the code'
         id: 'scancode'
-        uses: 'abcxyz/pkg/.github/actions/scancode@main' # ratchet:exclude
+        uses: 'abcxyz/actions/.github/actions/scancode@main' # ratchet:exclude
         with:
-          directory-to-scan: '${{ env.REPO_ROOT }}'
+          directory_to_scan: '${{ env.REPO_ROOT }}'
 
       # Upload the scancode result artifacts to GitHub Action artifact, see
       # https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts.
-      - uses: 'actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08' # ratchet:actions/upload-artifact@v4
+      - uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' # ratchet:actions/upload-artifact@v4
         with:
           name: 'scancode output'
           path: |

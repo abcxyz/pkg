@@ -1,0 +1,49 @@
+# Copyright 2025 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'lint-java'
+description: 'Lint java against the abcxyz style guide.'
+inputs:
+  java_version:
+    description: 'The version of Java to install and use.'
+    type: 'string'
+    required: true
+  java_distribution:
+    description: 'The distibution of Java to use.'
+    type: 'string'
+    default: 'zulu'
+  google_java_format_version:
+    description: 'The version of google-java-format to use. This must be the full version with no leading "v" prefix.'
+    type: 'string'
+    default: '1.25.2'
+  directory:
+    description: 'Directory in which Java files reside.'
+    type: 'string'
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Emit deprecation warning'
+      shell: 'bash'
+      run: |-
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/lint-java instead."
+
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/lint-java@main' # ratchet:exclude
+      with:
+        java_version: '${{ inputs.java_version }}'
+        java_distribution: '${{ inputs.java_distribution }}'
+        google_java_format_version: '${{ inputs.google_java_format_version }}'
+        directory: '${{ inputs.directory }}'

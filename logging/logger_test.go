@@ -141,6 +141,46 @@ func TestNewFromEnv(t *testing.T) {
 			},
 			wantPanic: "invalid value for LOG_DEBUG: strconv.ParseBool",
 		},
+
+		// target
+		{
+			name: "empty_target",
+			env: map[string]string{
+				"LOG_TARGET": "",
+			},
+		},
+		{
+			name: "custom_target",
+			env: map[string]string{
+				"LOG_TARGET": "STDERR",
+			},
+		},
+		{
+			name: "invalid_target",
+			env: map[string]string{
+				"LOG_TARGET": "ME",
+			},
+			wantPanic: "invalid value for LOG_TARGET: no such target \"ME\"",
+		},
+
+		// globals override
+		{
+			name:      "local_overrides_global",
+			envPrefix: "CUSTOM_",
+			env: map[string]string{
+				"LOG_LEVEL":        "warn",
+				"CUSTOM_LOG_LEVEL": "debug",
+			},
+			wantLevel: LevelDebug,
+		},
+		{
+			name:      "global_used_if_no_local",
+			envPrefix: "CUSTOM_",
+			env: map[string]string{
+				"LOG_LEVEL": "warn",
+			},
+			wantLevel: LevelWarning,
+		},
 	}
 
 	for _, tc := range cases {
@@ -157,9 +197,9 @@ func TestNewFromEnv(t *testing.T) {
 				}
 			}()
 
-			logger := newFromEnv(tc.envPrefix, func(k string) string {
+			logger := newFromEnv(tc.envPrefix, WithGetenv(func(k string) string {
 				return tc.env[k]
-			})
+			}))
 
 			if !logger.Handler().Enabled(ctx, tc.wantLevel) {
 				t.Errorf("expected handler to be at least %s", tc.wantLevel)

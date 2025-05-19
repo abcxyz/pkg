@@ -1,0 +1,53 @@
+# Copyright 2025 The Authors (see AUTHORS file)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'lint-go'
+description: 'Lint go against the abcxyz style guide.'
+inputs:
+  go_version:
+    description: 'The version of Go to install and use.'
+    type: 'string'
+  go_version_file:
+    description: 'Path to the go.mod file to extract a version.'
+    type: 'string'
+    default: 'go.mod'
+  golangci_url:
+    description: 'The URL to a golangci file. This is only used if no file is found in the local directory.'
+    type: 'string'
+    default: 'https://raw.githubusercontent.com/abcxyz/pkg/main/.golangci.yml'
+  directory:
+    description: 'Directory in which Go files reside.'
+    type: 'string'
+    default: '.'
+  golangci_lint_version:
+    description: 'Version of golangci linter to use'
+    type: 'string'
+    default: 'v1.64'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Emit deprecation warning'
+      shell: 'bash'
+      run: |-
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/lint-go instead."
+
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/lint-go@main' # ratchet:exclude
+      with:
+        go_version: '${{ inputs.go_version }}'
+        go_version_file: '${{ inputs.go_version_file }}'
+        golangci_url: '${{ inputs.golangci_url }}'
+        directory: '${{ inputs.directory }}'
+        golangci_lint_version: '${{ inputs.golangci_lint_version }}'

@@ -12,24 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:3.10
+name: 'test'
 
-ENV SCANCODE_RELEASE=32.0.8
+on:
+  pull_request:
+    branches:
+      - 'main'
+      - 'release/**/*'
+  workflow_dispatch:
 
-RUN apt-get update && apt-get install -y bzip2 xz-utils zlib1g libxml2-dev libxslt1-dev
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
 
-ADD "https://github.com/nexB/scancode-toolkit/archive/refs/tags/v${SCANCODE_RELEASE}.tar.gz" .
-
-RUN mkdir scancode-toolkit && tar xzvf v${SCANCODE_RELEASE}.tar.gz -C scancode-toolkit --strip-components=1
-
-WORKDIR /scancode-toolkit
-
-RUN ./scancode --help
-
-ENV PATH=$HOME/scancode-toolkit:$PATH
-
-RUN pip3 install pyyaml
-
-COPY entrypoint.sh /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+jobs:
+  go_test:
+    uses: 'abcxyz/actions/.github/workflows/go-test.yml@main' # ratchet:exclude

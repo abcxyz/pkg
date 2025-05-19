@@ -100,3 +100,4 @@ ignore:
   - 'thirdparty/'
   - 'third_party/'
   - 'vendor/'
+  - '.abc/'

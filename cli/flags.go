@@ -865,15 +865,35 @@ type StringSliceVar struct {
 
 func (f *FlagSection) StringSliceVar(i *StringSliceVar) {
 	parser := func(s string) ([]string, error) {
-		final := make([]string, 0)
-		parts := strings.Split(s, ",")
-		for _, part := range parts {
-			trimmed := strings.TrimSpace(part)
-			if trimmed != "" {
-				final = append(final, trimmed)
+		var parts []string
+		var b strings.Builder
+		var escaped bool
+
+		for _, r := range s {
+			if escaped {
+				escaped = false
+				b.WriteRune(r)
+				continue
+			}
+
+			switch r {
+			case '\\':
+				escaped = true
+			case ',':
+				if v := strings.TrimSpace(b.String()); v != "" {
+					parts = append(parts, v)
+				}
+				b.Reset()
+			default:
+				b.WriteRune(r)
 			}
 		}
-		return final, nil
+
+		if v := strings.TrimSpace(b.String()); v != "" {
+			parts = append(parts, v)
+		}
+
+		return parts, nil
 	}
 
 	printer := func(v []string) string {

@@ -38,6 +38,8 @@ function inOrgApprovedCount(members, submittedReviews, prLogin) {
 
 /** Checks that approval requirements are satisfied. */
 async function onPullRequest({orgMembersPath, prNumber, repoName, repoOwner, github, core}) {
+  core.warning("This workflow is deprecated. Please migrate to the new multi-approvers action found at https://github.com/abcxyz/actions/tree/main/.github/actions/multi-approvers.");
+
   const members = require(orgMembersPath).reduce((acc, v) => acc.set(v.login, v), new Map());
   const prResponse = await github.rest.pulls.get({owner: repoOwner, repo: repoName, pull_number: prNumber});
   const prLogin = prResponse.data.user.login;
@@ -70,6 +72,8 @@ async function onPullRequest({orgMembersPath, prNumber, repoName, repoOwner, git
  * pull_request_review as different status checks.
  */
 async function onPullRequestReview({workflowRef, repoName, repoOwner, branch, prNumber, github, core}) {
+  core.warning("This workflow is deprecated. Please migrate to the new multi-approvers action found at https://github.com/abcxyz/actions/tree/main/.github/actions/multi-approvers.");
+
   // Get the filename of the workflow.
   const workflowFilename = workflowRef.split('@')[0].split('/').pop();
 

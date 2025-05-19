@@ -37,32 +37,15 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Load Env File'
+    - name: 'Emit deprecation warning'
       shell: 'bash'
-      working-directory: '${{ inputs.working_directory }}'
-      env:
-        ENV_FILE: '${{ inputs.env_file }}'
-        REQUIRE_ENV: '${{ inputs.require_env }}'
-        ENFORCED_DIRECTORIES: '${{ inputs.enforced_directories }}'
       run: |-
-        if [ -f "$ENV_FILE" ]; then
-          # Filter out comment lines, empty lines, and lines with only whitespace.
-          grep -v '^[[:space:]]*#\|^$\|^\s*$' $ENV_FILE >> ${GITHUB_ENV}
-        elif [ "$REQUIRE_ENV" == true ]; then
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/override-workflow-variables instead."
 
-          if [ "$ENFORCED_DIRECTORIES" == "" ]; then
-            # Set to top-level dir of respository to enforce on all working-directories.
-            ENFORCED_DIRECTORIES="$GITHUB_WORKSPACE"
-          fi
-
-          # Replace , with space to make values iterable.
-          for REQUIRED_DIR in ${ENFORCED_DIRECTORIES//,/ }; do
-
-            ENFORCED_PATH="${GITHUB_WORKSPACE}/${REQUIRED_DIR}"
-            # Fail if the current directory is subdirectory of an enforced directory.
-            if [[ "$PWD" = "$ENFORCED_PATH"* ]]; then
-              echo "::error::env file is missing in $PWD"
-              exit 1
-            fi
-          done
-        fi
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/override-workflow-variables@main' # ratchet:exclude
+      with:
+        working_directory: '${{ inputs.working_directory }}'
+        env_file: '${{ inputs.env_file }}'
+        require_env: '${{ inputs.require_env }}'
+        enforced_directories: '${{ inputs.enforced_directories }}'

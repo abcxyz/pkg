@@ -33,84 +33,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    # Removes "./" from the input filepath, if exists. This avoids an issue with
-    # the sparse-checkout option in the Checkout step, where a relative path,
-    # e.g. "./env.yml", will not match with the expected "env.yml" file.
-    - name: 'Sanitize Input Filepath'
-      id: 'sanitize_filepath'
+    - name: 'Emit deprecation warning'
       shell: 'bash'
-      env:
-        CONFIG_REL_PATH: '${{ inputs.filepath }}'
       run: |-
-        relpath=${CONFIG_REL_PATH}
-        filepath=$(echo "$relpath" | sed 's/^\.\///')
-        echo "CONFIG_PATH=$filepath" >> "$GITHUB_OUTPUT"
+        echo "::warning::This action has moved to its own repo and will be removed in a future release. Please upgrade to abcxyz/actions/.github/actions/load-workflow-variables instead."
 
-    - name: 'Get Approved Configuration File'
-      uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
+    - name: 'run abcxyz/actions'
+      uses: 'abcxyz/actions/.github/actions/load-workflow-variables@main' # ratchet:exclude
       with:
-        ref: '${{ github.event.repository.default_branch }}'
-        path: 'load-workflow-variables/${{ github.sha }}'
-        sparse-checkout: |
-          ${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}
-        sparse-checkout-cone-mode: 'false'
-
-    - name: 'Load Workflow Variables'
-      shell: 'bash'
-      env:
-        WORKING_DIRECTORY: '${{ inputs.working_directory }}'
-        FILEPATH: 'load-workflow-variables/${{ github.sha }}/${{ steps.sanitize_filepath.outputs.CONFIG_PATH }}'
-        FAIL_ON_MISSING: '${{ inputs.fail_on_missing }}'
-      run: |-
-        FILEPATH=$(realpath "${FILEPATH}")
-        if [[ "${FILEPATH}" != "${GITHUB_WORKSPACE}"* ]]; then
-            echo "ERROR: ${FILEPATH} is not a sub-directory of ${GITHUB_WORKSPACE}"
-            exit 1
-        fi
-
-        echo "WORKING_DIRECTORY:${WORKING_DIRECTORY}"
-        echo "FILEPATH:${FILEPATH}"
-
-        # YAML provides a more human friendly way to define configs, but yq
-        # does prefix/suffix matching on * which can cause unwanted results.
-        # jq does exact matching, so we use yq to convert YAML to JSON, then
-        # use jq to do exact matching for directory values.
-
-        # Convert YAML to JSON
-        JSON=$(yq -o=json < "${FILEPATH}")
-
-        # Look for exact match on working directory
-        FOUND=$(echo "${JSON}" | jq -r ".[] | select(.dirs[] | select(. == \"$WORKING_DIRECTORY\"))")
-
-        if [[ -z "${FOUND}" ]]; then
-            echo "NOT FOUND   No exact match for ${WORKING_DIRECTORY}"
-
-            # Search directory hierarchy upwards for a * suffix indicating all children of parent be used
-            while [[ "${WORKING_DIRECTORY}" != "/" && "${WORKING_DIRECTORY}" != "." && "${WORKING_DIRECTORY}" != "" ]]; do
-                WORKING_DIRECTORY=$(dirname "${WORKING_DIRECTORY}")
-                SEARCH_DIR="${WORKING_DIRECTORY}/*"
-                FOUND=$(echo "${JSON}" | jq -r ".[] | select(.dirs[] | select(. == \"$SEARCH_DIR\"))")
-
-                if [[ ! -z "${FOUND}" ]]; then
-                    echo "FOUND       Found match for ${SEARCH_DIR}"
-                    break
-                fi
-
-                echo "NOT FOUND   No match for ${SEARCH_DIR}"
-            done
-        else
-            echo "FOUND       Exact match for ${WORKING_DIRECTORY}"
-        fi
-
-        if [[ -z "${FOUND}" ]]; then
-            if [[ "${FAIL_ON_MISSING}" != "false" && "${FAIL_ON_MISSING}" != "FALSE" ]]; then
-                echo "FAILED      Failed to find config for dir ${WORKING_DIRECTORY}"
-                exit 1
-            else
-                echo "WARNING     Failed to find config for dir ${WORKING_DIRECTORY}"
-                exit 0
-            fi
-        else
-            VARS=$(echo "${FOUND}" | jq -r '.variables | to_entries | .[] | .key + "<<EOT\n" + .value + "\nEOT"')
-            echo "${VARS}" >> $GITHUB_ENV
-        fi
+        working_directory: '${{ inputs.working_directory }}'
+        filepath: '${{ inputs.filepath }}'
+        fail_on_missing: '${{ inputs.fail_on_missing }}'

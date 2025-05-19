@@ -55,59 +55,10 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
 
-      - name: 'Setup Terraform'
-        uses: 'hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd' # ratchet:hashicorp/setup-terraform@v3.1.2
+      - name: 'Lint Terraform'
+        uses: 'abcxyz/actions/.github/actions/lint-terraform@main' # ratchet:exclude
         with:
           terraform_version: '${{ inputs.terraform_version }}'
-
-      - name: 'Check formatting'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          terraform fmt -recursive -check -diff
-
-      - name: 'Initialize and validate sub directories'
-        if: '${{ inputs.walk_dirs }}'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        env:
-          IGNORE_DIRS: '${{ inputs.ignored_walk_dirs }}'
-        run: |-
-          TERRAFORM_DIRS="$(find . -name '*.tf' -printf "%h\n" | sort -u | tr '\n' ' ')"
-
-          for DIR in ${TERRAFORM_DIRS}; do
-            IGNORE=false
-            for IGNORE_DIR in ${IGNORE_DIRS}; do
-              if [[ "${DIR}" == $IGNORE_DIR ]]; then
-                IGNORE=true
-                break
-              fi
-            done
-
-            if [[ "${IGNORE}" == "true" ]]; then
-              echo "IGNORE: ${DIR}"
-              continue
-            fi
-
-            echo "::group::${DIR}"
-
-            pushd "${DIR}" &>/dev/null
-            terraform init -backend=false -input=false
-            terraform validate
-            popd &>/dev/null
-
-            echo "::endgroup::"
-          done
-
-      - name: 'Initialize and validate'
-        if: '${{ !inputs.walk_dirs }}'
-        shell: 'bash'
-        working-directory: '${{ inputs.directory }}'
-        run: |-
-          terraform init -backend=false -input=false
-          terraform validate
-
-      - name: 'abcxyz Terraform linter'
-        uses: 'abcxyz/terraform-linter@main' # ratchet:exclude
-        with:
-          paths: '${{ inputs.directory }}'
+          directory: '${{ inputs.directory }}'
+          walk_dirs: '${{ inputs.walk_dirs }}'
+          ignored_walk_dirs: '${{ inputs.ignored_walk_dirs }}'
