@@ -135,7 +135,8 @@ func Run(ctx context.Context, opts *Option, args ...string) (exitCode int, _ err
 		var exitErr *exec.ExitError
 
 		if errors.As(err, &exitErr) {
-			if opts.AllowedExitCodes[0] == -1 || slices.Contains(opts.AllowedExitCodes, exitCode) {
+			// TODO, should I allow -1 to be in any position?
+			if (len(opts.AllowedExitCodes) > 0 && opts.AllowedExitCodes[0] == -1) || slices.Contains(opts.AllowedExitCodes, exitCode) {
 				logger.DebugContext(ctx, "command exited non-zero, but allowed by option", "exit_code", exitCode)
 				err = nil
 			} else {
@@ -207,7 +208,7 @@ func Environ(osEnv, allowedKeys, deniedKeys, overrideEnv []string) []string {
 	for _, v := range osEnv {
 		k := strings.SplitN(v, "=", 2)[0]
 		if (len(allowedKeys) == 0 || anyGlobMatch(k, allowedKeys)) &&
-			!anyGlobMatch(k, deniedKeys) {
+				!anyGlobMatch(k, deniedKeys) {
 			finalEnv = append(finalEnv, v)
 		}
 	}
