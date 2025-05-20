@@ -208,7 +208,7 @@ func Environ(osEnv, allowedKeys, deniedKeys, overrideEnv []string) []string {
 	for _, v := range osEnv {
 		k := strings.SplitN(v, "=", 2)[0]
 		if (len(allowedKeys) == 0 || anyGlobMatch(k, allowedKeys)) &&
-				!anyGlobMatch(k, deniedKeys) {
+			!anyGlobMatch(k, deniedKeys) {
 			finalEnv = append(finalEnv, v)
 		}
 	}
