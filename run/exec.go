@@ -42,7 +42,8 @@ const DefaultWaitDelay = time.Second
 
 // Simple is a wrapper around [Run] that captures stdout and stderr as strings.
 // This is intended to be used for commands that run non-interactively then
-// exit.
+// exit. For large amounts of output, it's recommended to call Run with a
+// streaming writer to avoid having all output in RAM.
 //
 // Sub-command inherits env variables.
 //
@@ -206,7 +207,7 @@ func Environ(osEnv, allowedKeys, deniedKeys, overrideEnv []string) []string {
 	for _, v := range osEnv {
 		k := strings.SplitN(v, "=", 2)[0]
 		if (len(allowedKeys) == 0 || anyGlobMatch(k, allowedKeys)) &&
-			!anyGlobMatch(k, deniedKeys) {
+				!anyGlobMatch(k, deniedKeys) {
 			finalEnv = append(finalEnv, v)
 		}
 	}
