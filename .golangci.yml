@@ -12,83 +12,83 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: "2"
+version: '2'
 run:
   build-tags:
-    - all
-  modules-download-mode: readonly
+    - 'all'
+  modules-download-mode: 'readonly'
   allow-parallel-runners: true
 linters:
   enable:
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - containedctx
-    - copyloopvar
-    - depguard
-    - dupword
-    - durationcheck
-    - errchkjson
-    - errname
-    - errorlint
-    - exhaustive
-    - forcetypeassert
-    - gocheckcompilerdirectives
-    - godot
-    - goheader
-    - goprintffuncname
-    - gosec
-    - importas
-    - loggercheck
-    - makezero
-    - mirror
-    - misspell
-    - nilerr
-    - noctx
-    - nolintlint
-    - nosprintfhostport
-    - paralleltest
-    - prealloc
-    - predeclared
-    - protogetter
-    - rowserrcheck
-    - sloglint
-    - spancheck
-    - sqlclosecheck
-    - staticcheck
-    - thelper
-    - unconvert
-    - usetesting
-    - wastedassign
-    - whitespace
-    - wrapcheck
+    - 'asasalint'
+    - 'asciicheck'
+    - 'bidichk'
+    - 'bodyclose'
+    - 'containedctx'
+    - 'copyloopvar'
+    - 'depguard'
+    - 'dupword'
+    - 'durationcheck'
+    - 'errchkjson'
+    - 'errname'
+    - 'errorlint'
+    - 'exhaustive'
+    - 'forcetypeassert'
+    - 'gocheckcompilerdirectives'
+    - 'godot'
+    - 'goheader'
+    - 'goprintffuncname'
+    - 'gosec'
+    - 'importas'
+    - 'loggercheck'
+    - 'makezero'
+    - 'mirror'
+    - 'misspell'
+    - 'nilerr'
+    - 'noctx'
+    - 'nolintlint'
+    - 'nosprintfhostport'
+    - 'paralleltest'
+    - 'prealloc'
+    - 'predeclared'
+    - 'protogetter'
+    - 'rowserrcheck'
+    - 'sloglint'
+    - 'spancheck'
+    - 'sqlclosecheck'
+    - 'staticcheck'
+    - 'thelper'
+    - 'unconvert'
+    - 'usetesting'
+    - 'wastedassign'
+    - 'whitespace'
+    - 'wrapcheck'
   settings:
     depguard:
       rules:
         main:
           files:
-            - $all
+            - '$all'
           deny:
-            - pkg: github.com/auth0/go-jwt-middleware
-              desc: the approved jwx library is github.com/lestrrat-go/jwx/v2
-            - pkg: github.com/gin-contrib/*
-              desc: third-party web frameworks are not approved, use net/http
-            - pkg: github.com/gin-gonic/contrib
-              desc: third-party web frameworks are not approved, use net/http
-            - pkg: github.com/gin-gonic/gin
-              desc: third-party web frameworks are not approved, use net/http
-            - pkg: github.com/golang-jwt/jwe
-              desc: the approved jwx library is github.com/lestrrat-go/jwx/v2
-            - pkg: github.com/golang-jwt/jwt
-              desc: the approved jwx library is github.com/lestrrat-go/jwx/v2
-            - pkg: github.com/stretchr/testify
-              desc: use the standard library for tests
+            - pkg: 'github.com/auth0/go-jwt-middleware'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/gin-contrib/*'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/gin-gonic/contrib'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/gin-gonic/gin'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/golang-jwt/jwe'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/golang-jwt/jwt'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/stretchr/testify'
+              desc: 'use the standard library for tests'
     goheader:
       values:
         regexp:
           INDENTATION: '[\t\f]+|[ ]{2,}'
-          YEAR_AUTHOR: \d{4} .*
+          YEAR_AUTHOR: '\d{4} .*'
       template: |-
         Copyright {{ YEAR_AUTHOR }}
 
@@ -104,62 +104,62 @@ linters:
         See the License for the specific language governing permissions and
         limitations under the License.
     sloglint:
-      context: all
+      context: 'all'
       static-msg: false
-      key-naming-case: snake
+      key-naming-case: 'snake'
       args-on-sep-lines: true
     usetesting:
       os-temp-dir: true
     wrapcheck:
       ignore-sig-regexps:
-        - \.ErrorOrNil\(
-        - \.StartGRPC\(
-        - \.StartHTTP\(
-        - \.StartHTTPHandler\(
-        - retry\.RetryableError\(
-        - status\.Error\(
+        - '\.ErrorOrNil\('
+        - '\.StartGRPC\('
+        - '\.StartHTTP\('
+        - '\.StartHTTPHandler\('
+        - 'retry\.RetryableError\('
+        - 'status\.Error\('
   exclusions:
-    generated: lax
+    generated: 'lax'
     presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
+      - 'comments'
+      - 'common-false-positives'
+      - 'legacy'
+      - 'std-error-handling'
     rules:
       - linters:
-          - wrapcheck
-        path: _test.go
-      - path: (.+)\.go$
-        text: '^G102:'
-      - path: (.+)\.go$
-        text: '^G115:'
+          - 'wrapcheck'
+        path: '_test.go'
+      - path: '(.+)\.go$'
+        text: '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
+      - path: '(.+)\.go$'
+        text: '^G115:' # gosec: there's no way to actually satisfy this linter
     paths:
-      - internal/pb
-      - third_party
+      - 'internal/pb'
+      - 'third_party'
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 severity:
-  default: error
+  default: 'error'
 formatters:
   enable:
-    - gci
-    - gofmt
-    - gofumpt
-    - goimports
+    - 'gci'
+    - 'gofmt'
+    - 'gofumpt'
+    - 'goimports'
   settings:
     gci:
       sections:
-        - standard
-        - default
-        - prefix(github.com/abcxyz)
-        - blank
-        - dot
+        - 'standard'
+        - 'default'
+        - 'prefix(github.com/abcxyz)'
+        - 'blank'
+        - 'dot'
       custom-order: true
     gofumpt:
       extra-rules: true
   exclusions:
-    generated: lax
+    generated: 'lax'
     paths:
-      - internal/pb
-      - third_party
+      - 'internal/pb'
+      - 'third_party'
