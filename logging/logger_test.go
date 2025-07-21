@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"strings"
 	"testing"
@@ -222,8 +221,8 @@ func TestDefaultLogger(t *testing.T) {
 func TestContext(t *testing.T) {
 	t.Parallel()
 
-	logger1 := slog.New(slog.NewTextHandler(io.Discard, nil))
-	logger2 := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger1 := slog.New(slog.DiscardHandler)
+	logger2 := slog.New(slog.DiscardHandler)
 
 	checkFromContext(t.Context(), t, DefaultLogger())
 

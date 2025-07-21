@@ -12,20 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+version: '2'
 run:
-  # default: '1m'
-  timeout: '5m'
-
-  # default: []
   build-tags:
     - 'all'
-
-  # default: ''
   modules-download-mode: 'readonly'
-
-  # default: false
   allow-parallel-runners: true
-
 linters:
   enable:
     - 'asasalint'
@@ -37,25 +29,17 @@ linters:
     - 'depguard'
     - 'dupword'
     - 'durationcheck'
-    - 'errcheck'
     - 'errchkjson'
     - 'errname'
     - 'errorlint'
     - 'exhaustive'
     - 'forcetypeassert'
-    - 'gci'
     - 'gocheckcompilerdirectives'
     - 'godot'
-    - 'gofmt'
-    - 'gofumpt'
     - 'goheader'
-    - 'goimports'
     - 'goprintffuncname'
     - 'gosec'
-    - 'gosimple'
-    - 'govet'
     - 'importas'
-    - 'ineffassign'
     - 'loggercheck'
     - 'makezero'
     - 'mirror'
@@ -73,124 +57,109 @@ linters:
     - 'spancheck'
     - 'sqlclosecheck'
     - 'staticcheck'
-    - 'stylecheck'
     - 'thelper'
-    - 'typecheck'
     - 'unconvert'
-    - 'unused'
     - 'usetesting'
     - 'wastedassign'
     - 'whitespace'
     - 'wrapcheck'
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - '$all'
+          deny:
+            - pkg: 'github.com/auth0/go-jwt-middleware'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/gin-contrib/*'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/gin-gonic/contrib'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/gin-gonic/gin'
+              desc: 'third-party web frameworks are not approved, use net/http'
+            - pkg: 'github.com/golang-jwt/jwe'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/golang-jwt/jwt'
+              desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
+            - pkg: 'github.com/stretchr/testify'
+              desc: 'use the standard library for tests'
+    goheader:
+      values:
+        regexp:
+          INDENTATION: '[\t\f]+|[ ]{2,}'
+          YEAR_AUTHOR: '\d{4} .*'
+      template: |-
+        Copyright {{ YEAR_AUTHOR }}
 
-issues:
-  # default: []
-  exclude:
-    - '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
-    - '^G115:' # gosec: there's no way to actually satisfy this linter
+        Licensed under the Apache License, Version 2.0 (the "License");
+        you may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
 
-  # default: []
-  exclude-rules:
-    # Exclude test files from certain linters
-    - path: '_test.go'
-      linters:
-        - 'wrapcheck'
+        {{ INDENTATION }}http://www.apache.org/licenses/LICENSE-2.0
 
-  # default: []
-  exclude-dirs:
-    - 'internal/pb'
-    - 'third_party'
-
-  # default: true
-  exclude-dirs-use-default: false
-
-  # default: 50
-  max-issues-per-linter: 0
-
-  # default: 3
-  max-same-issues: 0
-
-linters-settings:
-  depguard:
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+    sloglint:
+      context: 'all'
+      static-msg: false
+      key-naming-case: 'snake'
+      args-on-sep-lines: true
+    usetesting:
+      os-temp-dir: true
+    wrapcheck:
+      ignore-sig-regexps:
+        - '\.ErrorOrNil\('
+        - '\.StartGRPC\('
+        - '\.StartHTTP\('
+        - '\.StartHTTPHandler\('
+        - 'retry\.RetryableError\('
+        - 'status\.Error\('
+  exclusions:
+    generated: 'lax'
+    presets:
+      - 'comments'
+      - 'common-false-positives'
+      - 'legacy'
+      - 'std-error-handling'
     rules:
-      main:
-        files:
-          - '$all'
-        deny:
-          - pkg: 'github.com/auth0/go-jwt-middleware'
-            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
-          - pkg: 'github.com/gin-contrib/*'
-            desc: 'third-party web frameworks are not approved, use net/http'
-          - pkg: 'github.com/gin-gonic/contrib'
-            desc: 'third-party web frameworks are not approved, use net/http'
-          - pkg: 'github.com/gin-gonic/gin'
-            desc: 'third-party web frameworks are not approved, use net/http'
-          - pkg: 'github.com/golang-jwt/jwe'
-            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
-          - pkg: 'github.com/golang-jwt/jwt'
-            desc: 'the approved jwx library is github.com/lestrrat-go/jwx/v2'
-          - pkg: 'github.com/stretchr/testify'
-            desc: 'use the standard library for tests'
-
-  gci:
-    sections:
-      - 'standard'
-      - 'default'
-      - 'prefix(github.com/abcxyz)'
-      - 'blank'
-      - 'dot'
-
-    skip-generated: true
-    custom-order: true
-
-  gofumpt:
-    # default: false
-    extra-rules: true
-
-  goheader:
-    values:
-      regexp:
-        YEAR_AUTHOR: '\d{4} .*'
-        INDENTATION: '[\t\f]+|[ ]{2,}'
-    # default: ""
-    template: |-
-      Copyright {{ YEAR_AUTHOR }}
-
-      Licensed under the Apache License, Version 2.0 (the "License");
-      you may not use this file except in compliance with the License.
-      You may obtain a copy of the License at
-
-      {{ INDENTATION }}http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      See the License for the specific language governing permissions and
-      limitations under the License.
-
-  sloglint:
-    # default: false
-    context: 'all'
-    # default: false
-    static-msg: false
-    # default: '' (snake, kebab, camel, pascal)
-    key-naming-case: 'snake'
-    # default: false
-    args-on-sep-lines: true
-
-  usetesting:
-    # default: false
-    os-temp-dir: true
-
-  wrapcheck:
-    ignoreSigRegexps:
-      - '\.ErrorOrNil\('
-      - '\.StartGRPC\('
-      - '\.StartHTTP\('
-      - '\.StartHTTPHandler\('
-      - 'retry\.RetryableError\('
-      - 'status\.Error\('
-
+      - linters:
+          - 'wrapcheck'
+        path: '_test.go'
+      - path: '(.+)\.go$'
+        text: '^G102:' # gosec: we have to bind to all ifaces in Cloud Run services
+      - path: '(.+)\.go$'
+        text: '^G115:' # gosec: there's no way to actually satisfy this linter
+    paths:
+      - 'internal/pb'
+      - 'third_party'
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
 severity:
-  # default: ''
-  default-severity: 'error'
+  default: 'error'
+formatters:
+  enable:
+    - 'gci'
+    - 'gofmt'
+    - 'gofumpt'
+    - 'goimports'
+  settings:
+    gci:
+      sections:
+        - 'standard'
+        - 'default'
+        - 'prefix(github.com/abcxyz)'
+        - 'blank'
+        - 'dot'
+      custom-order: true
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: 'lax'
+    paths:
+      - 'internal/pb'
+      - 'third_party'
