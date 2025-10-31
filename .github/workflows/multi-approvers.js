@@ -92,7 +92,7 @@ async function onPullRequestReview({workflowRef, repoName, repoOwner, branch, pr
     .filter((r) =>
       r.pull_requests.map((pr) => pr.number).includes(prNumber)
     )
-    .sort((v) => v.id);
+    .sort((a, b) => b.id - a.id);
 
   // If there are failed runs for this PR, re-run the workflow.
   if (failedRuns.length > 0) {
