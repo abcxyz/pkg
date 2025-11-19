@@ -5,8 +5,3 @@
 *    @abcxyz/infrastructure-team
 
 # readability
-*.go      @abcxyz/go-readability
-*.tf      @abcxyz/terraform-readability
-*.js      @abcxyz/typescript-readability
-*.ts      @abcxyz/typescript-readability
-*.java    @abcxyz/java-readability
