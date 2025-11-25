@@ -46,5 +46,6 @@ func ProjectID(ctx context.Context) string {
 		logging.FromContext(ctx).ErrorContext(ctx, "failed to get project id", "error", err)
 		return ""
 	}
+	
 	return v
 }
