@@ -130,10 +130,10 @@ type TokenRequestAllRepos struct {
 // AppToken creates a signed JWT to authenticate a GitHub app so that it can
 // make API calls to GitHub.
 func (g *App) AppToken() (string, error) {
-	// Make the current time 30 seconds in the past to combat clock skew issues
+	// Make the current time 60 seconds in the past to combat clock skew issues
 	// where the JWT we issue looks like it is coming from the future when it gets
 	// to GitHub
-	iat := time.Now().UTC().Add(-30 * time.Second)
+	iat := time.Now().UTC().Add(-60 * time.Second)
 	exp := iat.Add(5 * time.Minute)
 
 	b64Encode := base64.RawURLEncoding.EncodeToString
