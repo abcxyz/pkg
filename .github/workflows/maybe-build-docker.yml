@@ -105,6 +105,16 @@ on:
         type: 'boolean'
         default: false
         description: 'Ignore the cache and rebuild the docker image.'
+      docker_parameters:
+        required: false
+        type: 'string'
+        description: |-
+          Newline-separated list of extra arguments to pass to docker build.
+          Example:
+            --build-arg
+            FOO=bar
+            --target
+            builder
     outputs:
       docker_tag:
         description: 'The unique docker tag of the created image'
@@ -159,8 +169,17 @@ jobs:
       - name: 'Echo docker hash tag'
         id: 'docker-tag'
         shell: 'bash'
+        env:
+          DOCKER_PARAMETERS: '${{ inputs.docker_parameters }}'
         run: |
-          echo "tag=${{ hashFiles(inputs.dockerfile, inputs.extra_hash_file1, inputs.extra_hash_file2) }}" >> "${GITHUB_OUTPUT}"
+          FILE_HASH="${{ hashFiles(inputs.dockerfile, inputs.extra_hash_file1, inputs.extra_hash_file2) }}"
+          if [[ "${DOCKER_PARAMETERS}" != "" ]]; then
+            PARAMS_HASH=$(printf '%s' "${DOCKER_PARAMETERS}" | sha256sum | cut -d' ' -f1)
+            TAG=$(printf '%s' "${FILE_HASH}-${PARAMS_HASH}" | sha256sum | cut -d' ' -f1)
+          else
+            TAG="${FILE_HASH}"
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
           echo "branch_tag=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF}}" | sed 's/refs\/heads\///g' | sed 's/\//-/g')" >> "${GITHUB_OUTPUT}"
 
       - id: 'gcp-auth'
@@ -246,6 +265,7 @@ jobs:
           EXTRA_TAG2: '${{ inputs.extra_tag2 }}'
           PLATFORMS: '${{ inputs.platforms }}'
           DOCKERFILE: '${{ inputs.dockerfile }}'
+          DOCKER_PARAMETERS: '${{ inputs.docker_parameters }}'
         run: |
           tags=()
           if [[ "${GH_IMAGE}" != "" ]]; then
@@ -269,10 +289,19 @@ jobs:
             fi
           fi
 
+          docker_params=()
+          if [[ "${DOCKER_PARAMETERS}" != "" ]]; then
+            while IFS= read -r line; do
+              if [[ "${line}" != "" ]]; then
+                docker_params+=("${line}")
+              fi
+            done <<< "${DOCKER_PARAMETERS}"
+          fi
+
           if [[ "${PLATFORMS}" != "" ]]; then
-            docker buildx build . --file "${DOCKERFILE}" --platform="${PLATFORMS}" "${tags[@]}" --push
+            docker buildx build . --file "${DOCKERFILE}" --platform="${PLATFORMS}" "${tags[@]}" "${docker_params[@]}" --push
           else
-            docker buildx build . --file "${DOCKERFILE}" "${tags[@]}" --push
+            docker buildx build . --file "${DOCKERFILE}" "${tags[@]}" "${docker_params[@]}" --push
           fi
 
       - name: 'Cleanup docker config'
